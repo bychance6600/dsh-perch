@@ -1,0 +1,84 @@
+{
+  "name": "dsh-roost",
+  "version": "0.1.0",
+  "description": "养一只会自己长大的她：没有人格设置，人格只能通过事件流长出来；她在 QQ 里跟人说话，自己刷 B 站看东西，记住在外面遇到的人。四阶段走完才有立场。",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "LICENSE",
+    "lib",
+    "media",
+    "cordis.patch.yml",
+    "README.md",
+    "AGENTS.md",
+    "CHANGELOG.md",
+    "bin",
+    "tools/setup-ffmpeg.mjs",
+    "tools",
+    "install.ps1"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": []
+    },
+    "compatibility": {
+      "dsh": ">=0.2.0-rc.1 <0.3.0-0",
+      "dshReleases": {
+        "0.2.0-rc.1": "unknown",
+        "0.2.0-rc.2": "unknown",
+        "0.2.1-rc.1": "unknown",
+        "0.2.1-rc.2": "compatible",
+        "0.2.1-rc.3": "compatible",
+        "0.2.1-rc.4": "unknown",
+        "0.2.1-rc.5": "unknown",
+        "0.2.2-alpha.2": "unknown"
+      },
+      "profiles": [
+        "desktop",
+        "web",
+        "headless"
+      ]
+    }
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "agent",
+    "pet",
+    "qq",
+    "bilibili",
+    "douyin",
+    "memory",
+    "persona"
+  ],
+  "author": "bychance6600",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bychance6600/dsh-roost.git"
+  },
+  "homepage": "https://github.com/bychance6600/dsh-roost#readme",
+  "bugs": {
+    "url": "https://github.com/bychance6600/dsh-roost/issues"
+  },
+  "engines": {
+    "node": ">=22",
+    "dsh": ">=0.2.0-rc.1 <0.3.0-0"
+  },
+  "dependencies": {},
+  "peerDependencies": {},
+  "devDependencies": {}
+}
