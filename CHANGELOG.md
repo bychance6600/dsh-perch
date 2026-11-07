@@ -12,6 +12,7 @@
 - **插件页的工具说明取 registry**：不再在客户端写死工具说明。收窄时从宿主 `tools.view()` 的 `definition.description` 记下说明（压平空白、截 240 字），`/state` 与 `/tools` 一起下发；没有说明的工具只写来源（她自己那一层注册的 / 宿主或别的插件注册的），不编「宿主按会话给的」。搜索、状态列、加 / 移、底部保存不变。
 - **成长节奏的配置改名**：`growthDays` 改成 `stageSpanDays`——它只是「四个阶段一共多少天」的尺子，不是寿命上限。老配置里的 `growthDays` 在 `normalizeConfig` 里迁移一次（新旧都有时以新键为准，保存时清掉旧键）。`absence` / `ask` / `capture` 四处写事件信封不再跑完整 `deriveSelf`，改用只算 `{day,stage}` 的 `stampOf()`；过滤口径（驳回、梦、`influence:none`、非 constitution）收进 `constitutionEvents()` 与 `deriveSelf` 共用。主动说话默认隔 3 小时（内部值，不上界面），上限只留 1–6 且不设 0，界面不再有「允许她主动开口」总开关，文案写明「上限不是任务」。
 - **世界书**：面板从渠道页移到成长页；内容仍由会话侧生成、主人导入，插件不写。
+- **作息归设置，世界书不再压过它**：`lib/worldbook.js` 新增 `isSettingOwned()`，把「作息 / 几点 / 睡觉 / 醒来 / 叫醒」这类条目当设置管辖，对话里不再从世界书取；`lib/selfdoc.js` 的「醒来的时候」改成按 `config.window` 与 `Math.min(daily.events, wakesPerDay)` 现算，停用条目不念。真机上她把 11-03 导入的旧作息背成「晚八点到十一点、一天两次」，压过了设置里的 `08:00–23:00`；现在设置一改，身份文档跟着变。
 
 ### 断线账
 
@@ -142,4 +143,4 @@
 ### 兼容
 
 - `dsh >=0.2.0-rc.1 <0.3.0-0`，Node ≥ 22；`dependencies` / `peerDependencies` / `devDependencies` 仍为空。
-- 测试基线：`node --test --test-isolation=none` → 1262 条 / 1251 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。
+- 测试基线：`node --test --test-isolation=none` → 1265 条 / 1254 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。

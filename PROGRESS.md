@@ -4,7 +4,7 @@
 
 **0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过）。A 段 35 条与 B 段 19 条验收全部收口（A1 于 2026-11-07 16:12 真机通过）。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1262 条 / 1251 过 / 9 红**（另有 2 skip，2026-11-07 抖音真机修完，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1265 条 / 1254 过 / 9 红**（另有 2 skip，2026-11-07 世界书作息修完，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
 
@@ -42,6 +42,16 @@
 - 回归测试：`test/derive.test.mjs`「DSML 脚手架不进判断」；`test/mem.test.mjs`「只有 DSML 脚手架的旧事件，不端出来」。
 - 定向 derive / beliefs / mem / a20 67/67、mem / guard 46/46；全量 **1262 条 / 1251 过 / 9 红 / 2 skip**（/tmp/full-dsml.log），9 红与已知环境红同名。
 - 已用修好的代码重生成 `C:/Users/by_ch/.dsh-roost/home/她的身份.md`：现在 `grep DSML` 无命中，那两条不再出现在「你自己说过的话」里。
+
+## 世界书压过设置（2026-11-07）——已修
+
+- 用户报：她把「作息」记成「晚上八点到十一点，一天两次」，而设置里是 `08:00–23:00`、一天最多 3 次。她读不到 config，只能背世界书。
+- 直接原因：`C:/Users/by_ch/.dsh-roost/worldbook.json` 里的 `wmw0ons2i7`（11-03 一次性导入的 lorebook）写着旧作息，经 `lib/worldbook.js` 的 `knowledgeBlock` 与 `lib/selfdoc.js` 的「我知道的事」进她的身份文档。调度器本身没问题：`pickWakeTime` 用的是 config.window，当天 `sched:2026-11-07` 落在 14:43，下一次按设置算。
+- 另两条旧账：`16:18` 的「叫了她一声」是 `lib/home.js` 换房间时的 `wakeIfBlank()`，不走 scheduler、不占当天配额；`00:34` 首次建屋同理。这条路径不归时段管，但只在空房间时发生。
+- 数据：删掉 `wmw0ons2i7`，备份在 `C:/Users/by_ch/.dsh-roost/worldbook.json.bak-20261107-schedule`；世界书剩 6 条。其余 6 条未动，其中「住在 dsh-fish-river / ~/.dsh-fish-river」与「抖音借号收发私信」仍是旧说法，等用户决定是否一起清。
+- 代码：`lib/worldbook.js` 新增 `isSettingOwned()`，把「作息 / 几点 / 睡觉 / 醒来 / 叫醒」这类条目当设置管辖，`matchEntries()` 不再从世界书取；`lib/selfdoc.js` 的 `renderSelfDoc()` 新增 `wakeWindow` / `wakeLimit`，在「醒来的时候」按 config 现算写「定时叫醒落在 08:00–23:00 之间，一天最多 3 次」，并过滤 `enabled:false` 的条目；`writeSelfDoc()` 传 `config.window` 与 `Math.min(daily.events, wakesPerDay)`；`lib/observe.js` 在 `/config` 保存后 `refreshSelfDoc()`，设置一改身份文档马上跟着变。
+- 测试：`test/worldbook.test.mjs` 加 3 条（身份文档按设置写、对话里不取世界书作息、关掉定时叫醒写「关着」）。定向 worldbook / selfcheck / identity / settings / beliefs / memory 82/82；全量 **1265 条 / 1254 过 / 9 红 / 2 skip**（/tmp/full-worldbook.log），9 红与已知环境红同名。
+- 身份文档已重生成：`C:/Users/by_ch/.dsh-roost/home/她的身份.md:103` 是新句，旧的「晚上八点到十一点 / 一天两次」不再出现。
 
 ## 已经做完
 

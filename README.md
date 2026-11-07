@@ -202,7 +202,7 @@ node --test --test-isolation=none  # 沙箱 / 受限环境（跨文件会有假�
 node --test test/<file>.test.mjs   # 单文件
 ```
 
-当前基线：**1262 条 / 1251 过 / 9 红 / 2 skip**。9 条都是已知环境项（跨文件隔离互相干扰；`withFileLock` 偶发），单跑对应文件会绿。**不许新增红。**
+当前基线：**1265 条 / 1254 过 / 9 红 / 2 skip**。9 条都是已知环境项（跨文件隔离互相干扰；`withFileLock` 偶发），单跑对应文件会绿。**不许新增红。**
 
 零依赖是铁律：`dependencies` / `peerDependencies` / `devDependencies` 三个永远 `{}`，测试只用 `node:test`。
 

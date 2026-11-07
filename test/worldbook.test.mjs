@@ -22,6 +22,7 @@ import {
 import { buildPrompt } from '../lib/channels/router.js'
 import { renderSelfDoc, writeSelfDoc, KNOWLEDGE_SHOWN } from '../lib/selfdoc.js'
 import { deriveSelf } from '../lib/derive.js'
+import { updateConfig } from '../lib/settings.js'
 
 async function tmpRoot() {
   return fs.mkdtemp(path.join(os.tmpdir(), 'fish-wb-'))
@@ -136,6 +137,40 @@ test('身份文档也带上她知道的事：他在的时候，她也知道这�
   assert.doesNotMatch(doc, /你是一个温柔的人/)
 
   await fs.rm(root, { recursive: true, force: true })
+})
+
+test('身份文档里的作息按设置现算，世界书里的作息不再压过它（2026-11-07 真机）', async () => {
+  const root = await tmpRoot()
+  await updateConfig({ wakesPerDay: 3, window: ['08:00', '23:00'] }, root)
+  await createWorldbook(root).add([
+    { key: ['作息'], content: '她一般晚上八点到十一点之间醒着，一天醒两次。' },
+    { key: ['临江'], content: '住在临江路 12 号。' },
+    { key: ['旧设定'], content: '这条停用了，不该出现。', enabled: false },
+  ])
+  await writeSelfDoc(root, {})
+
+  const doc = await fs.readFile(path.join(root, 'home', '她的身份.md'), 'utf8')
+  assert.match(doc, /定时叫醒落在 08:00–23:00 之间，一天最多 3 次/)
+  assert.doesNotMatch(doc, /晚上八点到十一点/)
+  assert.doesNotMatch(doc, /一天醒两次/)
+  assert.doesNotMatch(doc, /这条停用了/)
+  assert.match(doc, /临江路 12 号/)
+
+  await fs.rm(root, { recursive: true, force: true })
+})
+
+test('对话里也不从世界书取作息：这条归设置管（2026-11-07 真机）', () => {
+  const entries = [
+    { id: 'a', keys: ['作息'], text: '晚上八点到十一点醒着，一天两次。', enabled: true, at: 1 },
+    { id: 'b', keys: ['临江'], text: '住在临江路 12 号。', enabled: true, at: 1 },
+  ]
+  assert.equal(matchEntries(entries, '你的作息是怎样的？').length, 0)
+  assert.deepEqual(matchEntries(entries, '临江的作息').map((h) => h.id), ['b'])
+})
+
+test('设置里把定时叫醒关掉时，身份文档写「关着」，不写旧次数', () => {
+  const doc = renderSelfDoc({ ...deriveSelf([]), stage: 1 }, { wakeWindow: ['08:00', '23:00'], wakeLimit: 0 })
+  assert.match(doc, /定时叫醒现在是关着的/)
 })
 
 test('没导入过世界书时，身份文档里连标题都不出现', () => {
