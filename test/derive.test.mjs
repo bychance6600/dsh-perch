@@ -1,4 +1,4 @@
-﻿import { test } from 'node:test'
+import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   stageBounds, stageOf, deriveSelf, stampOf, consistency, novelty,
@@ -263,6 +263,31 @@ test('事件流变长后 deriveSelf 不是二次增长（issue #3）', () => {
   const t1 = best(small)
   const t2 = best(big)
   assert.ok(t2 < t1 * 8 + 50, `200 条 ${t1.toFixed(1)}ms → 800 条 ${t2.toFixed(1)}ms，增长超过线性`)
+})
+
+test('固化满 90 天退档：还在 beliefs，但让新的排到前面（A12）', () => {
+  const evs = [
+    ev('ev_seed', 'seed', 1, '种', { source: 'system' }),
+    ev('ev_a1', 'utterance', 1, '我不喜欢人多的场合。'),
+    ev('ev_a2', 'utterance', 2, '我不喜欢人多的场合。'),
+    ev('ev_a3', 'utterance', 3, '我不喜欢人多的场合。'),
+    ev('ev_new', 'utterance', 99, '今天想明白了一件小事。'),
+  ]
+  // 99 天前那批：mentions=3 本来该固化
+  const young = deriveSelf(evs, { now: T0 + 89 * DAY_MS })
+  const oldOne = young.beliefs.find((b) => b.id === 'ev_a1')
+  assert.equal(oldOne.solid, true)
+  assert.equal(oldOne.faded, false)
+  assert.ok(young.solid.some((b) => b.id === 'ev_a1'))
+
+  // 过了 90 天：退档，不再占「反复想起」的位置，也不排在新的前面
+  const aged = deriveSelf(evs, { now: T0 + 100 * DAY_MS })
+  const faded = aged.beliefs.find((b) => b.id === 'ev_a1')
+  assert.equal(faded.faded, true)
+  assert.equal(faded.solid, false)
+  assert.ok(!aged.solid.some((b) => b.id === 'ev_a1'), '退档的不该再进 solid 清单')
+  assert.equal(aged.beliefs[0].id, 'ev_new', '退档之后新判断要排到前面')
+  assert.equal(aged.beliefs.find((b) => b.id === 'ev_a1').text, '我不喜欢人多的场合。', '退档不删原文')
 })
 
 test('stability 对同一批事件只算一次（issue #3 缓存）', () => {

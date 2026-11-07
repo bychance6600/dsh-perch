@@ -96,6 +96,25 @@ test('身份文档里疤是核心段：写「至今没想通」，且预算再�
   assert.ok(full.includes('## 你至今没想通的事'))
 })
 
+test('疤不折：过了 90 天，没想通的事也不退档（A12）', () => {
+  // 让同一句话既进了 beliefs（三条重复的 utterance）又正是那道疤的原话。
+  const evs = base([
+    react('r1', 'insist'),
+    ev('u2', 'utterance', 3, CONCEDE),
+    ev('u3', 'utterance', 4, REFUSE),
+    ev('u4', 'utterance', 5, REFUSE),
+    ev('u5', 'utterance', 6, REFUSE),
+  ])
+  const m = deriveSelf(evs, { now: T0 + 200 * DAY_MS })
+  assert.equal(m.scars.length, 1)
+  const same = m.beliefs.find((b) => b.text === REFUSE)
+  assert.ok(same, '那条判断还在')
+  assert.equal(same.faded, false, '疤对应的判断不许退档')
+  assert.equal(same.solid, true)
+  assert.ok(same.ageDays > 90)
+  assert.ok(personaLine(m, { budget: SELF_DOC_BUDGET }).includes('## 你至今没想通的事'))
+})
+
 test('没有疤就不出现这一节（不空着占地方）', () => {
   const m = deriveSelf(base([react('r1', 'accept')]))
   assert.ok(!personaLine(m, { budget: SELF_DOC_BUDGET }).includes('你至今没想通的事'))

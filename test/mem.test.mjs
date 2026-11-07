@@ -14,8 +14,9 @@ import { mkdtemp, rm, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { personaLine, assemble, foldOlderBeliefs, HARD_BANS, sleepPrompt } from '../lib/persona.js'
-import { renderSelfDoc } from '../lib/selfdoc.js'
+import { personaLine, personaBudget, assemble, foldOlderBeliefs, HARD_BANS, sleepPrompt } from '../lib/persona.js'
+import { renderSelfDoc, writeSelfDoc } from '../lib/selfdoc.js'
+import { writeConfig, appendEvent } from '../lib/store.js'
 import { addExchange, recentExchanges, renderCarry, TALK_KEEP } from '../lib/talkmem.js'
 import { bumpTurns, rotateTalkSession, activeCarry, homeStatus, CARRY_TURNS } from '../lib/home.js'
 import { searchEvents, tokensOf, renderRecall, RECALL_LIMIT } from '../lib/recall.js'
@@ -340,4 +341,42 @@ test('预算紧到离谱时核心段仍完整，可选段被逐个报进 dropped
     if (name.startsWith('你自己说过的话')) assert.ok(!line.includes('## 你自己说过的话'))
   }
   assert.equal(b.usedRatio, 1)
+})
+
+test('dropped 段除了名字还带字数，日志才说得清挤掉了多少（A12）', () => {
+  const m = model({
+    beliefs: Array.from({ length: 12 }, (_, i) => ({ id: `b${i}`, text: `判断${i}：${'长'.repeat(40)}` })),
+    refusals: [{ what: '不想说' }],
+    narrative: { text: '我大概是一个会反复想同一件事的东西。' },
+  })
+  const b = personaBudget(m, { budget: 60, withBans: true })
+  assert.ok(b.droppedSections.length > 0)
+  assert.equal(b.droppedSections.length, b.dropped.length)
+  for (const s of b.droppedSections) {
+    assert.equal(typeof s.label, 'string')
+    assert.ok(s.chars > 0, `${s.label} 要带上正整数字数`)
+  }
+})
+
+test('写身份文档时把被挤掉的段和字数写进日志，不静默丢（A12）', async () => {
+  await withRoot(async (root) => {
+    await writeConfig(normalizeConfig({ memory: { docBudget: 600 } }), root)
+    for (let i = 0; i < 10; i++) {
+      await appendEvent(
+        { type: 'utterance', source: 'tool', text: `判断${i}：${'长'.repeat(20)}` },
+        { day: 1, stage: 1 },
+        root,
+      )
+    }
+    const lines = []
+    const w = await writeSelfDoc(root, { log: (m) => lines.push(String(m)) })
+    assert.equal(w.ok, true, JSON.stringify(w))
+    const hit = lines.find((l) => l.includes('身份文档：预算'))
+    assert.ok(hit, `日志里要有一行预算挤段：${lines.join(' | ')}`)
+    assert.match(hit, /挤掉 .+（\d+ 字）/, '要写清哪一段、多少字')
+    // 同一份内容再写一次不重复刷同一行
+    const again = []
+    await writeSelfDoc(root, { log: (m) => again.push(String(m)) })
+    assert.ok(!again.some((l) => l.includes('身份文档：预算')), '没变化就不该重复刷日志')
+  })
 })

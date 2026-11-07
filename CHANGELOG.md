@@ -51,6 +51,11 @@
 
 - **上网页也能看到最近一次限流**：「网络环境（一般不用改）」折叠块里多一行——上一次被 B 站拦是什么时候、哪个返回码、连着第几次；冷却中就说还要多久，解冻了就写「已经解冻了」。今天页那行保留，两边说的是同一件事。折叠块仍然默认收起。
 
+### 记忆
+
+- **固化满 90 天退一档**：判断仍然在，也还能用 `her_recall` 翻到，但排序让位给新的、还没退档的；疤对应的那句永远不退档。新增 `FADE_DAYS = 90`。
+- **折叠不截句子**：超出 200 字时少放一条整句，不再把句子砍成半截；被挤掉的段在日志里写清段名和字数（每个 root 同一内容只记一次）。
+
 ### 删除
 
 - 渠道：B 站私信、抖音私信/群（`lib/channels/bili.js`、抖音子包里的私信整机与相关测试已一并删除）。
@@ -78,4 +83,4 @@
 ### 兼容
 
 - `dsh >=0.2.0-rc.1 <0.3.0-0`，Node ≥ 22；`dependencies` / `peerDependencies` / `devDependencies` 仍为空。
-- 测试基线：`node --test --test-isolation=none` → 1223 条 / 1212 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。
+- 测试基线：`node --test --test-isolation=none` → 1228 条 / 1217 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。

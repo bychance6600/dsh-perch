@@ -4,7 +4,7 @@
 
 **0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过，正在按清单往下施工）。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1223 条 / 1212 过 / 9 红**（另有 2 skip，2026-11-07 A18 之后，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1228 条 / 1217 过 / 9 红**（另有 2 skip，2026-11-07 A12 之后，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
 
@@ -260,10 +260,19 @@
 - 测试：`test/p6.test.mjs` 的风控用例补断言 `s1.at === t0.toISOString()` 与 `clearRisk` 后 `at === ''`；`test/client.test.mjs` 1 条（折叠块默认收起、有「最近一次被限流」「连着第」、时间取 `risk?.at`、今天页那行还在）。
 - 全量 1223 条 / 1212 过 / 9 红 / 2 skip（/tmp/full-A18.log）。9 红与已知环境红逐条同名。
 
+**固化退档与预算日志（2026-11-07，已完 A12）**
+
+- 问题：更早的判断一旦「固化」就永远占在核心段里，最早那批永远压着新的；超出预算时 `foldOlderBeliefs` 还会 `slice(0,199)+…` 把句子砍成半截——「为什么」正好在后半句。丢段只丢得无声无息，日志里看不到丢了哪段、丢了多少字。
+- `lib/derive.js`：新增 `FADE_DAYS = 90`。判断满 `SOLID_MENTIONS`（3 次）或 `SOLID_VERIFIED`（2 次验证）算固化；固化且年龄 ≥90 天、又不是疤对应的那句，就 `faded: true`——**仍在 `beliefs`、仍能被 `her_recall` 翻到**，只是排序让位给未退档的、新的；`solid` 列表里不再有它。`scarQuotes` 从疤的 `quote` 取，命中就不退档。
+- `lib/persona.js`：`foldOlderBeliefs` 改成整句取舍——按顺序放，放不下就 `break`，不再截断句子；第一条再长也放。`personaBudget` 新增 `droppedSections: [{label, chars}]`，与 `dropped` 同步。
+- `lib/selfdoc.js`：重写身份文档时若 `droppedSections` 非空，记一行「身份文档：预算 X/Y，挤掉 段名（N 字）…」；用 `lastBudgetDrop`（每 root 一个签名）避免同一内容每次重写都刷。预算仍是 1800（A19 再谈 3→2）。
+- 测试：`test/derive.test.mjs`「固化满 90 天退档：还在 beliefs，但让新的排到前面」；`test/beliefs.test.mjs`「折叠行不截断句子：放不下就少放一条」；`test/scar.test.mjs`「疤不折：过了 90 天，没想通的事也不退档」；`test/mem.test.mjs` 两条（`droppedSections` 形状、`writeSelfDoc` 的预算日志只记一次）。
+- 全量 1228 条 / 1217 过 / 9 红 / 2 skip（/tmp/full-A12.log）。9 红与已知环境红逐条同名。
+
 **下一步顺序**
 
 1. ~~A11 收尾~~：已 ✅。~~A21~~：已 ✅。~~A34 改名~~：已 ✅。~~A35 名字变量~~：已 ✅。
-2. ~~A22~~：已 ✅。~~A23~~：已 ✅。~~A24~~：已 ✅。~~A25~~：已 ✅。~~A26~~：已 ✅。~~A27~~：已 ✅。~~A28~~：已 ✅。~~A29~~：已 ✅。~~A30~~：已 ✅。~~A17~~：已 ✅。~~A18~~：已 ✅。A12 → A19 → A20 → A31 → A32 → A33（A8 单独一轮；A13/A14 收尾；A10 随 A20 逐条核）。
+2. ~~A22~~：已 ✅。~~A23~~：已 ✅。~~A24~~：已 ✅。~~A25~~：已 ✅。~~A26~~：已 ✅。~~A27~~：已 ✅。~~A28~~：已 ✅。~~A29~~：已 ✅。~~A30~~：已 ✅。~~A17~~：已 ✅。~~A18~~：已 ✅。~~A12~~：已 ✅。A19 → A20 → A31 → A32 → A33（A8 单独一轮；A13/A14 收尾；A10 随 A20 逐条核）。
 3. A1 真机拔网验收并入 A11 之后（代码与模拟已过）。
 
 **环境注意**

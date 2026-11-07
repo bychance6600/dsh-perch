@@ -66,6 +66,23 @@ test('调成 1 条时只剩一条，其余折进「更早以前」', () => {
   assert.ok(old.includes('记不清原话了'), `折叠行要交代还有多少条：${old.slice(0, 80)}`)
 })
 
+test('折叠行不截断句子：放不下就少放一条（A12）', () => {
+  const long = '这一条特别长，长到整条放不进折叠行，但它仍然是一句完整的话。'.repeat(9)
+  const list = [
+    { id: 'b0', text: '短判断一' },
+    { id: 'b1', text: '短判断二' },
+    { id: 'b2', text: long },
+  ]
+  const line = foldOlderBeliefs(list, 0, 3)
+  assert.ok(!line.includes('…'), '不许用省略号砍句子')
+  assert.ok(line.includes('短判断一') && line.includes('短判断二'))
+  assert.ok(!line.includes(long), '放不下的整条不塞，宁可少放一条')
+  assert.match(line, /还有 1 条更早的/)
+  // 第一条无论多长都要能出现在眼前（不为了字数把它砍掉）
+  const one = foldOlderBeliefs([{ id: 'b0', text: long }], 0, 3)
+  assert.equal(one, long)
+})
+
 test('foldOlderBeliefs 的起点跟着 shown 走', () => {
   const a = foldOlderBeliefs(beliefs, 3)
   assert.ok(a.includes('判断编号3') && !a.includes('判断编号2；'), 'shown=3 从第 4 条开始折')
