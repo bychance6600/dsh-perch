@@ -4,7 +4,7 @@
 
 **0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过，正在按清单往下施工）。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1208 条 / 1197 过 / 9 红**（另有 2 skip，2026-11-07 A28 之后，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1220 条 / 1209 过 / 9 红**（另有 2 skip，2026-11-07 A29 之后，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
 
@@ -52,7 +52,7 @@
 
 ## 之后（按顺序）
 
-1. A27（插件页工具说明取 registry）→ A28 → A29 → A30 → A17 → A18 → A12 → A19 → A20 → A31 → A32 → A33；A8（B 站分镜）单独一轮；A13/A14 收尾；A10 随 A20 逐条核。
+1. ~~A27~~ ✅ ~~A28~~ ✅ ~~A29~~ ✅ A30 → A17 → A18 → A12 → A19 → A20 → A31 → A32 → A33；A8（B 站分镜）单独一轮；A13/A14 收尾；A10 随 A20 逐条核。
 2. 全做完再回头补 B 段的 19 条验收。
 
 ## 交接（2026-11-06 23:50，A 段进行中）
@@ -223,10 +223,20 @@
 - 测试：settings 迁移 2 条（旧键接值且不留旧键、新键优先、落盘清旧键）、derive `stampOf` 1 条（与 deriveSelf 的 day/elapsedStage 一致，忽略 social/dream/none/驳回）、client 1 条（无总开关、无 minIdleHours 入口、有「上限不是任务」）；proactive 的夹紧断言从 12 改 6，并补默认 3 与 0→1。
 - 全量 1208 条 / 1197 过 / 9 红 / 2 skip（/tmp/full-A28.log）。9 红与已知环境红逐条同名。
 
+**渠道认证按渠道记 id（2026-11-07，已完 A29）**
+
+- 问题：主人身份原来只从 `config.channels.qq.ownerId` 读，`owner.json` 里只有 B 站的 mid / cookie；渠道一多，同一个人在不同平台的 id 会被混在一张表里比对，也分不清「认证」（这句话算谁说的）与「登录」（cookie 是钥匙）。
+- `owner.json` 增 `channels: { qq: [], bili: [], douyin: [] }`：`saveChannelOwner(channel, raw)` 只写对应渠道，按逗号/顿号/分号/空白切分去重；空串写成空数组，表示**明确清掉**，不会让老 config 里的 `ownerId` 复活。`channelOwnerIds(ow, legacyChannels)` 只有该渠道键**不存在**时才回落老 `config.channels.<渠道>.ownerId`（一次性兼容，迁移一半也能跑）。`publicOwner()` 带 `channels`，不带 cookie。
+- 新增 `lib/channels/auth.js`：`ownerIdOf(msg, owners)` 只拿 `owners[msg.channel]` 比，兼容裸 id 与 `u_` 前缀——不同渠道的同一个数字不会被误认；`isOwnerMessage()` 仍保留 `personId==='owner'` 这条宿主会话入口。
+- 接线：`router.js` 删掉内部 `ownIdOf`，改用 `isOwnerMessage`；`host.js` 的 `ownerIdsNow()` 读 `owner.json`（老 config 兜底）；`proactive.js` 给主人发消息也从同一处取第一个 QQ id；`observe.js` 的 `/channels` GET 带 `owners`，新增 `POST /channels/owner`；设置页 QQ 卡的主人号改走这个接口，初值取 `owners.qq`。
+- 配置：`settings.js` 的默认值里删掉 `channels.qq.ownerId` / `channels.douyin.ownerId`（老配置里的键仍保留、仍可回落），渠道配置仍只有环境参数，没有加人格键。
+- 测试：`test/owner.test.mjs` 7 条（分渠道互不覆盖、publicOwner 不带 cookie、清空不复活、只缺键才回落、读优先、未知渠道不落盘、HTTP 存与取）、`test/channel-router.test.mjs` 2 条（同一数字在 B 站/抖音各自映射；heard 的 origin=`owner`、influence=`constitution`）、`test/proactive.test.mjs` 1 条（owner.json 优先于老 config）、`test/settings.test.mjs` 1 条、`test/client.test.mjs` 1 条。
+- 全量 1220 条 / 1209 过 / 9 红 / 2 skip（/tmp/full-A29.log）。9 红与已知环境红逐条同名。
+
 **下一步顺序**
 
 1. ~~A11 收尾~~：已 ✅。~~A21~~：已 ✅。~~A34 改名~~：已 ✅。~~A35 名字变量~~：已 ✅。
-2. ~~A22~~：已 ✅。~~A23~~：已 ✅。~~A24~~：已 ✅。~~A25~~：已 ✅。~~A26~~：已 ✅。~~A27~~：已 ✅。~~A28~~：已 ✅。A29 → A30 → A17 → A18 → A12 → A19 → A20 → A31 → A32 → A33（A8 单独一轮；A13/A14 收尾；A10 随 A20 逐条核）。
+2. ~~A22~~：已 ✅。~~A23~~：已 ✅。~~A24~~：已 ✅。~~A25~~：已 ✅。~~A26~~：已 ✅。~~A27~~：已 ✅。~~A28~~：已 ✅。~~A29~~：已 ✅。A30 → A17 → A18 → A12 → A19 → A20 → A31 → A32 → A33（A8 单独一轮；A13/A14 收尾；A10 随 A20 逐条核）。
 3. A1 真机拔网验收并入 A11 之后（代码与模拟已过）。
 
 **环境注意**

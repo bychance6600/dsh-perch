@@ -161,3 +161,13 @@ test('白名单校验：拼错的名字与不存在的工具都不许过，拿�
   // 空输入永远合法（留空 = 不额外给）
   assert.equal(validateToolNames('', known).ok, true)
 })
+
+// 2026-11-07（A29）：主人 id 不再有默认值；老配置里的旧键仍保留，供 owner.json 迁移回落。
+test('渠道默认值里没有 ownerId；老配置的旧键不被抹掉（A29）', () => {
+  const fresh = normalizeConfig({})
+  assert.equal(Object.prototype.hasOwnProperty.call(fresh.channels.qq, 'ownerId'), false)
+  assert.equal(Object.prototype.hasOwnProperty.call(fresh.channels.douyin, 'ownerId'), false)
+  const old = normalizeConfig({ channels: { qq: { ownerId: '10001' }, douyin: { ownerId: '20002' } } })
+  assert.equal(old.channels.qq.ownerId, '10001')
+  assert.equal(old.channels.douyin.ownerId, '20002')
+})

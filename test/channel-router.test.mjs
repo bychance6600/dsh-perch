@@ -16,6 +16,7 @@ import { createJournal } from '../lib/journal.js'
 import { createPeople } from '../lib/people.js'
 import { appendEvent, readEvents } from '../lib/store.js'
 import { canReply, channelConfig } from '../lib/channels/gate.js'
+import { isOwnerMessage, ownerIdOf } from '../lib/channels/auth.js'
 
 async function tmpRoot() {
   return fs.mkdtemp(path.join(os.tmpdir(), 'fish-chan-'))
@@ -633,4 +634,59 @@ test('私下允许有想法，群里只答问到的', () => {
   const dm = buildPrompt({ channel: 'qq', kind: 'dm', conversationId: '1', conversationName: '', personName: '某人' }, [], { isOwner: true })
   assert.match(dm, /你怎么看就怎么说/)
   assert.doesNotMatch(dm, /只回答问的那件事/)
+})
+
+// ---- 2026-11-07（A29）：认证归渠道层，认人按消息来自哪个渠道 ----
+
+test('auth：同一个数字在 QQ 上是主人，在 B 站上不是', () => {
+  const owners = { qq: ['10001'], bili: ['20002'] }
+  assert.equal(ownerIdOf({ channel: 'qq', personId: 'u_10001' }, owners), '10001')
+  assert.equal(ownerIdOf({ channel: 'qq', personId: '10001' }, owners), '10001')
+  assert.equal(ownerIdOf({ channel: 'bili', personId: '10001' }, owners), '')
+  assert.equal(ownerIdOf({ channel: 'bili', personId: 'u_20002' }, owners), '20002')
+  // 抖音是裸 openid，不带 u_ 也认
+  assert.equal(ownerIdOf({ channel: 'douyin', personId: '30003' }, { douyin: ['30003'] }), '30003')
+  // 渠道没有名单、或名单为空，都不认
+  assert.equal(ownerIdOf({ channel: 'douyin', personId: '30003' }, owners), '')
+  assert.equal(ownerIdOf({ channel: 'qq', personId: 'u_10001' }, { qq: [] }), '')
+  assert.equal(isOwnerMessage({ channel: 'bili', personId: '10001' }, owners), false)
+  assert.equal(isOwnerMessage({ channel: 'bili', personId: '20002' }, owners), true)
+  // 旧调用方的显式标记仍然认
+  assert.equal(isOwnerMessage({ channel: 'bili', personId: 'owner' }, {}), true)
+})
+
+test('router：B 站 / 抖音各自的主人 id 都能认成 owner，且不串渠道', async () => {
+  const cfg = { channels: { bili: { enabled: true }, douyin: { enabled: true } } }
+  const bili = { ...fakeAdapter(), name: 'bili' }
+  const douyin = { ...fakeAdapter(), name: 'douyin' }
+  const h = await harness({
+    stage: 1,
+    config: cfg,
+    ownerIds: { qq: [], bili: ['20002'], douyin: ['30003'] },
+    extraAdapters: [['bili', bili], ['douyin', douyin]],
+  })
+  const dm = (channel, personId) => groupMsg({
+    channel,
+    kind: 'dm',
+    conversationId: personId.replace(/^u_/, ''),
+    personId,
+    text: '在吗',
+  })
+
+  const rb = await h.router.handle(dm('bili', 'u_20002'))
+  assert.equal(rb.sent, true, JSON.stringify(rb))
+  const rd = await h.router.handle(dm('douyin', '30003'))
+  assert.equal(rd.sent, true, JSON.stringify(rd))
+
+  // 同一个号码放到别的渠道就是陌生人：阶段 1 不接
+  const rx = await h.router.handle(dm('bili', 'u_30003'))
+  assert.equal(rx.why, 'stage-too-early', JSON.stringify(rx))
+
+  const { events } = await readEvents(h.root)
+  const heard = events.filter((e) => e.type === 'heard' && e.origin === 'owner')
+  assert.deepEqual(heard.map((e) => [e.channel, e.origin, e.influence]), [
+    ['bili', 'owner', 'constitution'],
+    ['douyin', 'owner', 'constitution'],
+  ])
+  await fs.rm(h.root, { recursive: true, force: true })
 })

@@ -13,6 +13,7 @@ import os from 'node:os'
 import path from 'node:path'
 import fsx from 'node:fs'
 import { deliverToOwner } from '../lib/proactive.js'
+import { saveChannelOwner } from '../lib/owner.js'
 import assert from 'node:assert/strict'
 import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -390,6 +391,25 @@ test('deliverToOwner：QQ 开着、知道主人的号，就把这句话真的送
   assert.equal(sent[0].conversation.kind, 'private')
   assert.equal(sent[0].conversation.id, '10002')
   assert.equal(sent[0].text, '在。')
+})
+
+test('deliverToOwner：主人号以 owner.json 为准，老 config 的 ownerId 只作回落（A29）', async () => {
+  const root = fsx.mkdtempSync(path.join(os.tmpdir(), 'fish-pd-json-'))
+  try {
+    fsx.writeFileSync(path.join(root, 'config.json'), JSON.stringify({ channels: { qq: { enabled: true, ownerId: '99999' } } }))
+    await saveChannelOwner('qq', '10002, 10003', root)
+    const sent = []
+    const ch = { adapters: new Map([['qq', { async send(x) { sent.push(x); return { ok: true } } }]]) }
+    assert.equal(await deliverToOwner(root, '在。', { channels: ch }), true)
+    assert.equal(sent[0].conversation.id, '10002', '用的是 owner.json 里的号，不是 config 里的旧号')
+    // 清掉之后不复活：即便 config 还写着 99999，也不发
+    await saveChannelOwner('qq', '', root)
+    sent.length = 0
+    assert.equal(await deliverToOwner(root, '在。', { channels: ch }), false)
+    assert.equal(sent.length, 0)
+  } finally {
+    fsx.rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+  }
 })
 
 test('deliverToOwner：QQ 关着、或者没有适配器，就当没这回事，不抛', async () => {

@@ -843,3 +843,12 @@ test('主动开口：没有总开关，也没有 minIdleHours 入口（A28）', 
   assert.match(src, /只留 1–6 的上限/, '只留上限这一个控件')
   assert.match(src, /上限不是任务/, '上限的文案要写明它不是任务')
 })
+
+// 2026-11-07（A29）：渠道页的「主人的 QQ 号」不再写 config，改存 owner.json。
+test('渠道页的主人号走 /channels/owner，不再塞进 config（A29）', async () => {
+  const src = await readFile(CLIENT, 'utf8')
+  assert.ok(src.includes("jpost('/channels/owner'"), '要有按渠道存主人 id 的请求')
+  assert.ok(src.includes('chanOwners.qq'), '初值要读 /channels 返回的 owners')
+  assert.ok(!src.includes("patchChannel('qq', { ownerId: v })"), '旧的 config 写法要删干净')
+  assert.ok(!src.includes('chanSettings?.qq?.ownerId'), '初值不能还从 config 取')
+})

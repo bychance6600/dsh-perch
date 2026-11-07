@@ -17,7 +17,10 @@ import { join } from 'node:path'
 import { Readable } from 'node:stream'
 
 import { looksLikeLeak, screenOutgoing } from '../lib/guard.js'
-import { parseCookieInput, publicOwner, saveOwner, saveAccount } from '../lib/owner.js'
+import {
+  parseCookieInput, publicOwner, saveOwner, saveAccount,
+  OWNER_CHANNELS, splitOwnerIds, channelOwnerIds, loadChannelOwnerIds, saveChannelOwner,
+} from '../lib/owner.js'
 import { readOwner } from '../lib/store.js'
 import { registerObserve } from '../lib/observe.js'
 
@@ -161,7 +164,9 @@ function fakeCtx() {
 }
 
 function callRoute(routes, path, method, body) {
-  const def = routes.find((d) => d.path === '/dsh-roost' + path)
+  const full = '/dsh-roost' + path
+  const def = routes.find((d) => d.path === full)
+    ?? routes.filter((d) => full.startsWith(d.path + '/')).sort((a, b) => b.path.length - a.path.length)[0]
   if (!def) throw new Error(`没注册这条路由：${path}`)
   const chunks = body === undefined ? [] : [Buffer.from(JSON.stringify(body), 'utf8')]
   // readBody 走 EventEmitter（req.on('data'/'end')），所以用 Readable 当请求体
@@ -247,3 +252,111 @@ test('saveAccount 只记登录账号，不覆盖领养人', async () => {
   }
 })
 
+
+// ---- 2026-11-07（A29）：主人 id 按渠道记在 owner.json，不混进 config ----
+
+test('splitOwnerIds：逗号、顿号、分号、空白都算分隔，去重且保序', () => {
+  assert.deepEqual(splitOwnerIds('10001, 10002、10003;10002 10004'), ['10001', '10002', '10003', '10004'])
+  assert.deepEqual(splitOwnerIds([' 1 ', '2', '1']), ['1', '2'])
+  assert.deepEqual(splitOwnerIds(''), [])
+  assert.deepEqual(splitOwnerIds(null), [])
+})
+
+test('saveChannelOwner：QQ / B 站 / 抖音各存各的，互不覆盖', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'fish-ow-ch-'))
+  try {
+    assert.deepEqual(OWNER_CHANNELS, ['qq', 'bili', 'douyin'])
+    const a = await saveChannelOwner('qq', '10001, 10002', root)
+    assert.equal(a.ok, true)
+    assert.deepEqual(a.channels.qq, ['10001', '10002'])
+    await saveChannelOwner('bili', '20002', root)
+    await saveChannelOwner('douyin', '30003', root)
+
+    const ow = await readOwner(root)
+    assert.deepEqual(ow.channels, { qq: ['10001', '10002'], bili: ['20002'], douyin: ['30003'] })
+    // 数字不串门：QQ 号不会被当成 B 站 uid
+    assert.deepEqual(channelOwnerIds(ow).bili, ['20002'])
+    assert.equal(JSON.stringify(publicOwner(ow)).includes('SESSDATA'), false)
+    assert.deepEqual(publicOwner(ow).channels.qq, ['10001', '10002'])
+  } finally {
+    await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+  }
+})
+
+test('saveChannelOwner：空串是「清掉」，留下空数组，老配置不能把它复活', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'fish-ow-clear-'))
+  try {
+    await saveChannelOwner('qq', '10001', root)
+    const r = await saveChannelOwner('qq', '', root)
+    assert.equal(r.ok, true)
+    assert.match(r.note, /清掉/)
+    const ow = await readOwner(root)
+    assert.deepEqual(ow.channels.qq, [])
+    // 老 config 里还有 ownerId，但 owner.json 已经有这个渠道的键——以空为准。
+    assert.deepEqual(channelOwnerIds(ow, { qq: { ownerId: '99999' } }).qq, [])
+  } finally {
+    await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+  }
+})
+
+test('channelOwnerIds：没有这个渠道的键时才回落老配置的 ownerId', () => {
+  const legacy = { qq: { ownerId: '10001' }, douyin: { ownerId: '30003' } }
+  const fresh = channelOwnerIds({}, legacy)
+  assert.deepEqual(fresh.qq, ['10001'])
+  assert.deepEqual(fresh.douyin, ['30003'])
+  assert.deepEqual(fresh.bili, [])
+  // 只迁移了一半：qq 已写进 owner.json，douyin 还没。
+  const half = channelOwnerIds({ channels: { qq: ['20002'] } }, legacy)
+  assert.deepEqual(half.qq, ['20002'])
+  assert.deepEqual(half.douyin, ['30003'])
+})
+
+test('loadChannelOwnerIds：读的是 owner.json，不是 config', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'fish-ow-load-'))
+  try {
+    await saveChannelOwner('bili', '20002', root)
+    const ids = await loadChannelOwnerIds(root, { bili: { ownerId: '99999' } })
+    assert.deepEqual(ids.bili, ['20002'])
+    // 没写过的渠道才回落
+    assert.deepEqual(ids.qq, [])
+  } finally {
+    await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+  }
+})
+
+test('saveChannelOwner：不认识的渠道不落盘', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'fish-ow-bad-'))
+  try {
+    const r = await saveChannelOwner('telegram', '123', root)
+    assert.equal(r.ok, false)
+    const ow = await readOwner(root).catch(() => null)
+    assert.equal(ow?.channels?.telegram, undefined)
+  } finally {
+    await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+  }
+})
+
+test('/channels/owner 路由：按渠道存主人 id，GET /channels 能读到', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'fish-ow-route-'))
+  try {
+    const ctx = fakeCtx()
+    ctx.cfg.connection = { requestRejection: () => null }
+    registerObserve(ctx, { root })
+    const r = await callRoute(ctx.routes, '/channels/owner', 'POST', { channel: 'qq', id: '10001, 10002' })
+    assert.equal(r.status, 200)
+    assert.equal(r.body.ok, true)
+    assert.deepEqual(r.body.channels.qq, ['10001', '10002'])
+    const ow = await readOwner(root)
+    assert.deepEqual(ow.channels.qq, ['10001', '10002'])
+
+    const g = await callRoute(ctx.routes, '/channels', 'GET')
+    assert.equal(g.status, 200)
+    assert.deepEqual(g.body.owners.qq, ['10001', '10002'])
+
+    const bad = await callRoute(ctx.routes, '/channels/owner', 'POST', { channel: 'nope', id: '1' })
+    assert.equal(bad.status, 400)
+    assert.equal(bad.body.ok, false)
+  } finally {
+    await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+  }
+})
