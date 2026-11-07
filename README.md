@@ -47,7 +47,7 @@
 pnpm add github:bychance6600/dsh-roost
 
 # 或装本机这份源码（开发时）
-pnpm add link:D:/fish/dsh-roost
+pnpm add link:D:/path/to/dsh-roost
 ```
 
 然后把包名写进这个 profile 的 `package.json`：
@@ -66,7 +66,7 @@ pnpm add link:D:/fish/dsh-roost
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\install.ps1
-# 装本机源码：-LocalPath D:\fish\dsh-roost
+# 装本机源码：-LocalPath D:\path\to\dsh-roost
 # 只看它打算做什么：-DryRun
 ```
 
@@ -76,7 +76,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 
 1. 重启 DSH（运行中的包文件不会热替换）。
 2. 打开 **设置 → 她**。日志在 `~/.dsh-roost/logs/dsh-roost.log`，看到以 `0.1.0 · ` 开头的一行就是挂上了。
-3. 第一次打开会落在一行字都没有的「今天」页——先点一次 **「现在叫醒她」**，她开口之后侧栏里才会出现「跟她说话」。
+3. 第一次启动会自动建屋（工作区和一条会话），并在会话还空着时叫醒她一次。如果那一次没醒，状态卡右上角的 **「现在叫醒她」** 可以手动补一次；她开过口之后，侧栏里才会出现「跟她说话」（认出名字后是「跟 X 说话」）。
 
 ## 四、第一次打开：今天页
 
@@ -147,7 +147,7 @@ zip 不用解压；脚本用系统自带解压。二进制不进 git。
 
 ## 八、她手上的工具
 
-她的工具面默认收窄：只给她成长、日记、回忆、留话、看 B 站/抖音、看画面、问你、记梦这些。完整名单与一句说明在 **设置 → 她 → 插件**，可以加、可以移、可以搜，改完点保存。
+她的工具面默认收窄：只给她成长、日记、回忆、留话、桌上的纸条、看 B 站/抖音、看画面、问你这些（外加 `read_image` 让她真能看见画面）。完整名单与一句说明在 **设置 → 她 → 插件**，可以加、可以移、可以搜，改完点保存。
 
 - 收窄开关默认开；关掉之后她能看见宿主全部标准工具（重启生效）。
 - 想让她在 QQ 上说话：装宿主那边的 QQ 桥接工具，并把 `qq_send_message, qq_get_unread_messages, qq_reply` 加进表里。名字对不上，她就会说「我没法在 QQ 上说话」。
@@ -166,14 +166,23 @@ zip 不用解压；脚本用系统自带解压。二进制不进 git。
 默认 `~/.dsh-roost`（Windows：`C:\Users\<你>\.dsh-roost`）：
 
 ```
-events.jsonl   她的账本（只追加，不能删）
-people.json    她认得的每个人（印象 ≤150 字）
-journal.json   最近的流水
-owner.json     谁是主人、各渠道身份 id、B 站 cookie
-config.json    环境参数（不含人格）
-worldbook.json 世界书（事实）
-home/          身份文档、日记、小纸条
-logs/          插件日志（会滚动）
+events.jsonl          唯一可信源，只追加
+state.json            派生品，随时可由 rebuild() 重算
+config.json           环境参数（不含人格）
+owner.json            主人 id、各渠道身份 id、登录 cookie，0600
+home.json             这间屋子的账：wsId / sessionId / preset / carry / wokeFor
+home/                 她这条会话的 cwd，也是工作区目录
+  她的身份.md          生成，不手写
+diary/                her_diary / write_diary 的日记（一天一篇）
+out/                  日报（out/YYYY-MM-DD.md）
+notes.json            her_note 的便条（答应过、还没做的事）
+inbox.md              her_leave 的留话纯文本副本
+logs/                 启动与运行日志（会滚动）
+talk-recent.json      最近几轮原话，换会话时拼 carry
+people.json           每人印象（≤150 字）
+journal.json          群流水
+worldbook.json        世界书（事实）
+douyin-profile/       抖音浏览器的登录态（开抖音时才有）
 ```
 
 - **备份 / 恢复 / 搬家 / 从头开始**都在「数据」页。恢复前会把旧档挪去 `dsh-roost-backups/pre-restore-*`；重置是改名前缀封存，不删。
@@ -181,12 +190,12 @@ logs/          插件日志（会滚动）
 
 ## 十一、还没做完
 
-- **真机没跑过**：装 profile、建屋、QQ 连上、今天页对账都还没在一台真机上走完。
-- 印象层（每人 150 字、渠道层替她记）只有存储与显示，抽取管线还没接。
-- QQ 的入站 WAL / 出站 outbox 没做；桥会重推一部分。
-- 自动静默（她说「晚安」之后静到下一个出场点）没做——「出场点」还没定义。
-- 反馈页的 FAQ 是空状态；原理页按设计搁置。
-- 世界书内容还没生成（由会话侧写，不由插件写）。
+- **断网演练还没做**：断线账的代码与模拟都过了，真机拔网 30 秒并入 A11 之后验收。
+- **B 站看画面仍是均匀抽帧**：探容器头、切点、宫格分镜、只重扫某一段都还没做（A8）。
+- **抖音的推荐流选择器没在真机上校准**：主包与子包都写好了，但没开着抖音渠道跑过；真机第一次接通时要按页面实际结构调整 `FEED_SELECTORS`（子包 README 有说明）。
+- **原理页内容与反馈页 FAQ**按设计留空（A13 / A14）——等代码定型再写，不是漏做。
+- **B 段 19 条验收**还没逐条走。
+- 世界书的内容由会话侧生成、你导入；插件不替你写。
 
 ## 十二、开发与测试
 

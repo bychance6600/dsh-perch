@@ -18,9 +18,10 @@
     "AGENTS.md",
     "CHANGELOG.md",
     "bin",
-    "tools/setup-ffmpeg.mjs",
+    "packages",
     "tools",
-    "install.ps1"
+    "install.ps1",
+    "NOTICE.md"
   ],
   "scripts": {
     "test": "node --test"

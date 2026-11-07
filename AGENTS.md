@@ -80,13 +80,13 @@ node --test
 按环境挑跑法：
 
 - **正常环境**：上面这条命令（不带参数，Node 自己递归找 `test/*.test.mjs`），约 17–18 秒。
-- **别写成 `node --test "test/*.test.mjs"`**：Node 20 不展开 glob，会直接报 `Could not find '.../test/*.test.mjs'`；引号里的通配符只有 Node 22+ 认。CI 就是被这条拖红的。
+- **别写成 `node --test "test/*.test.mjs"`**：更老的 Node 20 不展开 glob，会直接报 `Could not find '.../test/*.test.mjs'`；引号里的通配符从 Node 22 起才认。CI 就是被这条拖红的。
 - **也别写成 `node --test test/`**（目录形式）：Node 26 + Windows 下报 `MODULE_NOT_FOUND`，沙箱里还会 `spawn EPERM`。
 - **沙箱 / 受限环境**：用 `node --test --test-isolation=none`，或逐文件跑（全量约 105 秒）。
 - **`--test-isolation=none` 有跨文件假红**：ULID、cover、growth_commit、坏 JSON、seen、withWake、ops_*、turn/end、wake 那几条会因共享进程互相干扰而报错，单跑对应文件是绿的。判断是不是假红：逐文件独立进程跑一遍，全绿即假红。
 - **`test/media.test.mjs` 的 `detectFfmpeg` 依赖 spawn**，在禁 spawn 的环境里会红（`spawnSync ... EPERM`）。这是环境限制，不是代码问题——但**不许**为了让它变绿而删掉那条断言。
 
-CI 也跑同一套（`.github/workflows/test.yml`，Node 20 / 22 / 24 各跑一遍）。
+CI 也跑同一套（`.github/workflows/test.yml`，Node 22 / 24 各跑一遍，Windows 再单独一轮）。
 
 ## 7. QQ 只接 OneBot，不内置 QQ 协议
 
