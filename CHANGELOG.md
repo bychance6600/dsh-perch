@@ -34,6 +34,14 @@
 - **浏览器通道补齐 `evaluate`**：之前 `browseFeed` 与打开/评论都在调一个不存在的 `evaluate`，所以一直回 `no-transport`；这次补上，并加了网络事件的开启与读取。
 - **开发态也能用抖音子包**：包名解析不到时回落到仓库里的 `packages/dsh-roost-douyin/`，和分镜模块同一个口径。
 
+### 清理
+
+- **删除清单逐条核过**：自更新、B 站私信、抖音私信、评论、旁听、导入卡、桌面通知、出门/请神七件套都不在仓库里，也没有路由、配置键或界面入口；留下的导入标记只用于不误读旧事件流，不是可用入口。
+- **清掉死代码**：观测台 `/status` 里那段恒为 null 的 `away`、`rejectNoteToHome`、配置里的 `outing`、存储层的 `outsideSessions` 与按会话盖 `influence:none` 的整段、主动说话的 `away/rested` 死分支；出门/请神的隔离带测试一并删除。
+- **旧文案**：定时提醒说明书不再提「出门/请神」，改成「到点时正在歇着或手上正忙，就先记下」；设置页不再有「这条对话现在由她来答」，分组「能不能出门」改「能不能上网」。
+- **数据说明**：`说明.md` 的数据表换成现在真有的文件，不再列纪念品、出门台账、会话便签这些已经不存在的东西。
+- 新增 `test/leftovers.test.mjs` 2 条，守住「已删模块 / 旧配置键 / 旧界面字样」不再回来。
+
 ### 看画面
 
 - **不再均匀抽帧**：先抽 96px 小图算灰指纹，按画面变化挑切点，再把切点附近的画面拼成故事板；每格带格号与时间码，格底画这一段的声音波形。故事板是一次采样，不是整条视频。
@@ -120,4 +128,4 @@
 ### 兼容
 
 - `dsh >=0.2.0-rc.1 <0.3.0-0`，Node ≥ 22；`dependencies` / `peerDependencies` / `devDependencies` 仍为空。
-- 测试基线：`node --test --test-isolation=none` → 1254 条 / 1243 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。
+- 测试基线：`node --test --test-isolation=none` → 1251 条 / 1240 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。

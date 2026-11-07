@@ -36,14 +36,14 @@ function fakeCtx({ answer = null, agents = true, service = true, onAsk = null } 
       ask: async (request) => {
         seen.push(request)
         if (onAsk) return onAsk(request)
-        return answer ?? { answers: [{ id: 'keepsake', selected: ['准了'] }] }
+        return answer ?? { answers: [{ id: 'note', selected: ['准了'] }] }
       },
     }
   }
   return { ctx, agent, seen }
 }
 
-const ONE = [{ id: 'keepsake', header: '想带回家', question: '行吗', options: [{ label: '准了' }, { label: '算了' }] }]
+const ONE = [{ id: 'note', header: '要这个', question: '行吗', options: [{ label: '准了' }, { label: '算了' }] }]
 
 test('askInChat：空问题不打扰宿主，直接说没问', async () => {
   const { ctx, seen } = fakeCtx()
@@ -113,11 +113,11 @@ test('askInChat：给了空答案也算没问到', async () => {
 })
 
 test('picked：取选中的第一个，没有就退回自定义输入，再没有就是空', () => {
-  assert.equal(picked([{ id: 'keepsake', selected: ['准了'] }], 'keepsake'), '准了')
-  assert.equal(picked([{ id: 'keepsake', selected: [] }], 'keepsake'), '')
-  assert.equal(picked([{ id: 'keepsake', selected: [], custom: ' 我自己说 ' }], 'keepsake'), '我自己说')
-  assert.equal(picked([{ id: 'other', selected: ['准了'] }], 'keepsake'), '')
-  assert.equal(picked(undefined, 'keepsake'), '')
+  assert.equal(picked([{ id: 'note', selected: ['准了'] }], 'note'), '准了')
+  assert.equal(picked([{ id: 'note', selected: [] }], 'note'), '')
+  assert.equal(picked([{ id: 'note', selected: [], custom: ' 我自己说 ' }], 'note'), '我自己说')
+  assert.equal(picked([{ id: 'other', selected: ['准了'] }], 'note'), '')
+  assert.equal(picked(undefined, 'note'), '')
 })
 
 test('askInChat：默认等 5 分钟', () => {

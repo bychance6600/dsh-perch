@@ -85,8 +85,6 @@ test('六种不该开口的情况各有各的理由，别混成一句「不到�
   const quiet = [ev({ ts: old })]
 
   assert.match(proactiveState({ config: {}, events: quiet, now }).why, /关着/)
-  assert.match(proactiveState({ config: ON, events: quiet, now, away: { kind: 'outing' } }).why, /不在家/)
-  assert.match(proactiveState({ config: ON, events: quiet, now, rested: true }).why, /请了假/)
 
   const used = [ev({ ts: old }), ev({ id: 'ev_t1', type: 'meta', text: `proactive-turn:${dateKey(new Date(now))}:1`, ts: new Date(now - 3 * 3_600_000).toISOString() }), ev({ id: 'ev_t2', type: 'meta', text: `proactive-turn:${dateKey(new Date(now))}:2`, ts: new Date(now - 2 * 3_600_000).toISOString() })]
   assert.match(proactiveState({ config: ON, events: used, now }).why, /上限/)

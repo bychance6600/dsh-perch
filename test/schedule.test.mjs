@@ -5,7 +5,7 @@
  * 固定框的提醒以 user 消息投回**创建它的那条会话**。插件这边做三件事：
  *   1. 默认**不**把 `schedule_*` 放进她的工具面（用户 m04504：默认工具数不变，
  *      谁想用谁自己加白名单）——但用户加进 `config.tools.allow` 之后必须真的生效；
- *   2. 只有放行时才告诉她怎么定、到点怎么做（「出门/请神/歇着时先记下别做」）；
+ *   2. 只有放行时才告诉她怎么定、到点怎么做（「歇着时先记下别做」）；
  *   3. 别把定时消息算成主人说话（turns 的轮数）。
  *
  * 宿主侧行为（投递、框、时区）不在这里测——那是宿主的事，真验证要靠真机建一条任务。
@@ -37,11 +37,11 @@ test('用户放行之后，「我手边有什么」那一段会把它念出来',
   assert.ok(!toolSurfaceText(HER_TOOLS).includes('schedule_create'), '没放行时不许提')
 })
 
-test('说明书讲清三件事：怎么定、到点怎么做、出门时先别做', () => {
+test('说明书讲清三件事：怎么定、到点怎么做、歇着时先别做', () => {
   assert.ok(SCHEDULE_BRIEF.includes('schedule_create'))
   assert.ok(/每天|daily|at/.test(SCHEDULE_BRIEF), '得写清时间怎么写')
   assert.ok(SCHEDULE_BRIEF.includes('定时消息'), '到点来的是什么，要先说清')
-  assert.ok(SCHEDULE_BRIEF.includes('出门'), '宿主投递不经过插件的闸门，这条只能靠她记住')
+  assert.ok(SCHEDULE_BRIEF.includes('歇着'), '宿主投递不经过插件的闸门，这条只能靠她记住')
   assert.ok(SCHEDULE_BRIEF.includes('不替你记成长'), '别让她以为提醒做完就自动算成长')
 })
 

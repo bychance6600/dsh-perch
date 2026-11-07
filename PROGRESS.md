@@ -4,7 +4,7 @@
 
 **0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过，正在按清单往下施工）。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1254 条 / 1243 过 / 9 红**（另有 2 skip，2026-11-07 A8 之后，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1251 条 / 1240 过 / 9 红**（另有 2 skip，2026-11-07 A15 之后，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
 
@@ -52,7 +52,7 @@
 
 ## 之后（按顺序）
 
-1. ~~A27~~ ✅ ~~A28~~ ✅ ~~A29~~ ✅ ~~A30~~ ✅ ~~A17~~ ✅ ~~A18~~ ✅ ~~A12~~ ✅ ~~A19~~ ✅ ~~A20~~ ✅ ~~A31~~ ✅ ~~A32~~ ✅ ~~A33~~ ✅；~~A8~~ ✅；~~A13~~ ✅ ~~A14~~ ✅；A10 随 A20 逐条核。
+1. ~~A27~~ ✅ ~~A28~~ ✅ ~~A29~~ ✅ ~~A30~~ ✅ ~~A17~~ ✅ ~~A18~~ ✅ ~~A12~~ ✅ ~~A19~~ ✅ ~~A20~~ ✅ ~~A31~~ ✅ ~~A32~~ ✅ ~~A33~~ ✅；~~A8~~ ✅；~~A13~~ ✅ ~~A14~~ ✅；~~A15~~ ✅；A10 随 A20 逐条核。
 2. 全做完再回头补 B 段的 19 条验收。
 
 ## 交接（2026-11-06 23:50，A 段进行中）
@@ -323,6 +323,17 @@
 - 真机冒烟：ffmpeg 造 3 秒 testsrc，注入假 view 调 `grabFrames(frames:6,boards:2)`，出 2 张 922×518、3+3 格，格号与时间码可读。
 - 全量 1254 条 / 1243 过 / 9 红 / 2 skip（/tmp/full-A8.log）；9 红与已知环境红逐条同名。
 
+**删除清单复核（2026-11-07，已完 A15）**
+
+- 问题：设计 §二的 12 行删除清单（自更新、B 站私信、抖音渠道壳、评论、出门/请神、旧版本记录、旧素材、仓库垃圾、兼容分支、旁听、导入卡、桌面通知）只做过「文件删了」，没有逐条核路由、配置键、界面、测试、文档残留；实测还找出几处死代码与旧文案。
+- 12 行结论：① 自更新 `update.js`/`selfupdate.js` 不存在；② B 站私信 `channels/bili.js` 不存在，B 站只剩公开接口与扫码登录；③ 抖音 `channels/douyin.js` 无 `send`/`onMessage`，只留 `start/stop/status/api()/feed()`；④ 评论 `comment.js` 不存在，`bili_look what=comments` 是只读看评论；⑤ 出门/请神七件套与其死代码已清；⑥ 根目录无 `RELEASE-NOTES-*`；⑦ `media/` 只剩两张原理图；⑧ 仓库垃圾（`PROBE`、截图脚本、`.tmp-plugins.json`）不在树里；⑨ 导入功能已删，只保留 `import-mark` 的只读兼容（不是入口）；⑩ 旁听 `hear.js` 与界面字样已清；⑪ 导入卡已删，`/import` 现在只导世界书；⑫ 桌面通知 `notify.js` 已删，调度注释改成「只写报告，不弹通知」。
+- 删掉的死代码：`lib/observe.js` 的 `/status` 里未定义的 `awayNow/awayLine/tripDays` 块（被 try/catch 吞掉、`away` 恒 null）、`rejectNoteToHome` 与它引用的四个不存在函数、死 import `lettersSince`；`lib/settings.js` 的 `DEFAULTS.outing` 与归一化；`lib/store.js` 的 `outsideSessions()` 与 appendEvent 里按 sessionId 盖 `influence:'none'` 的整段；`lib/proactive.js` 的 `away/rested` 参数与两个死分支；`test/isolation.test.mjs` 5 条。
+- 旧文案：`persona.js` 的定时提醒说明书不再写「出门/请神」，改成「到点时你正在歇着或手上正忙，就先记下」；`client.js` 删 `st.away.line` 与「这条对话现在由她来答」，分组「能不能出门」改「能不能上网」；`scheduler`/`restrict`/`schema`/`sessiontitle`/`herdiary` 的陈旧注释一并清。
+- 说明表：`lib/readme.js` 的 `README_VERSION` 2→3，数据表换成实际文件（`qq-wal.jsonl`、`qq-outbox.jsonl`、`douyin-profile/`、`home.json`、`people.json`、`notes.json`、`journal.json` 等），不再列 `keepsakes/`、`outings.json`、`possessions.json`、`session-notes.json`。
+- 兼容：`lib/derive.js` 的 `IMPORT_NAME_PREFIX`/`IMPORT_MARK_PREFIX` 与 `importedPersona` 读取仍保留，但导入功能没有任何入口；它只用来不误读旧事件流，不是可用的入口。
+- 测试：新增 `test/leftovers.test.mjs` 2 条（已删模块/配置键/界面字样不在；`readme.js` 数据表是实际文件）；定向 derive/proactive/settings/paths/client/p1/log/principle/askinchat/outside-surface/leftovers/schedule 全绿。
+- 全量 1251 条 / 1240 过 / 9 红 / 2 skip（/tmp/full-A15.log），9 红与已知环境红逐条同名。基线从 1254 降到 1251 = 删 `isolation` 5 条 + 新增 2 条。
+
 **原理页与反馈页收尾（2026-11-07，已完 A13/A14）**
 
 - A13：`lib/client.js` 的 `principlePage` 还在，两张原理图仍走 `/media/principle-loop.svg` 与 `/media/principle-memory.svg`（`lib/observe.js` 的 `/media` 白名单只放这两张），缩放 / 拖动 / `Esc` 由 `test/principle.test.mjs`、`test/principle-zoom.test.mjs` 守着。本轮验收是「页面还在，内容不更新」，所以没改理论卡；等代码定型后再按新库重写、给卡片标文件与行号。
@@ -332,7 +343,7 @@
 **下一步顺序**
 
 1. ~~A11 收尾~~：已 ✅。~~A21~~：已 ✅。~~A34 改名~~：已 ✅。~~A35 名字变量~~：已 ✅。
-2. ~~A22~~：已 ✅。~~A23~~：已 ✅。~~A24~~：已 ✅。~~A25~~：已 ✅。~~A26~~：已 ✅。~~A27~~：已 ✅。~~A28~~：已 ✅。~~A29~~：已 ✅。~~A30~~：已 ✅。~~A17~~：已 ✅。~~A18~~：已 ✅。~~A12~~：已 ✅。~~A19~~：已 ✅。~~A20~~：已 ✅。~~A31~~：已 ✅。~~A32~~：已 ✅。~~A33~~：已 ✅。~~A8~~：已 ✅。~~A13~~：已 ✅。~~A14~~：已 ✅。A10 随 A20 逐条核。
+2. ~~A22~~：已 ✅。~~A23~~：已 ✅。~~A24~~：已 ✅。~~A25~~：已 ✅。~~A26~~：已 ✅。~~A27~~：已 ✅。~~A28~~：已 ✅。~~A29~~：已 ✅。~~A30~~：已 ✅。~~A17~~：已 ✅。~~A18~~：已 ✅。~~A12~~：已 ✅。~~A19~~：已 ✅。~~A20~~：已 ✅。~~A31~~：已 ✅。~~A32~~：已 ✅。~~A33~~：已 ✅。~~A8~~：已 ✅。~~A13~~：已 ✅。~~A14~~：已 ✅。~~A15~~：已 ✅。A10 随 A20 逐条核。
 3. A1 真机拔网验收并入 A11 之后（代码与模拟已过）。
 
 **环境注意**

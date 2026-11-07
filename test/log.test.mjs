@@ -108,7 +108,7 @@ test('裸长串也抹：40 位以上且字母数字混杂的当凭据处理', ()
 test('自家的会话 id 与事件 id 不能被当成凭据抹掉（2026-10-29 用户 m02241）', () => {
   // 病根：规则②「40 位以上字母数字混杂」把 `session-<uuid>` 整条抹成 ***，
   // 于是日志里到处是「会话 ***」「woke ***」，要查「是哪条会话出的问题」时
-  // 日志一个字都给不出，只能翻 outings.json 反推。
+  // 日志一个字都给不出，查不到是哪条会话出的问题。
   const sid = 'session-058a9c4d-0999-4772-8264-c289f799fd09'
   assert.equal(scrub(`出门：装配完成 会话 ${sid}`), `出门：装配完成 会话 ${sid}`)
   assert.equal(scrub('woke session-abc123 test_first'), 'woke session-abc123 test_first')

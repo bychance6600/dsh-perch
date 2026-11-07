@@ -44,8 +44,6 @@ test('stampOf 只算 day/stage，过滤口径与 deriveSelf 一致（A28）', ()
     ev('ev_social', 'utterance', 10, '群里听来的', { influence: 'social' }),
     ev('ev_none', 'utterance', 10, '隔离带里的', { influence: 'none' }),
     ev('ev_dream', 'dream', 10, '一个梦'),
-    ev('ev_x', 'utterance', 10, '被驳回的'),
-    ev('ev_rej', 'meta', 1, 'outing-reject:ev_x', { source: 'system' }),
   ]
   const now = T0 + 10 * DAY_MS
   const stamp = stampOf(events, { stageSpanDays: 30, now })

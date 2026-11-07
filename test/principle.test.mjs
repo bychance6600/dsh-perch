@@ -61,18 +61,14 @@ test('出图走服务端白名单路由，客户端不内联图', async () => {
   assert.ok(!cl.includes('<svg'), '客户端里不许内联 SVG（会让 bundle 无谓变大）')
 })
 
-test('页签顺序：插件 → 原理 → 数据 → 反馈；出门排在「上网」和「记忆」中间（对所有人可见）', async () => {
+test('页签顺序：按她的一天排，原理在插件之后、数据之前（2026-11-06）', async () => {
   const cl = await readFile(CLIENT, 'utf8')
   const tabs = cl.match(/const TABS = \[([\s\S]*?)\n {6}\]/)
   assert.ok(tabs, '必须能定位到 TABS')
   const ids = [...tabs[1].matchAll(/\['([a-z]+)', '[^']+'\]/g)].map((m) => m[1])
-  // 2026-10-28 用户要求加第 9 个页签「反馈」（开发者 QQ + 交流群二维码），排在最后；
-  // 出门页从 2026-10-30（用户 m01904）起对所有人可见，2026-10-30（m02207）挪到「上网」和「记忆」之间。
-  // 2026-11-02（合并版）：加「渠道」页，紧跟「出门」——两者都是她跟外面打交道，
-  // 出门是去干活、渠道是会说话并记住人。它同样常驻、不进自动保存页签。
-  // 2026-11-02（用户 m02861）：出门不再是独立页签，并入「上网」底部；它原来的位置换成「社会」——
-  // 社会层是她在外面学到的东西，跟渠道是同一类（跟外面打交道）。社会页只读，开闸只能她自己按。
   // 2026-11-06（0.1.0 重建）：按她的一天排；今天在最前也是默认页，记忆并进成长与数据。
+  // 社会页只读，开闸只能她自己按；渠道页只放「在哪、开不开、多久一次」。
+  // 2026-11-07（A15）：出门/请神已删，页签里不再有它。
   assert.deepEqual(ids, ['today', 'now', 'grow', 'home', 'social', 'bili', 'channels', 'env', 'principle', 'data', 'feedback'])
   assert.ok(cl.includes("channels: '渠道："), 'TAB_HELP 必须有渠道页说明')
   assert.ok(cl.includes("showTab('channels') ? channelsPage : null"), '渠道页要挂进渲染树')
@@ -83,8 +79,6 @@ test('页签顺序：插件 → 原理 → 数据 → 反馈；出门排在「�
   // 2026-11-06：出门（含「先确认一下」那套一次性确认）整块删掉了，相关断言一并作废。
   assert.ok(cl.includes('...TABS.map(([id, name]) =>'), '页签栏不过滤')
 
-  // 动作面板不是配置：不许进 AUTO_SAVE_TABS（否则会多一句「改完就生效」的错误提示）
-  assert.ok(!/AUTO_SAVE_TABS = new Set\(.*outing/.test(cl), '出门不进自动保存页签')
   assert.ok(cl.includes("principle: '原理："), 'TAB_HELP 必须有原理页说明')
   assert.ok(cl.includes("showTab('principle') ? principlePage : null"), '必须真的挂上渲染')
   assert.ok(cl.indexOf("showTab('principle')") > cl.indexOf("showTab('env')"), '原理在插件之后')
