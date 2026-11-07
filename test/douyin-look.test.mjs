@@ -20,6 +20,7 @@ import {
   normalizeComments,
   renderComments,
 } from '../lib/douyinlook.js'
+import { makeStoryboard } from '../packages/dsh-roost-douyin/storyboard.js'
 
 const FEED = {
   aweme_list: [
@@ -151,7 +152,7 @@ test('注册的工具名与说明', async () => {
   assert.equal(regs[0].name, 'douyin_look')
   assert.match(regs[0].description, /推荐流/)
   assert.match(regs[0].description, /按这个词去找/)
-  assert.match(regs[0].description, /截三帧/)
+  assert.match(regs[0].description, /故事板/)
   assert.match(regs[0].description, /index/)
 })
 
@@ -204,7 +205,7 @@ test('open：按词找到之后真去打开第一条，拿不到画面就说没�
   const root = tmpRoot()
   const r = await lookFeedOnce({ root, cfg: cfgOn, transport: t, keyword: '徒步', open: true, waitMs: 0 })
   assert.equal(r.ok, true)
-  assert.match(r.text, /你打开的是第一条/)
+  assert.match(r.text, /你打开的是第 1 条/)
   assert.match(r.text, /画面没截到/)
   const lines = fs.readFileSync(path.join(root, 'events.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l))
   // 自己挑出来打开的那一条记 from:pick（A7）；搜过的词另记一行 searched。
@@ -212,6 +213,34 @@ test('open：按词找到之后真去打开第一条，拿不到画面就说没�
   assert.ok(lines.some((e) => String(e.text) === 'searched:徒步 douyin'))
 })
 
+
+test('what=zoom：从本地故事板取一格原图，不开浏览器、不碰平台', async () => {
+  const root = tmpRoot()
+  const made = await makeStoryboard({
+    bin: 'ffmpeg',
+    input: 'fake.mp4',
+    duration: 12,
+    outDir: path.join(root, 'media'),
+    id: '7703602183127797026',
+    count: 4,
+    extract: async () => ({ ok: true, width: 320, height: 568, data: Buffer.alloc(320 * 568 * 3, 90) }),
+  })
+  assert.equal(made.ok, true)
+  const r = await lookFeedOnce({ root, what: 'zoom', sampleId: made.sampleId, cell: 2, waitMs: 0 })
+  assert.equal(r.ok, true)
+  assert.match(r.text, /第 2 格/)
+  assert.match(r.text, /0:04/)
+  assert.ok(r.text.includes(made.cells[1].src))
+  const bad = await lookFeedOnce({ root, what: 'zoom', sampleId: made.sampleId, cell: 99, waitMs: 0 })
+  assert.equal(bad.ok, false)
+  assert.match(bad.note, /没有第 99 格/)
+})
+
+test('what=zoom：号不对就说这张不在了，不假装取到', async () => {
+  const r = await lookFeedOnce({ root: tmpRoot(), what: 'zoom', sampleId: 'deadbeef', cell: 1, waitMs: 0 })
+  assert.equal(r.ok, false)
+  assert.match(r.note, /不在了/)
+})
 
 // ── A9 热榜：不登录、每天一次、账与 dyfeed 分开 ──
 

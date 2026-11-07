@@ -4,7 +4,7 @@
 
 **0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。能跑测试，没上真机。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1184 条 / 1170 过 / 11 红**（另有 3 skip，2026-11-07 A24 之后）。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1195 条 / 1183 过 / 10 红**（另有 2 skip，2026-11-07 A25 之后，本机已装运行时 ffmpeg）。没装 ffmpeg 时是 11 红 / 3 skip，多出来的是 `dylink` 那条 Referer（先报「没找到 ffmpeg」）。全量约 110 秒。
 - 11 条红都是已知环境项：`test/dylink.test.mjs` 的「下视频要带 Referer」（先探测 ffmpeg，沙箱里 `spawnSync EPERM`），其余为跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、ops_*_own、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
 
@@ -186,10 +186,19 @@
 - `lib/scheduler.js` 把 `trigger`（manual/wake）与 `now` 传给 `gather`，手动按钮与自然醒来在账上分得开。
 - 测试：`test/newspaper.test.mjs` 6 条（空表读写、过期只留历史、坏行报错、坏表不推且不调平台、成功账本三件、事件流为空仍靠 seen.md 挡住）。全量 1184 / 1170 / 11 / 3 skip，11 红与已知环境红同名。
 
+**抖音分镜（2026-11-07，已完 A25）**
+
+- 借 dsh-douyin-agent 的「格编号 + 时间码 + 像素预算 480000 + zoom 按 sampleId+cell 回原图」，但 roost 没有视觉模型循环，所以「每次模型调用计入预算」落成她调 `douyin_look` 的次数：`MAX_CALLS=6`，放大另有 `MAX_ZOOMS=3`，连续 `MAX_INVALID=3` 次无效格号关闭这次观看。
+- 新增 `packages/dsh-roost-douyin/storyboard.js`：零依赖自己编 PNG（`zlib.deflateSync` + CRC32），ffmpeg 只解 rawvideo；`composeBoard` 保证整图像素数 ≤ 480000，格号与时间码画进格子，奇数格补灰；`makeStoryboard` 均匀取每段中点，落故事板与每格原图（TTL 2 小时）；`zoomSample` 只读本地 sample，不开浏览器。
+- `lib/dylink.js` 加 `storyboardOf` / `zoomDouyinSample`；`lib/douyinlook.js` 的 `open` 改拼故事板并给 `sample_id`，新增 `what=zoom` + `sample_id` + `cell`；旧子包没有 storyboard.js 时退回三帧截图，不硬失败。
+- 这块不改平台调用方式：故事板是一次采样，不是整条视频；她要看某一格的原图，再单独要一次，且次数有上限。
+- 测试：`test/storyboard.test.mjs` 9 条；`test/douyin-look.test.mjs` 新增 2 条（what=zoom 从本地样本取原图、号不对不假装取到），两条旧断言随文案改（描述从「截三帧」改「故事板」，打开文本从「第一条」改「第 1 条」）。全量 1195 / 1183 / 10 / 2 skip（本机装了运行时 ffmpeg，`dylink` 的 Referer 那条由红转绿；没装时 11 红 / 3 skip）。其余 10 红与已知环境红同名。
+- 运行时 ffmpeg 已放进 `bin/win32-x64/ffmpeg.exe`（101M，从旧 river 拷来，`bin/` 在 .gitignore 里）。真片冒烟：10 秒 testsrc2 → 6 格故事板 424×1129（478696 像素），zoom 第 3 格取回 720×1280 原图；格号与时间码都清楚。
+
 **下一步顺序**
 
 1. ~~A11 收尾~~：已 ✅。~~A21~~：已 ✅。~~A34 改名~~：已 ✅。~~A35 名字变量~~：已 ✅。
-2. ~~A22~~：已 ✅。~~A23~~：已 ✅。~~A24~~：已 ✅。A25（抖音分镜）→ A26 → A27 → A28 → A29 → A30 → A17 → A18 → A12 → A19 → A20 → A31 → A32 → A33（A8 单独一轮；A13/A14 收尾；A10 随 A20 逐条核）。
+2. ~~A22~~：已 ✅。~~A23~~：已 ✅。~~A24~~：已 ✅。~~A25~~：已 ✅。A26 → A27 → A28 → A29 → A30 → A17 → A18 → A12 → A19 → A20 → A31 → A32 → A33（A8 单独一轮；A13/A14 收尾；A10 随 A20 逐条核）。
 3. A1 真机拔网验收并入 A11 之后（代码与模拟已过）。
 
 **环境注意**
