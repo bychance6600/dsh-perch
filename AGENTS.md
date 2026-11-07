@@ -9,7 +9,7 @@
 > - **导入别人养过的那一位**（旧 0.5.3 例外）已删除。人格入口现在没有任何用户可填的地方。
 > - **桌面通知**（`notify.js`）与 **自更新**（`update.js`/`selfupdate.js`）已删除。
 > - 数据目录是 `~/.dsh-roost`；包名 `dsh-roost`；版本从 `0.1.0` 重新起。
-> - 测试基线以 `node --test --test-isolation=none` 的实测为准（当前 1267 条 / 1256 过 / 9 条已知环境红，见 `PROGRESS.md`），不要再引用 1359。
+> - 测试基线以 `node --test --test-isolation=none` 的实测为准（当前 1268 条 / 1257 过 / 9 条已知环境红，见 `PROGRESS.md`），不要再引用 1359。
 > - 「三道门」统一叫「三道瓶颈」；「四道门」统一叫「四道阶段」。文案守门规则不变。
 
 违背下面任何一条，即使测试全绿也算改坏了：这几条守的不是代码正确性，是**这个插件还是不是它自己**。
@@ -44,10 +44,11 @@
 | 不能读自己的数值与设定（能看自己说过什么） | `lib/rules.js` 的 `no-read-self`（物理层，`section: null`，**不进提示词**）；工具侧由 `lib/restrict.js` 的 `HER_TOOLS` 收窄 | `test/rules.test.mjs` + `test/restrict.test.mjs` |
 | 不能调工具改自己 | `lib/rules.js` 的 `no-self-modify`（物理层，同样不进提示词）；写入侧入口是 `lib/capture.js` 的 `growth_commit`（判断）与 `lib/herdiary.js` 的 `write_diary`（日记） | `test/rules.test.mjs` + `test/capture.test.mjs` |
 
-两条实现原则，改代码时别破坏：
+三条实现原则，改代码时别破坏：
 
 - **物理层与契约层不进提示词。** 写「你不可以读设定」等于告诉她「旁边有份设定，很关键」——那是诱因，不是防线。靠代码不给路径、不给工具来保证。
 - **不要绕过 `lib/guard.js`。** 她是"根本没看见"重塑人格那句话，不是"看见了但被劝住"。任何新的输入口（新工具、新接口、新外部文本源）都必须过 `guard.js`；秘密外发（cookie / token / `sk-` / Bearer / 长 base64）在这里一律拦下。
+- **不要把通用文件 / 命令工具放进 `config.tools.allow`。** `read` / `write` / `edit` / `glob` / `grep` / `bash` / `run_code` 这类不是按目录授权的：一放行，她就能读到 `~/.dsh-roost/home/她的身份.md`、配置和状态，等于绕过 `no-read-self`；写入类还能绕过 `no-self-modify`。要看某个项目的源码，给她 `web_fetch` 从 GitHub 读，或者单独做一个只读的小工具。
 
 ## 4. 文案有守门词，改之前先看测试
 
@@ -75,7 +76,7 @@
 node --test
 ```
 
-当前基线 **1267 个**（2 条 skip），其中 **9 条已知环境红**见 `PROGRESS.md`。**不许新增红**——那 9 条是跨文件隔离造成的（`withFileLock` 偶发），谁修好都欢迎，但别把「我没碰它」当理由放着。
+当前基线 **1268 个**（2 条 skip），其中 **9 条已知环境红**见 `PROGRESS.md`。**不许新增红**——那 9 条是跨文件隔离造成的（`withFileLock` 偶发），谁修好都欢迎，但别把「我没碰它」当理由放着。
 
 按环境挑跑法：
 
@@ -97,6 +98,7 @@ CI 也跑同一套（`.github/workflows/test.yml`，Node 22 / 24 各跑一遍，
 - `config.tools.allow`（设置页「插件」页的工具表）放行的是**宿主工具名**，包括桥暴露的 `qq_send_message, qq_get_unread_messages, qq_reply`。名字对不上，她就会答「我没法在 QQ 上说话」——这不是插件坏了，是名字没对上。
 - 放行之后要念给她听：身份文档「我手上有什么」由 `lib/persona.js` 的 `toolBrief(extra)` 生成、`lib/selfdoc.js` 把 `config.tools.allow` 作为 `extraTools` 传进去。看不见一只手，她就不会用。
 - 白名单只做加法。`config.tools.allow` 与 `HER_TOOLS` 取并集，不要用它去减工具；收窄只走 `lib/restrict.js` 那一套。
+- **白名单不是万能口：不要放行通用文件 / 命令工具**（`read` / `write` / `edit` / `glob` / `grep` / `bash` / `run_code` 这类）。它们不是按目录授权的，一放行就能读到她的身份文档、配置和状态，正好绕过「不能读自己的数值与设定」；写入类还能绕过「不能调工具改自己」。要看某个项目的源码，给她 `web_fetch` 从 GitHub 读，或单独做一个只读小工具。理由与数据目录的界线见 §3。
 
 **其余平台同理**：Chatbox、Monica、AstrBot 这些客户端/框架也走「社区桥 + 白名单」这条路——不要把它们的协议塞进本插件，先找能桥过去的项目，再把工具名填进 `config.tools.allow`。
 
@@ -229,6 +231,6 @@ CI 也跑同一套（`.github/workflows/test.yml`，Node 22 / 24 各跑一遍，
 - [ ] 三个依赖字段还是 `{}`
 - [ ] 没有新增人格设置入口
 - [ ] 新输入口都过了 `guard.js`
-- [ ] `node --test --test-isolation=none` 只剩 9 条已知环境红（基线 1267 条 / 1256 过 / 2 skip）
+- [ ] `node --test --test-isolation=none` 只剩 9 条已知环境红（基线 1268 条 / 1257 过 / 2 skip）
 - [ ] 界面文案没有「他」「四道门」「三道门」「好感度」，也没有写死任何名字
 - [ ] 改了 `EVENT_SCHEMA_VERSION` 的话，`CHANGELOG.md` 里写了迁移说明

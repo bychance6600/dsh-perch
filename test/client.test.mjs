@@ -246,6 +246,14 @@ test('插件页的工具说明取自 registry，取不到只说来源（A27）',
   assert.ok(!/TOOL_HINTS\[name\]/.test(src), '未知工具不许再套旧表兜底')
 })
 
+test('插件页写明：通用文件与命令工具不是白名单该放的东西（2026-11-07）', async () => {
+  const src = await readFile(CLIENT, 'utf8')
+  assert.ok(src.includes('不要把通用文件与命令工具加进来'))
+  assert.ok(src.includes('不能读自己的数值与设定'), '理由要写清：这是 no-read-self 的边界')
+  assert.ok(src.includes('run_code'), '命令执行工具也要在警告里点名')
+  assert.ok(src.includes('web_fetch'), '要看源码，指向 web_fetch 这条路')
+})
+
 test('插件页：registry 有说明就照显示，没有就只说来源（A27）', async () => {
   const react = fakeReact({
     0: stateWith({
@@ -264,6 +272,7 @@ test('插件页：registry 有说明就照显示，没有就只说来源（A27�
   assert.ok(txt.includes('宿主自己写的一句说明'), '有说明就照 registry 的写')
   assert.ok(txt.includes('quiet_tool'), '没说明的工具也要列出来')
   assert.ok(txt.includes('来源：她自己那一层注册的'), 'own 层工具取不到说明时说来源')
+  assert.ok(txt.includes('不要把通用文件与命令工具加进来'), '工具表要写明哪些工具不该放行')
   assert.ok(!txt.includes('宿主按会话给的'), '不许再编一句「宿主按会话给的」')
 })
 

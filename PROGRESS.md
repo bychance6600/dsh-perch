@@ -4,9 +4,16 @@
 
 **0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过）。A 段 35 条与 B 段 19 条验收全部收口（A1 于 2026-11-07 16:12 真机通过）。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1267 条 / 1256 过 / 9 红**（另有 2 skip，2026-11-07 bili_watch 证书修完，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1268 条 / 1257 过 / 9 红**（另有 2 skip，2026-11-07 工具白名单警告后核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
+
+## 工具白名单的警告（2026-11-07）
+
+- 用户问「她要看 dsh-pet 项目要开什么工具」，答复是只开 `web_fetch`，不要开 read/glob/grep/bash；用户要求把这条写进项目，免得后面有人给授权时踩坑。
+- 落点：`AGENTS.md` §3 与 §7（通用文件/命令工具不放 `config.tools.allow`，它们不是按目录授权，会读到 `~/.dsh-roost/home/她的身份.md`、配置和状态，绕过 no-read-self；写入类还能绕过 no-self-modify）、`README.md` §八、设置页「插件」工具卡（`lib/client.js`），以及 `docs/约定清单.md` A27 与 `CHANGELOG.md`。
+- 只做用户可见的警告，不硬拦白名单：白名单本来就是显式放行口，硬拦会与「白名单只做加法」和现有 `ops_*` 用例冲突。要看某个项目的源码，给她 `web_fetch` 从 GitHub 读，或单独做只读小工具。
+- 测试：`test/client.test.mjs` 新增源码守门（警告含「不能读自己的数值与设定」「run_code」「web_fetch」），A27 渲染断言也检查警告；`p5` / `naming` / `client` 56/56。全量 **1268 条 / 1257 过 / 9 红 / 2 skip**（/tmp/full-toolwarning.log），9 红同名。
 
 ## B 段验收（2026-11-07）
 
