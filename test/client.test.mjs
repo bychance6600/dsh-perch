@@ -850,6 +850,40 @@ test('主动开口：没有总开关，也没有 minIdleHours 入口（A28）', 
 })
 
 // 2026-11-07（A29）：渠道页的「主人的 QQ 号」不再写 config，改存 owner.json。
+// 2026-11-07（A17）：数据页收口成九项，blockedCard 不再单开一张卡；
+// 它和「换家留痕」回答的是同一个问题——她现在住的这个家，是不是你以为的那个。
+test('数据页收口：九项都在，blockedCard 收进换家留痕（A17）', async () => {
+  const src = await readFile(CLIENT, 'utf8')
+  const at = src.indexOf('const dataPage')
+  assert.ok(at > 0)
+  const page = src.slice(at)
+
+  const nine = [
+    "group('数据在哪'",
+    "group('备份与恢复'",
+    "groupFull('每日报告'",
+    "group('运行日志导出'",
+    "group('换家留痕'",
+    "group('本插件工作自检'",
+    "group('记忆体检'",
+    'archivedCard,',
+    'resetCard)',
+  ]
+  for (const s of nine) assert.ok(page.includes(s), `数据页少了这一项：${s}`)
+
+  assert.ok(src.includes("h('h3', null, '会话归档')"), '会话归档要有自己的标题')
+  assert.ok(src.includes("h('h3', null, '从头开始')"), '从头开始要有自己的标题')
+  assert.ok(!src.includes('blockedCard'), 'blockedCard 不该再作为一个卡片/变量存在')
+  const atMove = page.indexOf("group('换家留痕'")
+  const atBlocked = page.indexOf('这个家在别处也开着', atMove)
+  const atCheck = page.indexOf("group('本插件工作自检'")
+  assert.ok(atCheck < atMove && atBlocked > atMove, '「在别处也开着」要收进换家留痕，换家排在自检之后、体检之前')
+
+  assert.ok(page.includes("'备份成一份文件'"), '备份按钮要在')
+  assert.ok(page.includes("'从备份恢复'"), '恢复按钮要在')
+  assert.equal((page.match(/group\('记忆体检'/g) || []).length, 1, '记忆体检只留一张卡')
+})
+
 test('渠道页的主人号走 /channels/owner，不再塞进 config（A29）', async () => {
   const src = await readFile(CLIENT, 'utf8')
   assert.ok(src.includes("jpost('/channels/owner'"), '要有按渠道存主人 id 的请求')

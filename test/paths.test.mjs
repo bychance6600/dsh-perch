@@ -74,7 +74,7 @@ test('服务端有 /paths，客户端不再自己拼路径', () => {
   assert.ok(CLIENT.includes('复制数据文件夹路径'))
 })
 
-test('「危险」页改名「数据」，仍是 8 个页签，排最后', () => {
+test('「危险」页改名「数据」，排最后', () => {
   assert.ok(CLIENT.includes("['data', '数据']"))
   assert.equal(CLIENT.includes("['danger'"), false)
   assert.ok(CLIENT.includes("showTab('data') ? dataPage : null"))
