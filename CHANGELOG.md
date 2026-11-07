@@ -13,6 +13,10 @@
 - **成长节奏的配置改名**：`growthDays` 改成 `stageSpanDays`——它只是「四个阶段一共多少天」的尺子，不是寿命上限。老配置里的 `growthDays` 在 `normalizeConfig` 里迁移一次（新旧都有时以新键为准，保存时清掉旧键）。`absence` / `ask` / `capture` 四处写事件信封不再跑完整 `deriveSelf`，改用只算 `{day,stage}` 的 `stampOf()`；过滤口径（驳回、梦、`influence:none`、非 constitution）收进 `constitutionEvents()` 与 `deriveSelf` 共用。主动说话默认隔 3 小时（内部值，不上界面），上限只留 1–6 且不设 0，界面不再有「允许她主动开口」总开关，文案写明「上限不是任务」。
 - **世界书**：面板从渠道页移到成长页；内容仍由会话侧生成、主人导入，插件不写。
 
+### 断线账
+
+- **断线那句挪到最新消息前**：原来写在提示词最上面，真机上她收到了「断了 47 秒」却没接；现在紧挨着最新一句，仍然只报一次，不写成要求。
+
 ### 渠道认证
 
 - **主人身份按渠道记，不混着比**：`owner.json` 新增 `channels`（QQ / B 站 / 抖音各一份 id 列表），设置页「渠道」的 QQ 主人号改走 `POST /channels/owner` 只写这一个渠道；`lib/channels/auth.js` 只拿当前消息所在的渠道去比对，同一个人在不同平台的 id 不会被认错。老配置里的 `channels.<渠道>.ownerId` 只在 `owner.json` 还没有该渠道键时兜底一次；空数组表示明确清掉，不会复活。认证（这句话算谁说的）留在渠道层，B 站 cookie 与登录仍只在 `owner.js`。

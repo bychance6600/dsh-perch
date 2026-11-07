@@ -331,6 +331,16 @@ test('buildPrompt：没断线时没有那句，断过才带上', () => {
   assert.equal(buildPrompt(msg, [], { isOwner: true }).includes('断了一下'), false)
   const text = buildPrompt(msg, [], { isOwner: true, offline: '刚才这边断了一下，断了 32 秒' })
   assert.match(text, /刚才这边断了一下，断了 32 秒/)
+
+  // 2026-11-07 真机：这句原来在提示词最上面，她收到了却没接；现在必须挨着最新一句。
+  const withHistory = buildPrompt(
+    msg,
+    [{ role: 'her', text: '嗯。' }, { role: 'me', text: '在吗' }],
+    { isOwner: true, offline: '刚才这边断了一下，断了 32 秒' },
+  )
+  const noteAt = withHistory.indexOf('（刚才这边断了一下')
+  assert.ok(noteAt > withHistory.lastIndexOf('（前面几句：'), '断线那句要排在历史之后')
+  assert.ok(noteAt < withHistory.lastIndexOf('（回不回'), '断线那句要挨着最新一句')
 })
 
 test('router：适配器报过断线，下一句之前带一句；同一段断线只带一次', async () => {
