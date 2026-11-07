@@ -47,6 +47,10 @@
 - **说法对齐**：「会话被收起来了」改「会话归档」；「重开一局」改「从头开始」。行为不变：旧档整体改名封存，不删；侧栏归档仍不会自己偷偷再开一局。
 - 记忆体检仍是一张只读卡：点一下才读账本，不写任何东西，不评价对错。
 
+### 上网
+
+- **上网页也能看到最近一次限流**：「网络环境（一般不用改）」折叠块里多一行——上一次被 B 站拦是什么时候、哪个返回码、连着第几次；冷却中就说还要多久，解冻了就写「已经解冻了」。今天页那行保留，两边说的是同一件事。折叠块仍然默认收起。
+
 ### 删除
 
 - 渠道：B 站私信、抖音私信/群（`lib/channels/bili.js`、抖音子包里的私信整机与相关测试已一并删除）。
@@ -74,4 +78,4 @@
 ### 兼容
 
 - `dsh >=0.2.0-rc.1 <0.3.0-0`，Node ≥ 22；`dependencies` / `peerDependencies` / `devDependencies` 仍为空。
-- 测试基线：`node --test --test-isolation=none` → 1222 条 / 1211 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。
+- 测试基线：`node --test --test-isolation=none` → 1223 条 / 1212 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。

@@ -77,6 +77,8 @@ test('风控：撞一次就冷却，且罚则逐次加长', async () => {
     assert.equal(s1.cooling, true)
     assert.equal(s1.strikes, 1)
     assert.equal(s1.remainMin, STRIKES_MIN[0])
+    // A18：设置页要能报出上一次撞墙的时间（/risk 直接展开 riskState）
+    assert.equal(s1.at, t0.toISOString())
 
     // 冷却期内再撞一次：台阶升到第二级
     noteRisk(root, -412, t0)
@@ -93,6 +95,7 @@ test('风控：撞一次就冷却，且罚则逐次加长', async () => {
     clearRisk(root)
     assert.equal(riskState(root, new Date()).cooling, false)
     assert.equal(riskState(root, new Date()).strikes, 0)
+    assert.equal(riskState(root, new Date()).at, '')
   } finally {
     await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
   }

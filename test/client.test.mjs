@@ -891,3 +891,19 @@ test('渠道页的主人号走 /channels/owner，不再塞进 config（A29）', 
   assert.ok(!src.includes("patchChannel('qq', { ownerId: v })"), '旧的 config 写法要删干净')
   assert.ok(!src.includes('chanSettings?.qq?.ownerId'), '初值不能还从 config 取')
 })
+
+test('网络环境折叠块报最后一次限流的时间与次数，默认收起（A18）', async () => {
+  const src = await readFile(CLIENT, 'utf8')
+  const atNet = src.indexOf('网络环境（一般不用改）')
+  assert.ok(atNet > 0)
+  const atDetails = src.lastIndexOf("h('details'", atNet)
+  assert.ok(atDetails > 0)
+  const block = src.slice(atDetails, atNet + 600)
+  assert.ok(!/open\s*:/.test(block), '这个折叠块要默认收起')
+  assert.ok(src.includes('最近一次被限流：'), '要报上一次撞墙')
+  assert.ok(src.includes('连着第'), '要报第几次')
+  assert.ok(src.includes('risk?.at'), '时间取自 /risk 的 at')
+  assert.ok(src.includes('已经解冻了'), '解冻了也要能看到上次是什么时候')
+  // 今天页那行还在（A18 不动它）
+  assert.ok(src.includes('todayData.hands.risk'), '今天页的限流行要保留')
+})
