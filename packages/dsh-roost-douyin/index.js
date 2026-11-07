@@ -125,6 +125,177 @@ export async function browseFeed({ transport, limit = 6, waitMs = 1800, sleep: s
   }
 }
 
+
+/** 网络请求 URL 里能当「当前在播」的 id：group_id / aweme_id / item_id，至少 15 位。 */
+export const CURRENT_ID_MARKS = ['group_id=', 'aweme_id=', 'item_id=']
+
+export function idFromUrl(url = '') {
+  let s = String(url ?? '')
+  try { s = decodeURIComponent(s) } catch { /* 原样找 */ }
+  for (const mark of CURRENT_ID_MARKS) {
+    const p = s.indexOf(mark)
+    if (p < 0) continue
+    const m = /^\d{15,25}/.exec(s.slice(p + mark.length))
+    if (m) return { id: m[0], mark }
+  }
+  return { id: '', mark: '' }
+}
+
+/** 从网络日志倒着找：最后一条带 id 的请求最接近此刻在播的那条。 */
+export function currentIdFromLog(entries = []) {
+  const list = Array.isArray(entries) ? entries : []
+  for (let i = list.length - 1; i >= 0; i--) {
+    const got = idFromUrl(list[i]?.url ?? list[i] ?? '')
+    if (got.id) return got
+  }
+  return { id: '', mark: '' }
+}
+
+/**
+ * 页面里那一小段：这个 id 在 DOM 里出现几次、正在播的 video 和它是不是同一块。
+ * 只在页面里数数，不点任何东西。
+ */
+export function currentPageScript(id = '') {
+  const want = JSON.stringify(String(id ?? ''))
+  return `(() => {
+    const id = ${want}
+    const html = document.documentElement.innerHTML
+    let hits = 0, i = 0
+    while ((i = html.indexOf(id, i)) >= 0) { hits += 1; i += id.length }
+    const vids = Array.from(document.querySelectorAll('video'))
+    const v = vids.find((x) => !x.paused) || vids[0] || null
+    let sameItem = false
+    if (v) {
+      const links = Array.from(document.querySelectorAll('a[href*="/video/"]'))
+      for (const a of links) {
+        const href = String(a.getAttribute('href') || '')
+        if (!href.includes(id)) continue
+        let el = a
+        for (let d = 0; d < 8 && el; d += 1, el = el.parentElement) {
+          if (el.contains(v)) { sameItem = true; break }
+        }
+        if (sameItem) break
+      }
+    }
+    const descEl = document.querySelector('[data-e2e="video-desc"], .video-info-detail, .xg-video-container h1')
+    return JSON.stringify({
+      hits,
+      playing: v ? !v.paused : false,
+      sameItem,
+      title: document.title || '',
+      desc: descEl ? String(descEl.innerText || '').trim().slice(0, 200) : '',
+    })
+  })()`
+}
+
+/** 没有 id 时也能说清楚页面在不在播、标题是什么。 */
+export function pageStateScript() {
+  return `(() => {
+    const vids = Array.from(document.querySelectorAll('video'))
+    const v = vids.find((x) => !x.paused) || vids[0] || null
+    const descEl = document.querySelector('[data-e2e="video-desc"], .video-info-detail, .xg-video-container h1')
+    return JSON.stringify({
+      playing: v ? !v.paused : false,
+      title: document.title || '',
+      desc: descEl ? String(descEl.innerText || '').trim().slice(0, 200) : '',
+    })
+  })()`
+}
+
+function parsePageValue(v) {
+  let x = v
+  if (typeof x === 'string') {
+    try { x = JSON.parse(x) } catch { return null }
+  }
+  return x && typeof x === 'object' ? x : null
+}
+
+async function readPage(transport, expression) {
+  try {
+    const r = await transport.evaluate(expression)
+    if (!r?.ok) return { ok: false, why: r?.why ?? '页面没回话' }
+    const page = parsePageValue(r.value)
+    return page ? { ok: true, page } : { ok: false, why: '页面回的不是可读的状态' }
+  } catch (err) {
+    return { ok: false, why: String(err?.message ?? err) }
+  }
+}
+
+/**
+ * 此刻正在播的那条视频的 aweme_id。
+ *
+ * 先看网络日志里最后一条带 group_id/aweme_id 的请求，再回页面里数这个 id：
+ *   · 页面里没有这个 id       → 疑似（可能拿到的是上一条，别当准）；
+ *   · 页面里有，但对不上正在播的 video → 也标成疑似；
+ *   · 都对得上                 → verified。
+ * 永不抛；拿不到就照实说拿不到。
+ */
+export async function currentId({ transport } = {}) {
+  if (!transport || typeof transport.evaluate !== 'function') {
+    return { ok: false, id: '', verified: false, why: '没有可用的浏览器通道' }
+  }
+  try {
+    if (typeof transport.enableNetwork === 'function') await transport.enableNetwork()
+  } catch { /* 网络日志拿不到就退到页面状态 */ }
+
+  let log = []
+  try {
+    if (typeof transport.networkLog === 'function') log = await transport.networkLog()
+  } catch { /* 同上 */ }
+  const hit = currentIdFromLog(log)
+  if (!hit.id) {
+    const st = await readPage(transport, pageStateScript())
+    return {
+      ok: false,
+      id: '',
+      verified: false,
+      why: '网络日志里还没有换片请求',
+      playing: st.ok ? Boolean(st.page.playing) : false,
+      title: st.ok ? String(st.page.title ?? '') : '',
+      desc: st.ok ? String(st.page.desc ?? '') : '',
+    }
+  }
+
+  const checked = await readPage(transport, currentPageScript(hit.id))
+  if (!checked.ok) {
+    return { ok: true, id: hit.id, source: hit.mark, verified: false, hits: -1, why: checked.why }
+  }
+  const page = checked.page
+  const hits = Number(page.hits ?? 0) || 0
+  const playing = Boolean(page.playing)
+  const sameItem = Boolean(page.sameItem)
+  const verified = hits > 0 && (!playing || sameItem)
+  let why = ''
+  if (hits <= 0) why = '页面上没找到这个 id'
+  else if (playing && !sameItem) why = '页面上有这个 id，但没对上正在播的那一块'
+  return {
+    ok: true,
+    id: hit.id,
+    source: hit.mark,
+    verified,
+    hits,
+    playing,
+    sameItem,
+    title: String(page.title ?? ''),
+    desc: String(page.desc ?? ''),
+    why,
+  }
+}
+
+/** 把 currentId 的结果说成两句人话；不确定就说不确定。 */
+export function renderCurrentId(got = {}) {
+  const title = got.title ? `\n页面标题：${got.title}` : ''
+  const desc = got.desc ? `\n文案：${got.desc}` : ''
+  if (!got.ok) {
+    return `没拿到当前在播的号（${got.why ?? '网络日志里还没有换片请求'}）。${title}${desc}\n滑一条再试；这一下先别当准。`
+  }
+  if (got.verified) {
+    const times = Number(got.hits ?? 0) > 0 ? `，页面上出现 ${got.hits} 次` : ''
+    return `当前在播的号：${got.id}（来源 ${got.source}${times}）${title}${desc}`
+  }
+  return `疑似当前在播的号：${got.id}（来源 ${got.source}；${got.why || '没能和画面对上'}）${title}${desc}\n可能拿到的是上一条；滑一下再试，先别拿它当准。`
+}
+
 /**
  * CDP 传输层。单拆出来是为了测试时可以整个换掉——
  * 渠道逻辑（去重、切段、退避）不该依赖「这台机器上有没有浏览器」。
@@ -135,6 +306,9 @@ export function createCdpTransport(opts = {}) {
   let nextId = 1
   const pending = new Map()
   let targetUrl = ''
+  let networkOn = false
+  const networkUrls = []
+  const eventHandlers = new Set()
 
   const port = Number(opts.debugPort ?? DEFAULTS.debugPort)
   const profileDir = opts.profileDir || path.join(os.tmpdir(), 'dsh-roost-douyin-profile')
@@ -185,6 +359,18 @@ export function createCdpTransport(opts = {}) {
           if (msg.error) p.reject(new Error(msg.error.message ?? 'cdp-error'))
           else p.resolve(msg.result)
           return
+        }
+        if (msg.method) {
+          if (msg.method === 'Network.requestWillBeSent') {
+            const url = String(msg.params?.request?.url ?? '')
+            if (url) {
+              networkUrls.push({ url, at: Date.now(), type: String(msg.params?.type ?? '') })
+              if (networkUrls.length > 120) networkUrls.shift()
+            }
+          }
+          for (const fn of eventHandlers) {
+            try { fn(msg) } catch { /* 监听器自己的错不影响传输 */ }
+          }
         }
       })
       sock.addEventListener('close', () => {
@@ -267,6 +453,45 @@ export function createCdpTransport(opts = {}) {
       }
     },
 
+    /** 在页面里跑一段表达式。awaitPromise 默认关，读 fetch 结果时显式打开。 */
+    async evaluate(expression, opts = {}) {
+      try {
+        const r = await send('Runtime.evaluate', {
+          expression,
+          returnByValue: true,
+          awaitPromise: Boolean(opts?.awaitPromise),
+        })
+        if (r?.exceptionDetails) return { ok: false, why: 'page-script-error', raw: r }
+        return { ok: true, value: r?.result?.value }
+      } catch (err) {
+        return { ok: false, why: String(err?.message ?? err) }
+      }
+    },
+
+    /** 开网络事件。只记请求 URL，不读响应体，也不碰凭据。 */
+    async enableNetwork() {
+      if (networkOn) return { ok: true }
+      try {
+        await send('Network.enable', { maxTotalBufferSize: 50000000 })
+        networkOn = true
+        return { ok: true }
+      } catch (err) {
+        return { ok: false, why: String(err?.message ?? err) }
+      }
+    },
+
+    /** 最近的请求 URL（最多 120 条），给「当前在播」反查用。 */
+    networkLog() {
+      return networkUrls.slice()
+    },
+
+    /** 监听 CDP 事件；返回取消监听的函数。 */
+    onEvent(fn) {
+      if (typeof fn !== 'function') return () => {}
+      eventHandlers.add(fn)
+      return () => eventHandlers.delete(fn)
+    },
+
     /**
      * 把窗口提到前台（2026-11-02 真机）。
      *
@@ -292,4 +517,4 @@ export function createCdpTransport(opts = {}) {
   }
 }
 
-export default { createCdpTransport, browseFeed, feedScript }
+export default { createCdpTransport, browseFeed, feedScript, currentId, renderCurrentId }

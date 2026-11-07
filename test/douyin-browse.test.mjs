@@ -85,6 +85,12 @@ test('loadDouyin：没装子包就整条路消失，不抛', async () => {
   assert.equal(await loadDouyin(async () => ({ browseFeed: () => {} })).then((m) => typeof m.browseFeed), 'function')
 })
 
+test('loadDouyin：包名解析不到时，回落到仓库里那一份（和分镜模块同一个口径）', async () => {
+  const mod = await loadDouyin()
+  assert.equal(typeof mod?.browseFeed, 'function')
+  assert.equal(typeof mod?.currentId, 'function')
+})
+
 test('记账分片：条目多的时候写多条 meta，前缀只有第一条是 dy-browse:', async () => {
   const root = await tmpRoot()
   const many = Array.from({ length: 12 }, (_, i) => ({ id: String(1000 + i), title: '标题'.repeat(20), author: 'a', like: '1', href: 'h' }))

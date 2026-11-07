@@ -4,8 +4,8 @@
 
 **0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。能跑测试，没上真机。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1195 条 / 1183 过 / 10 红**（另有 2 skip，2026-11-07 A25 之后，本机已装运行时 ffmpeg）。没装 ffmpeg 时是 11 红 / 3 skip，多出来的是 `dylink` 那条 Referer（先报「没找到 ffmpeg」）。全量约 110 秒。
-- 11 条红都是已知环境项：`test/dylink.test.mjs` 的「下视频要带 Referer」（先探测 ffmpeg，沙箱里 `spawnSync EPERM`），其余为跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、ops_*_own、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1201 条 / 1189 过 / 10 红**（另有 2 skip，2026-11-07 A26 之后，本机已装运行时 ffmpeg）。没装 ffmpeg 时是 11 红 / 3 skip，多出来的是 `dylink` 那条 Referer。全量约 110 秒。
+- 10 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、ops_*_own、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
 
 ## 已经做完
@@ -52,7 +52,7 @@
 
 ## 之后（按顺序）
 
-1. A24（判重表与执行记录）→ A25 → A26 → A27 → A28 → A29 → A30 → A17 → A18 → A12 → A19 → A20 → A31 → A32 → A33；A8（B 站分镜）单独一轮；A13/A14 收尾；A10 随 A20 逐条核。
+1. A27（插件页工具说明取 registry）→ A28 → A29 → A30 → A17 → A18 → A12 → A19 → A20 → A31 → A32 → A33；A8（B 站分镜）单独一轮；A13/A14 收尾；A10 随 A20 逐条核。
 2. 全做完再回头补 B 段的 19 条验收。
 
 ## 交接（2026-11-06 23:50，A 段进行中）
@@ -195,10 +195,19 @@
 - 测试：`test/storyboard.test.mjs` 9 条；`test/douyin-look.test.mjs` 新增 2 条（what=zoom 从本地样本取原图、号不对不假装取到），两条旧断言随文案改（描述从「截三帧」改「故事板」，打开文本从「第一条」改「第 1 条」）。全量 1195 / 1183 / 10 / 2 skip（本机装了运行时 ffmpeg，`dylink` 的 Referer 那条由红转绿；没装时 11 红 / 3 skip）。其余 10 红与已知环境红同名。
 - 运行时 ffmpeg 已放进 `bin/win32-x64/ffmpeg.exe`（101M，从旧 river 拷来，`bin/` 在 .gitignore 里）。真片冒烟：10 秒 testsrc2 → 6 格故事板 424×1129（478696 像素），zoom 第 3 格取回 720×1280 原图；格号与时间码都清楚。
 
+**抖音当前在播反查（2026-11-07，已完 A26）**
+
+- 问题：连续刷片之后，页面上的号可能还是上一条；拿错了就会把别人的文案、评论安到正在看的这条上。
+- CDP 传输层原来根本没有 `evaluate`，`browseFeed` 与 open/comments 一直在调一个不存在的方法（返回 `no-transport`）。这次补上 `evaluate`（Runtime.evaluate、`returnByValue`），并加 `enableNetwork`（`Network.enable`，缓冲 50MB）、`networkLog()`、`onEvent()`；`Network.requestWillBeSent` 只留 URL、时间与类型，最多 120 条。
+- 反查分两步：先从网络日志倒序找最后一条带 `group_id=` / `aweme_id=` / `item_id=` 的 URL，取后面 15–25 位数字当候选；再回页面数这个 id 在 `document.documentElement.innerHTML` 里出现几次，并沿 `a[href*="/video/"]` 向上 8 层看是否包住正在播的那个 `<video>`。`verified = hits>0 && (!playing || sameItem)`；页面里没有、或对不上正在播的那块，都只输出「疑似当前在播的号…可能拿到的是上一条，别当准」。
+- `douyin_look` 新增 `what=current`：每次是一间新浏览器（about:blank），所以先开网络日志、提前台、进推荐页（`channels.douyin.homeUrl`），等 1.8 秒再反查；不开 `open`、不碰点赞。`lib/douyinbrowse.js` 的 `loadDouyin` 改成没装子包时回落到 `../packages/dsh-roost-douyin/index.js`，开发态也能用。
+- 测试：`test/douyin-look.test.mjs` 4 条（从三种标记里认号、对上了才叫当前、页面没有/对不上只说疑似、没日志不编号），`test/douyin-browse.test.mjs` 1 条（包名解析不到时回落）。两文件 40/40；全量 1201 / 1189 / 10 / 2 skip，10 红与已知环境红同名。
+- 真机浏览器没开（`browse.douyin.enabled` 与 `channels.douyin.enabled` 都关着），A26 的接线靠注入假 transport 验证；等哪天真开抖音，再按「连续刷片后 id 与画面一致」补一次真机验收。
+
 **下一步顺序**
 
 1. ~~A11 收尾~~：已 ✅。~~A21~~：已 ✅。~~A34 改名~~：已 ✅。~~A35 名字变量~~：已 ✅。
-2. ~~A22~~：已 ✅。~~A23~~：已 ✅。~~A24~~：已 ✅。~~A25~~：已 ✅。A26 → A27 → A28 → A29 → A30 → A17 → A18 → A12 → A19 → A20 → A31 → A32 → A33（A8 单独一轮；A13/A14 收尾；A10 随 A20 逐条核）。
+2. ~~A22~~：已 ✅。~~A23~~：已 ✅。~~A24~~：已 ✅。~~A25~~：已 ✅。~~A26~~：已 ✅。A27 → A28 → A29 → A30 → A17 → A18 → A12 → A19 → A20 → A31 → A32 → A33（A8 单独一轮；A13/A14 收尾；A10 随 A20 逐条核）。
 3. A1 真机拔网验收并入 A11 之后（代码与模拟已过）。
 
 **环境注意**

@@ -21,6 +21,7 @@ import {
   renderComments,
 } from '../lib/douyinlook.js'
 import { makeStoryboard } from '../packages/dsh-roost-douyin/storyboard.js'
+import { idFromUrl, currentIdFromLog, currentId, renderCurrentId } from '../packages/dsh-roost-douyin/index.js'
 
 const FEED = {
   aweme_list: [
@@ -379,6 +380,76 @@ test('what=comments：没给号就说要哪一条；给的是链接也认', asyn
   const r = await lookFeedOnce({ root: tmpRoot(), cfg: cfgOn, transport: t, what: 'comments', id: 'https://www.douyin.com/video/7703602183127797026', waitMs: 0 })
   assert.equal(r.ok, true)
   assert.match(t.state.navigated, /7703602183127797026/)
+})
+
+
+function currentTransport({ urls = [], hits = 2, playing = true, sameItem = true, title = '推荐', desc = '一条视频' } = {}) {
+  return {
+    state: { started: false, closed: false, network: false, navigated: '', calls: 0 },
+    async start() { this.state.started = true; return { ok: true } },
+    async navigate(url) { this.state.navigated = url; return { ok: true } },
+    async enableNetwork() { this.state.network = true; return { ok: true } },
+    networkLog() { return urls.map((url) => ({ url })) },
+    async evaluate(expr) {
+      this.state.calls += 1
+      assert.match(expr, /document\.documentElement\.innerHTML/)
+      return { ok: true, value: JSON.stringify({ hits, playing, sameItem, title, desc }) }
+    },
+    async close() { this.state.closed = true; return { ok: true } },
+  }
+}
+
+test('currentId：从 group_id / aweme_id / item_id 里认号，只认 15 位以上', () => {
+  assert.deepEqual(idFromUrl('https://www.douyin.com/aweme/v1/web/feed/?group_id=7700000000000000001&x=1'), { id: '7700000000000000001', mark: 'group_id=' })
+  assert.deepEqual(idFromUrl('https://x/?aweme_id=7700000000000000002'), { id: '7700000000000000002', mark: 'aweme_id=' })
+  assert.deepEqual(idFromUrl('https://x/?item_id=7700000000000000003'), { id: '7700000000000000003', mark: 'item_id=' })
+  assert.deepEqual(idFromUrl('https://x/?group_id=12345'), { id: '', mark: '' })
+  assert.deepEqual(currentIdFromLog([{ url: 'https://x/?group_id=7700000000000000001' }, { url: 'https://x/?group_id=7700000000000000009' }]).id, '7700000000000000009')
+})
+
+test('what=current：页面上对上了才叫当前，反查次数写出来', async () => {
+  const t = currentTransport({ urls: ['https://www.douyin.com/aweme/v1/web/feed/?group_id=7700000000000000001'] })
+  const r = await lookFeedOnce({ root: tmpRoot(), cfg: cfgOn, transport: t, what: 'current', waitMs: 0 })
+  assert.equal(r.ok, true)
+  assert.match(r.text, /当前在播的号：7700000000000000001/)
+  assert.match(r.text, /页面上出现 2 次/)
+  assert.doesNotMatch(r.text, /疑似/)
+  assert.equal(t.state.network, true)
+  assert.equal(t.state.navigated, 'https://www.douyin.com/?recommend=1')
+  assert.equal(t.state.closed, true)
+})
+
+test('what=current：页面里没有这个号 / 对不上正在播的那块，都只说疑似', async () => {
+  const miss = await lookFeedOnce({
+    root: tmpRoot(), cfg: cfgOn, what: 'current', waitMs: 0,
+    transport: currentTransport({ urls: ['https://x/?group_id=7700000000000000001'], hits: 0, sameItem: false }),
+  })
+  assert.equal(miss.ok, true)
+  assert.match(miss.text, /疑似当前在播的号/)
+  assert.match(miss.text, /没找到这个 id/)
+  assert.match(miss.text, /别拿它当准/)
+
+  const wrong = await lookFeedOnce({
+    root: tmpRoot(), cfg: cfgOn, what: 'current', waitMs: 0,
+    transport: currentTransport({ urls: ['https://x/?aweme_id=7700000000000000002'], hits: 1, sameItem: false }),
+  })
+  assert.match(wrong.text, /没对上正在播的那一块/)
+  assert.doesNotMatch(wrong.text, /^当前在播的号：/m)
+})
+
+test('what=current：网络日志里还没换片请求，就说没拿到，不编一个号', async () => {
+  const t = currentTransport({ urls: [] })
+  const r = await lookFeedOnce({ root: tmpRoot(), cfg: cfgOn, transport: t, what: 'current', waitMs: 0 })
+  assert.equal(r.ok, false)
+  assert.match(r.note, /还没有换片请求/)
+  assert.match(r.text, /没拿到当前在播的号/)
+  assert.doesNotMatch(r.text, /7700000000000000001/)
+})
+
+test('renderCurrentId：不确定的号不说成确定的', () => {
+  const text = renderCurrentId({ ok: true, id: '7700000000000000001', source: 'group_id', verified: false, hits: 0, why: '页面上没找到这个 id' })
+  assert.match(text, /^疑似当前在播的号/)
+  assert.match(text, /可能拿到的是上一条/)
 })
 
 test('what=search 不给词：别悄悄退回推荐流', async () => {

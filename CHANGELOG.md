@@ -24,6 +24,9 @@
 - **打开一条改成故事板**：不再只截三帧，而是按 480000 像素预算拼一张宫格图，每格左上角是格号、左下角是时间码；同时留下每格原图，TTL 2 小时。故事板是一次采样，不是整条视频。
 - **可以放大某一格**：`douyin_look` 新增 `what=zoom`、`sample_id`、`cell`，按格号取回那一格的原图，不重新打开浏览器、不重新碰平台。
 - **预算与刹车**：每次调用都计入预算（`MAX_CALLS=6`），放大另有三次上限；连续三次格号不对就停这次观看。零依赖：PNG 自己编，ffmpeg 只解 rawvideo；没装 ffmpeg 或旧子包没有 storyboard 时退回原来的三帧截图。
+- **知道此刻在播哪一条**：`douyin_look` 新增 `what=current`。先从 CDP 网络日志里倒序找最后一条带 `group_id` / `aweme_id` / `item_id` 的请求当候选，再回页面数这个 id 出现几次、并核对它是否就是正在播的那一块；对不上就说「疑似…可能拿到的是上一条」，不拿上一条假装这一条。
+- **浏览器通道补齐 `evaluate`**：之前 `browseFeed` 与打开/评论都在调一个不存在的 `evaluate`，所以一直回 `no-transport`；这次补上，并加了网络事件的开启与读取。
+- **开发态也能用抖音子包**：包名解析不到时回落到仓库里的 `packages/dsh-roost-douyin/`，和分镜模块同一个口径。
 
 ### 删除
 
@@ -52,4 +55,4 @@
 ### 兼容
 
 - `dsh >=0.2.0-rc.1 <0.3.0-0`，Node ≥ 22；`dependencies` / `peerDependencies` / `devDependencies` 仍为空。
-- 测试基线：`node --test --test-isolation=none` → 1195 条 / 1183 过 / 10 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时 11 红 / 3 skip），见 `PROGRESS.md`。
+- 测试基线：`node --test --test-isolation=none` → 1201 条 / 1189 过 / 10 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时 11 红 / 3 skip），见 `PROGRESS.md`。
