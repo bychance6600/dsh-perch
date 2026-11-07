@@ -4,7 +4,7 @@
 
 **0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过）。A 段 35 条与 B 段 19 条验收全部收口（A1 于 2026-11-07 16:12 真机通过）。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1259 条 / 1248 过 / 9 红**（另有 2 skip，2026-11-07 B15 之后，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1260 条 / 1249 过 / 9 红**（另有 2 skip，2026-11-07 抖音真机修完，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
 
@@ -22,6 +22,14 @@
 - 她 16:12 的回话里接住了：「每次断完，我这边会多一句「断了 47 秒」……今天这句来了两次」。A1 的「断过就说一句、没断不说」成立。
 - 15:15 那次她没接，原因是断线句在提示词最上面、被前面的历史与设定淹了；已挪到最新一条消息正前方（`test/channel-router.test.mjs` 加了位置断言）。`lib/channels/router.js` 的 `buildPrompt` 仍只写事实，不写「你要先说这个」。
 - 全量 1259 条 / 1248 过 / 9 红 / 2 skip（/tmp/full-A1b.log），9 红同名。A1 ✅。
+
+## 抖音真机（2026-11-07）——`sleep is not defined`
+
+- 她在 QQ 里说推荐流「看不见」，伸手试了一下，回的是「sleep is not defined」。这不是没登录，也不是页面变了，是代码自己抛的错。
+- 根因：`packages/dsh-roost-douyin/index.js` 里 `browseFeed` 的默认等待函数写成了 `sleep`，`waitForDevtools` 也调 `sleep`，但子包从头到尾没有定义过它。测试里都传了 `sleep` 替身，所以一直没露。
+- 修法：子包顶部补 `function sleep(ms)`（`setTimeout` 包成 Promise，负数/非数字按 0 算）。`browseFeed` 不传 sleeper 时就走它。
+- 回归测试：`test/douyin-browse.test.mjs` 新增「不传 sleeper 也自己等，不报 sleep is not defined」，用假 transport 走一遍 `navigate` → `evaluate`，不启浏览器。
+- 定向 douyin-browse / douyin-look / douyin-adapter 55/55；全量 **1260 条 / 1249 过 / 9 红 / 2 skip**（/tmp/full-douyin.log），9 红与已知环境红逐条同名。
 
 ## 已经做完
 

@@ -30,6 +30,11 @@ const DEFAULTS = {
   debugPort: 9333,
 }
 
+/** 小睡。单拆出来，测试可以注入自己的 sleeper；`browseFeed` 不传时就用它。 */
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, Math.max(0, Number(ms) || 0)))
+}
+
 /** 常见安装位置。找不到就让人在设置里填 browserPath。 */
 export function browserCandidates(platform = process.platform) {
   if (platform === 'win32') {

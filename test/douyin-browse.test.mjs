@@ -80,6 +80,22 @@ test('gatherDouyin：平台不给 / 拉取失败，都不打扰她', async () =>
   await fs.rm(root, { recursive: true, force: true })
 })
 
+test('browseFeed：不传 sleeper 也自己等，不报 sleep is not defined（2026-11-07 真机）', async () => {
+  const mod = await import('../packages/dsh-roost-douyin/index.js')
+  const calls = []
+  const transport = {
+    async navigate(url) { calls.push(['navigate', url]) },
+    async evaluate(script) {
+      calls.push(['evaluate', typeof script])
+      return { ok: true, value: JSON.stringify({ items: [{ id: '333', title: '一条', href: 'https://www.douyin.com/video/333' }] }) }
+    },
+  }
+  const r = await mod.browseFeed({ transport, limit: 1, waitMs: 1 })
+  assert.equal(r.ok, true)
+  assert.equal(r.items.length, 1)
+  assert.equal(calls[0][0], 'navigate')
+})
+
 test('loadDouyin：没装子包就整条路消失，不抛', async () => {
   assert.equal(await loadDouyin(async () => { throw new Error('ERR_MODULE_NOT_FOUND') }), null)
   assert.equal(await loadDouyin(async () => ({ browseFeed: () => {} })).then((m) => typeof m.browseFeed), 'function')
