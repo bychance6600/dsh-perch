@@ -168,8 +168,8 @@ test('默认预算 1200 → 1800，且三处（配置、常量、界面）一致
   assert.ok(CLIENT.includes('useState(1800)'), '界面初始值要跟着改')
   assert.ok(CLIENT.includes("cfg.memory?.docBudget ?? 1800"))
   assert.ok(!CLIENT.includes('useState(1200)'), '旧的 1200 不许残留')
-  // 判断区仍固定 3 条：这一条是「像工作记忆」，与预算无关
-  assert.equal(BELIEF_SHOWN, 3)
+  // 判断区默认 2 条（A19）：像工作记忆，与预算无关
+  assert.equal(BELIEF_SHOWN, 2)
 })
 
 test('say.js 不再把身份/工具说明塞进 user 消息（否则用户能在对话里看见）', () => {

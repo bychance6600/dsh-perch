@@ -55,6 +55,7 @@
 
 - **固化满 90 天退一档**：判断仍然在，也还能用 `her_recall` 翻到，但排序让位给新的、还没退档的；疤对应的那句永远不退档。新增 `FADE_DAYS = 90`。
 - **折叠不截句子**：超出 200 字时少放一条整句，不再把句子砍成半截；被挤掉的段在日志里写清段名和字数（每个 root 同一内容只记一次）。
+- **判断默认只摆 2 条**：A12 的退档已经把旧的往后排，这一条再把每轮逐条摆出的判断从 3 收到 2；少的那条折进「更早以前」，预算仍是 1800。
 
 ### 删除
 
@@ -83,4 +84,4 @@
 ### 兼容
 
 - `dsh >=0.2.0-rc.1 <0.3.0-0`，Node ≥ 22；`dependencies` / `peerDependencies` / `devDependencies` 仍为空。
-- 测试基线：`node --test --test-isolation=none` → 1228 条 / 1217 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。
+- 测试基线：`node --test --test-isolation=none` → 1229 条 / 1218 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。

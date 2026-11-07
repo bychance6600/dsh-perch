@@ -4,7 +4,7 @@
 
 **0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过，正在按清单往下施工）。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1228 条 / 1217 过 / 9 红**（另有 2 skip，2026-11-07 A12 之后，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1229 条 / 1218 过 / 9 红**（另有 2 skip，2026-11-07 A19 之后，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
 
@@ -269,10 +269,30 @@
 - 测试：`test/derive.test.mjs`「固化满 90 天退档：还在 beliefs，但让新的排到前面」；`test/beliefs.test.mjs`「折叠行不截断句子：放不下就少放一条」；`test/scar.test.mjs`「疤不折：过了 90 天，没想通的事也不退档」；`test/mem.test.mjs` 两条（`droppedSections` 形状、`writeSelfDoc` 的预算日志只记一次）。
 - 全量 1228 条 / 1217 过 / 9 红 / 2 skip（/tmp/full-A12.log）。9 红与已知环境红逐条同名。
 
+**判断只摆两条（2026-11-07，已完 A19）**
+
+- 问题：A12 的 90 天退档已经在把旧的判断往后排，但每轮仍逐条摆 3 条；核心段（永远保留的那几段）里判断占比偏高。设计里的下一步是「beliefs 3→2，预算数字不动，不够再谈 2100」。
+- `lib/persona.js`：`BELIEF_SHOWN` 3 → 2，`shownCount()` 的非数字回落与注释同步；`BELIEF_FOLDED` 仍是 3。排序与折叠逻辑不变——少摆的那一条折进「更早以前」，不删原文。
+- `lib/settings.js`：`DEFAULTS.memory.beliefsShown` 3 → 2；夹取仍是 1–8，设置页标签与「每轮对话认知记忆条数」不变。`lib/client.js` 的 `useState(3)` 与 `cfg.memory?.beliefsShown ?? 3` 都改成 2，避免界面显示和实际用数不一致。
+- 预算没动：`SELF_DOC_BUDGET` 仍 1800，`memory.docBudget` 仍默认 1800、夹在 600–4000。
+- 测试：`test/beliefs.test.mjs` 默认值断言全改 2，新增「A19：默认只摆 2 条，核心段确实变小；预算仍是 1800，句子不截断」（`personaBudget` 默认 used < shown:3 的 used，折叠段不含 `…`）；`test/mem.test.mjs` 的折叠用例改为 2 条在眼前、被折的从第 3 条起、`还有 7 条更早的`；`test/identity.test.mjs` / `test/p8.test.mjs` 里写死 3 的断言同步改。
+- 全量 1229 条 / 1218 过 / 9 红 / 2 skip（/tmp/full-A19b.log）；这一轮 `withFileLock` 偶发红，单跑 `test/tenant.test.mjs` 15/15 绿。9 条已知红同名。
+- 她那份 `~/.dsh-roost/config.json` 里 `beliefsShown` 原本显式存着 3；已改成 2（重启或下次保存后生效），想调回在成长页改。
+
+**判断只摆两条（2026-11-07，已完 A19）**
+
+- 问题：A12 的 90 天退档已经在把旧的判断往后排，但每轮仍逐条摆 3 条；核心段（永远保留的那几段）里判断占比偏高。设计里的下一步是「beliefs 3→2，预算数字不动，不够再谈 2100」。
+- `lib/persona.js`：`BELIEF_SHOWN` 3 → 2，`shownCount()` 的非数字回落与注释同步；`BELIEF_FOLDED` 仍是 3。排序与折叠逻辑不变——少摆的那一条折进「更早以前」，不删原文。
+- `lib/settings.js`：`DEFAULTS.memory.beliefsShown` 3 → 2；夹取仍是 1–8，设置页标签与「每轮对话认知记忆条数」不变。`lib/client.js` 的 `useState(3)` 与 `cfg.memory?.beliefsShown ?? 3` 都改成 2，避免界面显示和实际用数不一致。
+- 预算没动：`SELF_DOC_BUDGET` 仍 1800，`memory.docBudget` 仍默认 1800、夹在 600–4000。
+- 测试：`test/beliefs.test.mjs` 默认值断言全改 2，新增「A19：默认只摆 2 条，核心段确实变小；预算仍是 1800，句子不截断」（`personaBudget` 默认 used < shown:3 的 used，折叠段不含 `…`）；`test/mem.test.mjs` 的折叠用例改为 2 条在眼前、被折的从第 3 条起、`还有 7 条更早的`；`test/identity.test.mjs` / `test/p8.test.mjs` 里写死 3 的断言同步改。
+- 全量 1229 条 / 1218 过 / 9 红 / 2 skip（/tmp/full-A19b.log）；这一轮 `withFileLock` 偶发红，单跑 `test/tenant.test.mjs` 15/15 绿。9 条已知红同名。
+- 她那份 `~/.dsh-roost/config.json` 里 `beliefsShown` 原本显式存着 3；已改成 2（重启或下次保存后生效），想调回在成长页改。
+
 **下一步顺序**
 
 1. ~~A11 收尾~~：已 ✅。~~A21~~：已 ✅。~~A34 改名~~：已 ✅。~~A35 名字变量~~：已 ✅。
-2. ~~A22~~：已 ✅。~~A23~~：已 ✅。~~A24~~：已 ✅。~~A25~~：已 ✅。~~A26~~：已 ✅。~~A27~~：已 ✅。~~A28~~：已 ✅。~~A29~~：已 ✅。~~A30~~：已 ✅。~~A17~~：已 ✅。~~A18~~：已 ✅。~~A12~~：已 ✅。A19 → A20 → A31 → A32 → A33（A8 单独一轮；A13/A14 收尾；A10 随 A20 逐条核）。
+2. ~~A22~~：已 ✅。~~A23~~：已 ✅。~~A24~~：已 ✅。~~A25~~：已 ✅。~~A26~~：已 ✅。~~A27~~：已 ✅。~~A28~~：已 ✅。~~A29~~：已 ✅。~~A30~~：已 ✅。~~A17~~：已 ✅。~~A18~~：已 ✅。~~A12~~：已 ✅。~~A19~~：已 ✅。A20 → A31 → A32 → A33（A8 单独一轮；A13/A14 收尾；A10 随 A20 逐条核）。
 3. A1 真机拔网验收并入 A11 之后（代码与模拟已过）。
 
 **环境注意**

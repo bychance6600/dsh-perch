@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
-import { shownCount, buildSections, foldOlderBeliefs, BELIEF_SHOWN } from '../lib/persona.js'
+import { shownCount, buildSections, foldOlderBeliefs, BELIEF_SHOWN, personaBudget, SELF_DOC_BUDGET } from '../lib/persona.js'
 import { normalizeConfig, DEFAULTS } from '../lib/settings.js'
 import { renderSelfDoc } from '../lib/selfdoc.js'
 
@@ -38,15 +38,15 @@ function beliefSection(text) {
   return next >= 0 ? rest.slice(0, next) : rest
 }
 
-test('shownCount：默认 3，夹在 1–8', () => {
-  assert.equal(BELIEF_SHOWN, 3)
-  assert.equal(shownCount(undefined), 3)
+test('shownCount：默认 2，夹在 1–8', () => {
+  assert.equal(BELIEF_SHOWN, 2)
+  assert.equal(shownCount(undefined), 2)
   assert.equal(shownCount(0), 1)
   assert.equal(shownCount(1), 1)
   assert.equal(shownCount(5), 5)
   assert.equal(shownCount(9), 8)
   assert.equal(shownCount(2.6), 3, '四舍五入')
-  assert.equal(shownCount('abc'), 3, '非数字回默认')
+  assert.equal(shownCount('abc'), 2, '非数字回默认')
 })
 
 test('摆几条由 opts.shown 决定：5 条就是 5 行', () => {
@@ -92,14 +92,26 @@ test('foldOlderBeliefs 的起点跟着 shown 走', () => {
 
 test('身份文档（renderSelfDoc）也认 shown', () => {
   const base = renderSelfDoc(model(), { budget: 4000 })
-  assert.equal((beliefSection(base).match(/^- 判断编号/gm) || []).length, 3, '不传就是 3 条')
+  assert.equal((beliefSection(base).match(/^- 判断编号/gm) || []).length, 2, '不传就是 2 条')
   const wide = renderSelfDoc(model(), { budget: 4000, shown: 6 })
   assert.equal((beliefSection(wide).match(/^- 判断编号/gm) || []).length, 6)
 })
 
-test('配置项：默认 3，越界被夹回 1–8', () => {
-  assert.equal(DEFAULTS.memory.beliefsShown, 3)
-  assert.equal(normalizeConfig({}).memory.beliefsShown, 3)
+test('A19：默认只摆 2 条，核心段确实变小；预算仍是 1800，句子不截断', () => {
+  const two = personaBudget(model())
+  const three = personaBudget(model(), { shown: 3 })
+  assert.equal(two.budget, SELF_DOC_BUDGET)
+  assert.equal(SELF_DOC_BUDGET, 1800)
+  assert.equal(two.budget, three.budget, '收的是条数，不是预算')
+  assert.ok(two.used < three.used, '少摆一条，核心段字数应当下降')
+  const seg = beliefSection(renderSelfDoc(model(), { budget: 4000 }))
+  assert.equal((seg.match(/^- 判断编号/gm) || []).length, 2)
+  assert.ok(!seg.includes('…'), '放不下的折成一行，不截句子')
+})
+
+test('配置项：默认 2，越界被夹回 1–8', () => {
+  assert.equal(DEFAULTS.memory.beliefsShown, 2)
+  assert.equal(normalizeConfig({}).memory.beliefsShown, 2)
   assert.equal(normalizeConfig({ memory: { beliefsShown: 0 } }).memory.beliefsShown, 1)
   assert.equal(normalizeConfig({ memory: { beliefsShown: 99 } }).memory.beliefsShown, 8)
   assert.equal(normalizeConfig({ memory: { beliefsShown: '5' } }).memory.beliefsShown, 5)
@@ -110,7 +122,7 @@ test('客户端：设置项、buildConfig、上限表都在', () => {
   assert.ok(src.includes('每轮对话认知记忆条数'), '设置项标签')
   assert.ok(src.includes('beliefsShown: Number(beliefsShown)'), 'buildConfig 要提交它')
   assert.ok(src.includes("['一次看见几条', beliefsShown, 1, 8]"), '坏值校验表')
-  assert.ok(src.includes('setBeliefsShown(Number(cfg.memory?.beliefsShown ?? 3))'), 'load 要读它')
+  assert.ok(src.includes('setBeliefsShown(Number(cfg.memory?.beliefsShown ?? 2))'), 'load 要读它')
 })
 
 test('观测台与身份文档同源：/memory 用 shownCount 而不是写死的常量', () => {

@@ -88,14 +88,14 @@ test('「更早以前」是折叠不是删除：原文仍在，只截断显示',
   // 2026-10-24：beliefs 改成显著性排序（最显著的在前），
   // 于是"折叠"折的是**最不显著**的那几条，不再是"最旧"的那几条。
   const line = foldOlderBeliefs(beliefs)
-  assert.ok(line.includes('判断编号3') && line.includes('判断编号4'), '折叠行要带上靠后的那几条')
-  assert.match(line, /还有 6 条更早的/)
-  // 显示区只放最显著的 BELIEF_SHOWN 条
+  assert.ok(line.includes('判断编号2') && line.includes('判断编号3'), '折叠行要带上靠后的那几条')
+  assert.match(line, /还有 7 条更早的/)
+  // 显示区只放最显著的 BELIEF_SHOWN 条（A19：默认 2 条）
   const text = personaLine(model({ beliefs }), { budget: 4000 })
   assert.ok(text.includes('- 判断编号0'), '最显著的必须在眼前')
-  assert.ok(text.includes('- 判断编号2'))
-  assert.ok(!text.includes('- 判断编号3'), '靠后的不该单独成条')
-  assert.ok(text.includes('判断编号3'), '被折起来的那几条也要留个影子')
+  assert.ok(text.includes('- 判断编号1'))
+  assert.ok(!text.includes('- 判断编号2'), '靠后的不该单独成条')
+  assert.ok(text.includes('判断编号2'), '被折起来的那几条也要留个影子')
 })
 
 // ---------------------------------------------------------------- 轮换搬运
