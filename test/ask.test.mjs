@@ -249,5 +249,7 @@ test('卡片回来的是对象还是字符串都要认出来，认不出也别�
   assert.equal(picked([{ id: 'q', selected: [{ label: '可以' }] }], 'q'), '可以')
   assert.equal(picked([{ id: 'q', selected: ['这次不行'] }], 'q'), '这次不行')
   assert.equal(picked([{ id: 'q', custom: ' 我自己写 ' }], 'q'), '我自己写')
+  // A20：宿主手打答案时给的是 selected: [] + custom，空数组不能把 custom 挡掉。
+  assert.equal(picked([{ id: 'q', selected: [], custom: ' 可以 ' }], 'q'), '可以')
   assert.equal(picked([], 'q'), '')
 })

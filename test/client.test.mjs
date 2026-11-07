@@ -907,3 +907,9 @@ test('网络环境折叠块报最后一次限流的时间与次数，默认收�
   // 今天页那行还在（A18 不动它）
   assert.ok(src.includes('todayData.hands.risk'), '今天页的限流行要保留')
 })
+
+test('事件计数按真实经历显示，记账与噪声另说（A20）', async () => {
+  const src = await readFile(CLIENT, 'utf8')
+  assert.ok(src.includes('s.counts.real ?? s.counts.total'), '状态条优先显示真实经历数')
+  assert.ok(src.includes('另有'), 'title 要说清还有多少条记账/噪声')
+})

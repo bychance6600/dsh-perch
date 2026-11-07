@@ -4,7 +4,7 @@
 
 **0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过，正在按清单往下施工）。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1229 条 / 1218 过 / 9 红**（另有 2 skip，2026-11-07 A19 之后，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1241 条 / 1230 过 / 9 红**（另有 2 skip，2026-11-07 A20 之后，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
 
@@ -52,7 +52,7 @@
 
 ## 之后（按顺序）
 
-1. ~~A27~~ ✅ ~~A28~~ ✅ ~~A29~~ ✅ ~~A30~~ ✅ ~~A17~~ ✅ A18 → A12 → A19 → A20 → A31 → A32 → A33；A8（B 站分镜）单独一轮；A13/A14 收尾；A10 随 A20 逐条核。
+1. ~~A27~~ ✅ ~~A28~~ ✅ ~~A29~~ ✅ ~~A30~~ ✅ ~~A17~~ ✅ ~~A18~~ ✅ ~~A12~~ ✅ ~~A19~~ ✅ ~~A20~~ ✅ A31 → A32 → A33；A8（B 站分镜）单独一轮；A13/A14 收尾；A10 随 A20 逐条核。
 2. 全做完再回头补 B 段的 19 条验收。
 
 ## 交接（2026-11-06 23:50，A 段进行中）
@@ -279,20 +279,20 @@
 - 全量 1229 条 / 1218 过 / 9 红 / 2 skip（/tmp/full-A19b.log）；这一轮 `withFileLock` 偶发红，单跑 `test/tenant.test.mjs` 15/15 绿。9 条已知红同名。
 - 她那份 `~/.dsh-roost/config.json` 里 `beliefsShown` 原本显式存着 3；已改成 2（重启或下次保存后生效），想调回在成长页改。
 
-**判断只摆两条（2026-11-07，已完 A19）**
+**父项 25 条移植（2026-11-07，已完 A20）**
 
-- 问题：A12 的 90 天退档已经在把旧的判断往后排，但每轮仍逐条摆 3 条；核心段（永远保留的那几段）里判断占比偏高。设计里的下一步是「beliefs 3→2，预算数字不动，不够再谈 2100」。
-- `lib/persona.js`：`BELIEF_SHOWN` 3 → 2，`shownCount()` 的非数字回落与注释同步；`BELIEF_FOLDED` 仍是 3。排序与折叠逻辑不变——少摆的那一条折进「更早以前」，不删原文。
-- `lib/settings.js`：`DEFAULTS.memory.beliefsShown` 3 → 2；夹取仍是 1–8，设置页标签与「每轮对话认知记忆条数」不变。`lib/client.js` 的 `useState(3)` 与 `cfg.memory?.beliefsShown ?? 3` 都改成 2，避免界面显示和实际用数不一致。
-- 预算没动：`SELF_DOC_BUDGET` 仍 1800，`memory.docBudget` 仍默认 1800、夹在 600–4000。
-- 测试：`test/beliefs.test.mjs` 默认值断言全改 2，新增「A19：默认只摆 2 条，核心段确实变小；预算仍是 1800，句子不截断」（`personaBudget` 默认 used < shown:3 的 used，折叠段不含 `…`）；`test/mem.test.mjs` 的折叠用例改为 2 条在眼前、被折的从第 3 条起、`还有 7 条更早的`；`test/identity.test.mjs` / `test/p8.test.mjs` 里写死 3 的断言同步改。
-- 全量 1229 条 / 1218 过 / 9 红 / 2 skip（/tmp/full-A19b.log）；这一轮 `withFileLock` 偶发红，单跑 `test/tenant.test.mjs` 15/15 绿。9 条已知红同名。
-- 她那份 `~/.dsh-roost/config.json` 里 `beliefsShown` 原本显式存着 3；已改成 2（重启或下次保存后生效），想调回在成长页改。
+- 问题：0.1.0 的代码是从 river 0.1.68 分出来的，父项 0.8.6–0.9.1 修过的一批小毛病没有全带过来；设计文档 §八列了「直接取」25 条，需要逐条对代码，能写的写，不写的记理由。
+- 逐条表在 `docs/父项移植表.md`：25 条里 14 条照取、1 条部分取（群消息加 speaker 前缀；`sanitizeForeign` 早就有）、8 条已改等价、2 条不取（新库没有换房问话；没有会把时间线挤掉的独立聊天行）。
+- 照取的：拒绝词表加「不同意/不赞成/不认同/不支持/不选/反对/否掉/否决」并带 `(?!他|她|你)` 守卫（`lib/derive.js:55`）；判断后面带本地日期与来路（`lib/persona.js:139`）；`her_recall` 的 `brief` 档（`lib/recall.js:197`）；事件计数分 real/meta/noise（`lib/eventcount.js:16`，状态条显示真实经历数）；BOM 先剥（`lib/store.js:115`）；归档后认 `live[0]`（`lib/home.js:234`）；手打答案读 `custom`（`lib/ask.js:277`）；`her_say` 每日上限真拦、成长坐标改用 `deriveSelf`（`lib/proactive.js:261-267`）；回执改「记下了」；头像临时名加随机后缀（`lib/avatar.js:103`）；主动投递前先 `isBusy`（`lib/scheduler.js:195`）；元话语拦截（`lib/proactive.js:57`）；三处 UTC 日期改本地（`lib/home.js:37/741`、`lib/say.js:265`、`lib/recall.js:169`）。
+- 已改等价：90 天退档（A12）、冷落 seen 只在开口那刻记、醒一醒用 turn/end watcher + 30 秒 fallback + 换房、换房锁、探活内联、排队叫醒、45 分钟最小间隔 + set/clear 时机、换房日期按本地日（A21）。
+- 不取：换房问话（新库 `rotateTalkSession` 不弹问，`wakeIfBlank` 本来就在新会话建好之后）；聊天行折行/「说 N」（新库没有独立聊天行，时间线已合并）。
+- 新增 `test/a20.test.mjs` 10 条；`test/proactive.test.mjs` 加上限/元话语/坐标与「记下了」断言；`test/ask.test.mjs` 加 `selected:[] + custom`；`test/client.test.mjs` 加真实经历计数。
+- 全量 1241 条 / 1230 过 / 9 红 / 2 skip（/tmp/full-A20b.log）。9 红与已知环境红逐条同名。
 
 **下一步顺序**
 
 1. ~~A11 收尾~~：已 ✅。~~A21~~：已 ✅。~~A34 改名~~：已 ✅。~~A35 名字变量~~：已 ✅。
-2. ~~A22~~：已 ✅。~~A23~~：已 ✅。~~A24~~：已 ✅。~~A25~~：已 ✅。~~A26~~：已 ✅。~~A27~~：已 ✅。~~A28~~：已 ✅。~~A29~~：已 ✅。~~A30~~：已 ✅。~~A17~~：已 ✅。~~A18~~：已 ✅。~~A12~~：已 ✅。~~A19~~：已 ✅。A20 → A31 → A32 → A33（A8 单独一轮；A13/A14 收尾；A10 随 A20 逐条核）。
+2. ~~A22~~：已 ✅。~~A23~~：已 ✅。~~A24~~：已 ✅。~~A25~~：已 ✅。~~A26~~：已 ✅。~~A27~~：已 ✅。~~A28~~：已 ✅。~~A29~~：已 ✅。~~A30~~：已 ✅。~~A17~~：已 ✅。~~A18~~：已 ✅。~~A12~~：已 ✅。~~A19~~：已 ✅。~~A20~~：已 ✅。A31 → A32 → A33（A8 单独一轮；A13/A14 收尾；A10 随 A20 逐条核）。
 3. A1 真机拔网验收并入 A11 之后（代码与模拟已过）。
 
 **环境注意**

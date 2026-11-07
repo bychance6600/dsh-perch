@@ -38,6 +38,7 @@ import {
   writeSay,
 } from '../lib/proactive.js'
 import { dateKey } from '../lib/settings.js'
+import { deriveSelf } from '../lib/derive.js'
 import { readEvents } from '../lib/store.js'
 import { HER_TOOLS } from '../lib/restrict.js'
 
@@ -186,6 +187,36 @@ test('写下的一句会落成 utterance（带「她主动说」前缀）并留�
   assert.match(meta.text, /care/)
 }))
 
+test('her_say 的每日上限真拦，元话语不算一次开口，坐标用 deriveSelf（A20）', () => withRoot(async (root) => {
+  const now = Date.now()
+  const t0 = now - 10 * 86_400_000
+  line(root, ev({ id: 'ev_seed', type: 'seed', text: '种', source: 'system', ts: new Date(t0).toISOString(), day: dateKey(new Date(t0)) }))
+  line(root, ev({ id: 'ev_say', type: 'utterance', text: '我先前的记录', ts: new Date(now - 3_600_000).toISOString() }))
+
+  // 元话语：说的是「这轮没什么要说」，不是一句真的话，不能记成开口。
+  const before = (await readEvents(root)).events.length
+  const meta = await writeSay(root, { text: '这轮没什么要说的', refs: ['ev_say'], now })
+  assert.match(meta.note, /不算开口/)
+  assert.equal((await readEvents(root)).events.length, before, '被拦下的不能落进事件流')
+
+  const a = await writeSay(root, { text: '第一句。', refs: ['ev_say'], now })
+  const b = await writeSay(root, { text: '第二句。', refs: ['ev_say'], now })
+  assert.equal(a.ok, true, a.note)
+  assert.equal(b.ok, true, b.note)
+
+  // 默认一天 2 次；第三次要挡在写事件之前。
+  const c = await writeSay(root, { text: '第三句。', refs: ['ev_say'], now })
+  assert.equal(c.ok, false)
+  assert.match(c.note, /上限/)
+
+  const { events } = await readEvents(root)
+  const said = events.find((e) => e.id === a.id)
+  const model = deriveSelf(events, { now, stageSpanDays: 30 })
+  assert.equal(said.day, model.day, '成长坐标要跟她当时那天对得上')
+  assert.equal(said.stage, model.stage)
+  assert.ok(said.day > 1, '不能写死成第 1 天')
+}))
+
 test('默认白名单里没有 her_say；只有 .dev 下注册了才看得见', () => {
   assert.equal(HER_TOOLS.includes('her_say'), false, '公开版不能有这个工具')
   const src = readFileSync(new URL('../lib/proactive.js', import.meta.url), 'utf8')
@@ -216,7 +247,7 @@ test('her_say 的显示结果是 ContentBlock 数组，不是字符串（0.8.2 �
     assert.equal(typeof blocks[0].text, 'string')
     assert.ok(blocks[0].text.length > 0)
   }
-  assert.match(spec.output.render({}, { ok: true }).at(0).text, /说出去了/)
+  assert.match(spec.output.render({}, { ok: true }).at(0).text, /记下了/)
   assert.match(spec.output.render({}, { ok: false, note: '这条没记下。' }).at(0).text, /没记下/)
 })
 
