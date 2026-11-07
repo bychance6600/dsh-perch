@@ -913,3 +913,18 @@ test('事件计数按真实经历显示，记账与噪声另说（A20）', async
   assert.ok(src.includes('s.counts.real ?? s.counts.total'), '状态条优先显示真实经历数')
   assert.ok(src.includes('另有'), 'title 要说清还有多少条记账/噪声')
 })
+
+
+// 2026-11-07（A8）：看画面的设置从「取几帧」扩成四件事，文案照清单。
+test('看画面设置：几张 / 每张几格 / 细节档 / 清晰度都在，且写进配置（A8）', async () => {
+  const src = await readFile(CLIENT, 'utf8')
+  assert.ok(src.includes("Num({ label: '几张故事板'"))
+  assert.ok(src.includes("Num({ label: '每张几格'"))
+  assert.ok(src.includes("Sel({ label: '细节档'"))
+  assert.ok(src.includes("Sel({ label: '清晰度'"))
+  assert.ok(!src.includes("label: '每条取几帧'"), '旧标签要换掉')
+  assert.ok(src.includes('boards: Number(videoBoards)'))
+  assert.ok(src.includes('detail: videoDetail'))
+  assert.ok(src.includes('quality: Number(videoQuality)'))
+  assert.ok(src.includes('挑切点取格，不是等距抽帧'), '设置页要写清不是均匀抽帧')
+})

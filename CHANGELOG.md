@@ -34,6 +34,14 @@
 - **浏览器通道补齐 `evaluate`**：之前 `browseFeed` 与打开/评论都在调一个不存在的 `evaluate`，所以一直回 `no-transport`；这次补上，并加了网络事件的开启与读取。
 - **开发态也能用抖音子包**：包名解析不到时回落到仓库里的 `packages/dsh-roost-douyin/`，和分镜模块同一个口径。
 
+### 看画面
+
+- **不再均匀抽帧**：先抽 96px 小图算灰指纹，按画面变化挑切点，再把切点附近的画面拼成故事板；每格带格号与时间码，格底画这一段的声音波形。故事板是一次采样，不是整条视频。
+- **可以只重扫一段**：`bili_watch` 新增 `from` / `to`（秒），只扫这一段；`find` 给一句话，从字幕里找回时间码，只读字幕、不占今日额度。
+- **三档细节**：`compact` / `normal` / `fine` 决定格子大小、采样密度与是否取波形；上网页设置九项里的「每条取几帧」换成「几张故事板 / 每张几格 / 细节档 / 清晰度」。
+- **画法共用**：B 站与抖音都用 `lib/frames.js` 拼宫格、画格号 / 时间码 / 波形，PNG 自己编，不引依赖。
+- **缺 ffmpeg 也说话**：取不到画面时返回真实原因并降级，不静默失败；`ffmpeg` 仍按 `DSH_ROOST_FFMPEG` → `bin/<平台>-<架构>/` → PATH 找。
+
 ### 自检
 
 - **QQ 三项分开报**：桥（WS 在不在听）、连接（适配器连上没有、待发几条、收/发计数）、令牌（只报填没填，不回显）。QQ 没开时三项也在，写明「没开」；连不上时先说 `lastError`，再给核对 `wsUrl` / 令牌的路。
@@ -112,4 +120,4 @@
 ### 兼容
 
 - `dsh >=0.2.0-rc.1 <0.3.0-0`，Node ≥ 22；`dependencies` / `peerDependencies` / `devDependencies` 仍为空。
-- 测试基线：`node --test --test-isolation=none` → 1241 条 / 1230 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。
+- 测试基线：`node --test --test-isolation=none` → 1254 条 / 1243 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。

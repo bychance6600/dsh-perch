@@ -171,3 +171,20 @@ test('渠道默认值里没有 ownerId；老配置的旧键不被抹掉（A29）
   assert.equal(old.channels.qq.ownerId, '10001')
   assert.equal(old.channels.douyin.ownerId, '20002')
 })
+
+
+// 2026-11-07（A8）：看画面的四件事（几张、每张几格、细节档、清晰度）都进配置。
+test('看画面的设置：默认一张、正常档、720P；乱写会被夹回来（A8）', () => {
+  const d = normalizeConfig({})
+  assert.equal(d.video.boards, 1)
+  assert.equal(d.video.detail, 'normal')
+  assert.equal(d.video.quality, 64)
+  const odd = normalizeConfig({ video: { boards: 99, detail: 'ultra', quality: 999 } })
+  assert.equal(odd.video.boards, 3)
+  assert.equal(odd.video.detail, 'normal')
+  assert.equal(odd.video.quality, 80)
+  const low = normalizeConfig({ video: { boards: 0, detail: 'compact', quality: 1 } })
+  assert.equal(low.video.boards, 1)
+  assert.equal(low.video.detail, 'compact')
+  assert.equal(low.video.quality, 16)
+})

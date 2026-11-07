@@ -59,7 +59,12 @@ test('registerWatch：注册一个叫 bili_watch 的工具，参数是合法 JSO
   // 2026-11-01 用户 m02712：at 是可选的，不许挤进 required，否则老的调用全失败
   assert.equal(t.parameters.properties.at.type, 'array')
   assert.equal(t.parameters.properties.at.items.type, 'number')
+  assert.equal(t.parameters.properties.from.type, 'number')
+  assert.equal(t.parameters.properties.to.type, 'number')
+  assert.equal(t.parameters.properties.find.type, 'string')
   assert.match(t.description, /at/)
+  assert.match(t.description, /from \/ to/)
+  assert.match(t.description, /find/)
   assert.equal(t.output.render.length >= 0, true)
 })
 
@@ -190,5 +195,55 @@ test('bili_watch：不在这个家里的会话调不动它', async () => {
     const out = await ctx._tools[0].execute({ bvid: 'BV1ED4y1Y7dc' }, away)
     assert.equal(out.ok, false)
     assert.match(out.note, /另一个家|没有落盘/)
+  })
+})
+
+
+// 2026-11-07（A8）：一句话找回时间码，不取画面、不占今天的额度。
+test('bili_watch：find 只查字幕，不写 watched、不占额度（A8）', async () => {
+  await withRoot(async (root) => {
+    await updateConfig({ browse: { enabled: true }, video: { enabled: true, perDay: 0 } }, root)
+    const ctx = fakeCtx()
+    let grabbed = 0
+    registerWatch(ctx, {
+      root,
+      findMoment: async ({ find }) => ({ ok: true, title: '测试片', cues: [{ t: 125, text: '这句话在这里' }], why: '' }),
+      grabFrames: async () => { grabbed += 1; return { ok: false, why: '不该抽帧' } },
+    })
+    const out = await ctx._tools[0].execute({ bvid: 'BV1ph4y1g75E', find: '这句话' }, {})
+    assert.equal(out.ok, true)
+    assert.equal(out.path, '')
+    assert.match(out.text, /2:05/)
+    assert.match(out.text, /这句话在这里/)
+    assert.equal(grabbed, 0, 'find 不该抽帧')
+    const { readEvents } = await import('../lib/store.js')
+    const ev = await readEvents(root)
+    assert.equal(ev.events.filter((e) => String(e.text || '').startsWith('watched:')).length, 0,
+      '只查字幕不该占「今天看过画面」的额度')
+  })
+})
+
+test('bili_watch：from / to 原样传给抽帧，终点在起点前面就先拒（A8）', async () => {
+  await withRoot(async (root) => {
+    await updateConfig({ browse: { enabled: true }, video: { enabled: true, perDay: 2 } }, root)
+    const ctx = fakeCtx()
+    let seen = null
+    registerWatch(ctx, {
+      root,
+      grabFrames: async (o) => {
+        seen = o
+        return { ok: true, path: join(root, 'sheet.png'), paths: [join(root, 'sheet.png')], title: '测试片', shots: 4, times: [10, 12, 14, 16], duration: 60, boards: [{ times: [10, 12, 14, 16] }], detail: 'normal' }
+      },
+    })
+    const bad = await ctx._tools[0].execute({ bvid: 'BV1ph4y1g75E', from: 30, to: 10 }, {})
+    assert.equal(bad.ok, false)
+    assert.match(bad.note, /终点要在起点后面/)
+    assert.equal(seen, null)
+    const out = await ctx._tools[0].execute({ bvid: 'BV1ph4y1g75E', from: 10, to: 20 }, {})
+    assert.equal(out.ok, true)
+    assert.equal(seen.from, 10)
+    assert.equal(seen.to, 20)
+    assert.match(out.text, /按变化挑了 4 格/)
+    assert.match(out.text, /不是整条视频/)
   })
 })

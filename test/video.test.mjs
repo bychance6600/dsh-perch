@@ -16,7 +16,7 @@ import { mkdtemp, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/prom
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { grabFrames, sampleTimes, normalizeAt } from '../lib/video.js'
+import { grabFrames, sampleTimes, normalizeAt, pickSceneTimes, frameDiff, matchCues, wavePeaks, DETAIL } from '../lib/video.js'
 import { detectFfmpeg, mediaDir } from '../lib/media.js'
 
 const BVID = 'BV1ph4y1g75E'
@@ -188,15 +188,13 @@ test('源码守门：不给 ffmpeg 任何文件路径输出（issue #13 的核�
   // 旧写法留下过 tmp-* 临时目录，这个不该再出现
   assert.doesNotMatch(src, /tmp-\$\{/, '不该再建 tmp-* 临时帧目录')
 
-  // 每一处 ffmpeg 调用都必须以 image2pipe 输出到 `-` 结尾
-  // 只数调用点（`runFfmpeg(` 后面紧跟参数），不算函数定义那一行
+  // 每一处 ffmpeg 调用都必须把像素/声音吐到 stdout（`-`），不给它任何文件输出路径。
+  // 2026-11-07（A8）：拼图从 ffmpeg 的 tile 改成自己用 lib/frames.js 画，
+  // 所以这里不再只认 image2pipe+png；rawvideo 与 s16le 同样只能写 `-`。
   const runs = (src.match(/runFfmpeg\((?!bin, args, o)/g) ?? []).length
-  const pipes = (src.match(/'image2pipe', '-vcodec', 'png'/g) ?? []).length
-  assert.ok(runs >= 2, `至少要两处 ffmpeg 调用（抽帧 + 拼图），实际 ${runs}`)
-  assert.equal(
-    pipes, runs,
-    `每个 ffmpeg 调用都要走 image2pipe→stdout（调用 ${runs} 处，管道输出 ${pipes} 处）`,
-  )
+  assert.ok(runs >= 2, `至少要两处 ffmpeg 调用（抽帧 + 取声音），实际 ${runs}`)
+  assert.match(src, /'-f', 'rawvideo', '-pix_fmt', 'rgb24', '-',/)
+  assert.match(src, /'-f', 's16le', '-',/)
 
   // -i 的入参只能是 url 或 `-`（stdin），不能是 join(...) 拼出来的文件路径
   for (const m of src.matchAll(/-'?i'?,\s*([^\],\n]+)/g)) {
@@ -333,4 +331,72 @@ test('grabFrames：拼图失败时不把 ffmpeg 的报错当成图落盘', async
   const dir = await mediaDir(root)
   const sheets = (await readdir(dir).catch(() => [])).filter((x) => x.startsWith('sheet-'))
   assert.equal(sheets.length, 0, `失败时不该留下拼图文件，实际有 ${sheets.join(',')}`)
+})
+
+
+// ---- A8：切点检测、字幕找回、波形（2026-11-07）----
+
+/** 造一张纯色灰度帧：frameDiff 只看亮度，刚好够测切点。 */
+function solid(w, h, v) {
+  const data = Buffer.alloc(w * h * 3, v)
+  return { width: w, height: h, data }
+}
+
+test('pickSceneTimes：画面变化大的时刻优先，不是等距抽帧', () => {
+  // 0–2 秒一个画面，3–4 秒换了画面；要两格时应该挑到切点附近。
+  const samples = [
+    { t: 0, frame: solid(16, 9, 0) },
+    { t: 1, frame: solid(16, 9, 0) },
+    { t: 2, frame: solid(16, 9, 0) },
+    { t: 3, frame: solid(16, 9, 255) },
+    { t: 4, frame: solid(16, 9, 255) },
+  ]
+  assert.ok(frameDiff(samples[0].frame, samples[3].frame) > 0.9)
+  assert.equal(frameDiff(samples[0].frame, samples[1].frame), 0)
+  const times = pickSceneTimes(samples, 2)
+  assert.deepEqual(times, [0, 3], '第二格应该落在换画面的那一刻，而不是 2 或 4')
+})
+
+test('pickSceneTimes：要的格数比候选多时原样给回，仍然升序', () => {
+  const samples = [{ t: 2 }, { t: 0 }, { t: 1 }]
+  assert.deepEqual(pickSceneTimes(samples, 9), [0, 1, 2])
+  assert.deepEqual(pickSceneTimes([], 4), [])
+})
+
+test('matchCues：整句命中排第一；只命中碎片也给，但分数低', () => {
+  const cues = [
+    { t: 10, text: '今天我们先讲一下这个' },
+    { t: 30, text: '亚细亚生产方式的核心是什么' },
+    { t: 50, text: '回到刚才那个问题' },
+  ]
+  const exact = matchCues(cues, '亚细亚生产方式')
+  assert.equal(exact[0].t, 30)
+  assert.ok(exact[0].score > 1, '整句命中应该拿到 1 以上')
+  const loose = matchCues(cues, '生产关系和生产力')
+  assert.ok(loose.length >= 1)
+  assert.ok(loose[0].score < 1)
+  assert.deepEqual(matchCues(cues, '一'), [], '一个字不猜')
+})
+
+test('wavePeaks：每段给固定根数，幅度归一，空 PGM 不崩', () => {
+  const n = 8000
+  const pcm = Buffer.alloc(n * 2)
+  for (let i = 0; i < n; i += 1) {
+    pcm.writeInt16LE(i < n / 2 ? 16000 : -32000, i * 2)
+  }
+  const [a, b] = wavePeaks(pcm, [[0, 0.5], [0.5, 1]], 8)
+  assert.equal(a.length, 8)
+  assert.equal(b.length, 8)
+  assert.ok(a.every((x) => x >= 0 && x <= 1))
+  assert.ok(b.some((x) => x > 0.9), '后半段更响，峰值应该接近 1')
+  assert.deepEqual(wavePeaks(Buffer.alloc(0), [[0, 1]], 4), [[]])
+})
+
+test('细节档：三档都给出格大小、取点数和像素预算（A8 设置项要用）', () => {
+  for (const k of ['compact', 'normal', 'fine']) {
+    assert.ok(DETAIL[k].cell >= 200)
+    assert.ok(DETAIL[k].samples >= 4)
+    assert.ok(DETAIL[k].budget >= 300000)
+  }
+  assert.ok(DETAIL.fine.cell > DETAIL.normal.cell)
 })
