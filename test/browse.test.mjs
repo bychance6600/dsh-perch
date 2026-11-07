@@ -415,10 +415,10 @@ test('buildReport：只有事实与原话，没有总结', () => {
     events,
   })
   assert.match(md, /# 2026-10-22/)
-  assert.match(md, /看了什么/)
+  assert.match(md, /## 看到的/)
   assert.match(md, /BV1/)
   assert.match(md, /2分05秒/)
-  assert.match(md, /她说了什么/)
+  assert.match(md, /## 她说的/)
   assert.match(md, /今天有点吵/)
   assert.match(md, /改写自 ev_1/)
   // meta 不进正文
@@ -437,6 +437,33 @@ test('buildReport：今天没看、没说话也有完整结构（不是空文件
   const md = buildReport({ dateKey: '2026-10-22', items: [], events: [] })
   assert.match(md, /今天没看/)
   assert.match(md, /什么都没说/)
+})
+
+test('A22：报告按来源分三栏，空的一天三栏也齐全', () => {
+  const md = buildReport({ dateKey: '2026-10-22', items: [], events: [] })
+  const said = md.indexOf('## 她说的')
+  const heard = md.indexOf('## 听到的')
+  const seenAt = md.indexOf('## 看到的')
+  assert.ok(said >= 0 && heard > said && seenAt > heard, '三栏顺序不对')
+  assert.match(md, /今天她没听见谁说话/)
+})
+
+test('A22：听到的只转写谁在哪儿说了什么，不评价', () => {
+  const events = [
+    { type: 'heard', ts: '2026-10-22T01:00:00.000Z', text: '阿岸：周三去不去看展', channel: 'qq', visibility: 'private', origin: 'owner' },
+    { type: 'heard', ts: '2026-10-22T01:05:00.000Z', text: '小满：群里那个链接', channel: 'qq', visibility: 'group', origin: 'stranger' },
+    { type: 'heard', ts: '2026-10-21T10:00:00.000Z', text: '阿岸：昨天的话', channel: 'qq', visibility: 'private' },
+  ]
+  const md = buildReport({ dateKey: '2026-10-22', items: [], events })
+  const at = md.indexOf('## 听到的')
+  const end = md.indexOf('## 看到的')
+  const sec = md.slice(at, end)
+  assert.match(sec, /阿岸：周三去不去看展/)
+  assert.match(sec, /QQ · 私聊 · 主人/)
+  assert.match(sec, /小满：群里那个链接/)
+  assert.match(sec, /QQ · 群里/)
+  assert.ok(!sec.includes('昨天的话'), '别的日子听到的不进这一天')
+  for (const w of ['可以看出', '说明她', '有意思']) assert.ok(!sec.includes(w))
 })
 
 test('flushReport 落盘，listReports 能列出来，且可重生成', async () => {

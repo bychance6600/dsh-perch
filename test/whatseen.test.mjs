@@ -123,7 +123,7 @@ test('seenOn：三档一次取齐，互不重叠', () => {
 
 // ---------------------------------------------------------------- 报告
 
-test('报告：三节分开写，"翻到过"不许出现在"看了什么"里', () => {
+test('报告：三栏按来源分；"只翻到过"不许出现在"看过画面"里', () => {
   const md = buildReport({
     dateKey: DK,
     seen: {
@@ -133,10 +133,14 @@ test('报告：三节分开写，"翻到过"不许出现在"看了什么"里', (
     },
     events: [],
   })
-  const watchedAt = md.indexOf('## 看了什么')
-  const glancedAt = md.indexOf('## 翻到过什么')
-  const handedAt = md.indexOf('## 你递过来的')
-  assert.ok(watchedAt >= 0 && glancedAt > watchedAt && handedAt > glancedAt, '三节顺序不对')
+  const saidAt = md.indexOf('## 她说的')
+  const heardAt = md.indexOf('## 听到的')
+  const seenAt = md.indexOf('## 看到的')
+  assert.ok(saidAt >= 0 && heardAt > saidAt && seenAt > heardAt, '三栏顺序不对')
+  const watchedAt = md.indexOf('### 看过画面')
+  const glancedAt = md.indexOf('### 只翻到过')
+  const handedAt = md.indexOf('### 你递过来的')
+  assert.ok(watchedAt > seenAt && glancedAt > watchedAt && handedAt > glancedAt, '看到的子节顺序不对')
   // 「只翻到的」只许出现在翻到过那一节里
   assert.ok(md.indexOf('只翻到的') > glancedAt)
   assert.ok(!md.slice(watchedAt, glancedAt).includes('只翻到的'))
@@ -156,7 +160,7 @@ test('报告：一条画面都没看时说的是「今天没看画面」，不�
 test('报告：老调用方只传 items 时按「翻到过」处理，不炸也不太喊看过', () => {
   const md = buildReport({ dateKey: DK, items: [{ bvid: B1, title: '老调用' }], events: [] })
   assert.match(md, /今天没看画面/)
-  assert.match(md, /翻到过什么/)
+  assert.match(md, /### 只翻到过/)
   assert.match(md, /老调用/)
 })
 
