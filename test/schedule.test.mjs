@@ -52,10 +52,13 @@ test('身份文档只在放行时挂这段说明书', () => {
   assert.ok(src.includes("=== 'schedule_create'"), '判据要读白名单里的 schedule_create')
 })
 
-test('插件页工具表里给她写清 schedule_create 是干什么的（2026-11-06 起不再用条件文案）', () => {
+test('插件页工具表的说明从 registry 取，不在客户端写死（A27，2026-11-07）', () => {
   const src = readFileSync(join(libDir, 'client.js'), 'utf8')
   assert.ok(!src.includes('scheduleOn'), '旧的「放行才改口」分叉已删')
-  assert.ok(src.includes("schedule_create: '给自己定一个提醒'"), '工具表要有一句说明')
+  // A27 之前这里写死过 schedule_create 的说明；现在统一从宿主 registry 的 description 取。
+  // 取不到就只说来源，绝不再手写一句「给自己定一个提醒」。
+  assert.ok(!src.includes("schedule_create: '给自己定一个提醒'"), '说明不该再写死在客户端')
+  assert.ok(src.includes('state?.tools?.descriptions'), '工具说明要跟着 /state 的 registry 快照走')
   assert.ok(src.includes("'未放行'"), '没放行时状态要写清楚')
 })
 

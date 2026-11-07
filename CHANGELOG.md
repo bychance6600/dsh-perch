@@ -9,6 +9,7 @@
 - **QQ 渠道**：按 `新项目-设计讨论.md` 的渠道节重写 `lib/channels/qq.js`、`gate.js`、`router.js`。只写 OneBot 11 标准子集；心跳 30s，重连退避 2/5/10/30/60s；群冷却 120s（被 @、回复她、管理员豁免）、每分钟 30 条、每群每天 20 条、夜间 23:00–08:00 与工作日峰时只接点名；同一会话 10 秒合批，flush 时按发送者切段；群里没点她的消息只进内存背景环（每群 20 条 × 300 字），不进账；回复按句切气泡、超过 3 条每两条停 900ms；`replyToSelf` 认得她自己的 message_id；附件只记一条元数据。
 - **抖音改成材料层**：`lib/channels/douyin.js` 只留浏览器 transport、`api()` 与 `feed()`，没有 `send`/`onMessage`；`channels.douyin.enabled` 只表示「报纸能读」；`sub.js` 加 `loadSubModule()`；`host.js` 起材料时不建 people/journal/router。
 - **设置页**：页签按她的一天重排为 11 个（今天 / 状态 / 成长 / 住所 / 社会 / 上网 / 渠道 / 插件 / 原理 / 数据 / 反馈），默认「今天」。今天页四段（现状、时间线、今天变了什么、手边）；成长页四阶段实时生成、上下文与记忆并页；住所页只留状态与会话健康（连续两次发送失败自动换会话，新增 `POST /home/rotate`）；上网页合并 B 站与抖音的每日次数、看画面加今日计数、请求节奏与历史折叠；插件页改成收窄开关 + 可搜索工具表；反馈页只留仓库链接。
+- **插件页的工具说明取 registry**：不再在客户端写死工具说明。收窄时从宿主 `tools.view()` 的 `definition.description` 记下说明（压平空白、截 240 字），`/state` 与 `/tools` 一起下发；没有说明的工具只写来源（她自己那一层注册的 / 宿主或别的插件注册的），不编「宿主按会话给的」。搜索、状态列、加 / 移、底部保存不变。
 - **世界书**：面板从渠道页移到成长页；内容仍由会话侧生成、主人导入，插件不写。
 
 ### 报告
@@ -55,4 +56,4 @@
 ### 兼容
 
 - `dsh >=0.2.0-rc.1 <0.3.0-0`，Node ≥ 22；`dependencies` / `peerDependencies` / `devDependencies` 仍为空。
-- 测试基线：`node --test --test-isolation=none` → 1201 条 / 1189 过 / 10 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时 11 红 / 3 skip），见 `PROGRESS.md`。
+- 测试基线：`node --test --test-isolation=none` → 1204 条 / 1193 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。

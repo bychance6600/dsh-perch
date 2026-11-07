@@ -4,8 +4,8 @@
 
 **0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。能跑测试，没上真机。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1201 条 / 1189 过 / 10 红**（另有 2 skip，2026-11-07 A26 之后，本机已装运行时 ffmpeg）。没装 ffmpeg 时是 11 红 / 3 skip，多出来的是 `dylink` 那条 Referer。全量约 110 秒。
-- 10 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、ops_*_own、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1204 条 / 1193 过 / 9 红**（另有 2 skip，2026-11-07 A27 之后，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+- 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
 
 ## 已经做完
@@ -203,6 +203,15 @@
 - `douyin_look` 新增 `what=current`：每次是一间新浏览器（about:blank），所以先开网络日志、提前台、进推荐页（`channels.douyin.homeUrl`），等 1.8 秒再反查；不开 `open`、不碰点赞。`lib/douyinbrowse.js` 的 `loadDouyin` 改成没装子包时回落到 `../packages/dsh-roost-douyin/index.js`，开发态也能用。
 - 测试：`test/douyin-look.test.mjs` 4 条（从三种标记里认号、对上了才叫当前、页面没有/对不上只说疑似、没日志不编号），`test/douyin-browse.test.mjs` 1 条（包名解析不到时回落）。两文件 40/40；全量 1201 / 1189 / 10 / 2 skip，10 红与已知环境红同名。
 - 真机浏览器没开（`browse.douyin.enabled` 与 `channels.douyin.enabled` 都关着），A26 的接线靠注入假 transport 验证；等哪天真开抖音，再按「连续刷片后 id 与画面一致」补一次真机验收。
+
+**插件页工具说明取 registry（2026-11-07，已完 A27）**
+
+- 问题：`lib/client.js` 里有一张写死的 `TOOL_HINTS`（15 个名字）。没覆盖到的工具一律显示「宿主按会话给的」或「宿主或其他插件给的」——前者是编的：宿主按会话给的是**收窄后的视图**，不是某个工具的来源。
+- 宿主 `ToolsService.view(scope)` 的 `visible` 是 `Map<name, definition>`，`definition.description` 就是注册时那份说明。`lib/restrict.js` 的 `rememberFromView` 顺手把它记进模块级 `lastDescriptions`：压掉换行与连续空白、trim、超过 240 字截断加省略号；没写说明的名字不存（不补空话）。新增 `knownToolDescriptions()` 返回按名字排序的普通对象；`rememberKnownTools()` 连它一起清，测试不会串味。
+- `lib/observe.js`：`/state` 的 `tools` 与 `/tools` 都带 `descriptions`。
+- `lib/client.js`：删掉 `TOOL_HINTS`。有说明照 registry 显示（全文放 title），没有就只看来源——own 层写「来源：她自己那一层注册的」，其余写「来源：宿主或别的插件注册的」。搜索、状态列、加 / 移、底部保存都没动。
+- 测试：`test/restrict.test.mjs` 1 条（Map 里的说明能取到、换行压平、没说明不出现、超长截断、复位清空）；`test/client.test.mjs` 2 条（源码里不再有 `TOOL_HINTS`、插件页渲染出 registry 说明与来源）；`test/p5.test.mjs` 的 /tools 断言加 `descriptions`，并在用例开头 `rememberKnownTools([])` 复位 own 层（全量里 `bash` 从别的用例漏进来，曾把 `ops_*_own` 那条判红）；`test/schedule.test.mjs` 从「源码里要有 schedule_create 的说明」改成「说明不许再写死在客户端」。
+- 全量 1204 条 / 1193 过 / 9 红 / 2 skip（/tmp/full-A27d.log）。9 红与已知环境红同名（own 层那条已转绿）；`withFileLock` 在 isolation=none 下偶发，单跑绿。
 
 **下一步顺序**
 

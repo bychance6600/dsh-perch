@@ -13,7 +13,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { HER_TOOLS, currentToolSurface, isHerAgent, knownToolNames, ownLayerNames, registerToolRestrict, rememberFromView, rememberKnownTools, readRestrictState, describeRestrict, toolSurfaceText, toolSurfaceFor, outsideSurfaceText, visibleToolsOf } from '../lib/restrict.js'
+import { HER_TOOLS, currentToolSurface, isHerAgent, knownToolNames, knownToolDescriptions, ownLayerNames, registerToolRestrict, rememberFromView, rememberKnownTools, readRestrictState, describeRestrict, toolSurfaceText, toolSurfaceFor, outsideSurfaceText, visibleToolsOf } from '../lib/restrict.js'
 
 /** 一个够用的假插件 ctx：能 on('agent/created')，也能被我们主动触发。 */
 function fakeCtx() {
@@ -447,6 +447,28 @@ test('rememberFromView：restrictable ∪ visible 才算「认得的名字」', 
   assert.deepEqual(ownLayerNames(), ['ops_x'])
   // 复位
   rememberFromView({ restrictableNames: new Set([...HER_TOOLS]), visible: new Map(HER_TOOLS.map((n) => [n, {}])) })
+})
+
+test('工具说明从 registry 的 definition.description 来；没有就留空，不编（A27）', () => {
+  rememberKnownTools([])
+  rememberFromView({
+    restrictableNames: new Set(['a_tool']),
+    visible: new Map([
+      ['a_tool', { name: 'a_tool', description: '  第一行\n第二行   第三行  ' }],
+      ['quiet_tool', { name: 'quiet_tool' }],
+      ['blank_tool', { description: '   ' }],
+      ['long_tool', { description: 'x'.repeat(300) }],
+    ]),
+  })
+  const d = knownToolDescriptions()
+  assert.equal(d.a_tool, '第一行 第二行 第三行', '换行与连续空白要压平')
+  assert.ok(!('quiet_tool' in d), '宿主没写说明的名字不许补一句')
+  assert.ok(!('blank_tool' in d), '空白说明等于没有')
+  assert.equal(d.long_tool.length, 240, '太长的说明截到 240 字')
+  assert.ok(d.long_tool.endsWith('…'), '截断要有省略号')
+  // 复位必须连说明一起清，否则测试之间会串味
+  rememberKnownTools([])
+  assert.deepEqual(knownToolDescriptions(), {})
 })
 
 test('白名单只写 own 层名字时：不延后、不收窄失败（以前会整条失效）', () => {

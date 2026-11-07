@@ -21,7 +21,7 @@ import { tmpdir } from 'node:os'
 import { normalizeConfig, inWindow, DEFAULTS } from '../lib/settings.js'
 import { lookBeforeWake } from '../lib/scheduler.js'
 import { registerObserve } from '../lib/observe.js'
-import { HER_TOOLS, rememberFromView } from '../lib/restrict.js'
+import { HER_TOOLS, rememberFromView, rememberKnownTools } from '../lib/restrict.js'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const CLIENT = join(HERE, '..', 'lib', 'client.js')
@@ -243,9 +243,11 @@ test('own 层的 ops_* 能存进白名单，且 /tools 会说明「收窄挡不�
   // 现在收 restrictable ∪ visible；但下给 restrict() 的仍然只有收得窄的那批。
   const root = await mkdtemp(join(tmpdir(), 'fish-p5e-'))
   try {
+    // 全量跑的时候别的用例可能留下过 own 层名单（比如 bash）；这里要一个干净起点。
+    rememberKnownTools([])
     rememberFromView({
       restrictableNames: new Set([...HER_TOOLS]),
-      visible: new Map([...HER_TOOLS.map((n) => [n, {}]), ['ops_bash', {}]]),
+      visible: new Map([...HER_TOOLS.map((n) => [n, { name: n, description: `${n} 的说明` }]), ['ops_bash', { name: 'ops_bash', description: '跑一条 shell 命令' }]]),
     })
     const ctx = fakeCtx(root)
     ctx.cfg.connection = { requestRejection: () => null }
@@ -261,6 +263,7 @@ test('own 层的 ops_* 能存进白名单，且 /tools 会说明「收窄挡不�
     await tools.handler({ method: 'GET', url: '/dsh-roost/tools', headers: {} }, res)
     assert.ok(payload.known.includes('ops_bash'), '白名单校验必须认得这个名字')
     assert.deepEqual(payload.ownLayer, ['ops_bash'], 'own 层名单用来解释「加进来只是让守卫放行」')
+    assert.equal(payload.descriptions.ops_bash, '跑一条 shell 命令', '工具说明要照 registry 给，界面不许自己编')
 
     const config = ctx.routes.find((r) => String(r.path || '').endsWith('/config'))
     const body = JSON.stringify({ tools: { restrict: true, allow: ['ops_bash', 'read_image'] } })

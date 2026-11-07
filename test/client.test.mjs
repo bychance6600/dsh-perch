@@ -237,6 +237,36 @@ test('组件在"有数据"时把关键信息渲染出来', async () => {
   delete globalThis.fetch
 })
 
+test('插件页的工具说明取自 registry，取不到只说来源（A27）', async () => {
+  const src = await readFile(CLIENT, 'utf8')
+  assert.ok(!src.includes('TOOL_HINTS'), '不许再留一份写死的工具说明表')
+  assert.ok(src.includes('state?.tools?.descriptions'), '说明要从 /state 的 tools.descriptions 取')
+  assert.ok(src.includes('来源：她自己那一层注册的'), 'own 层工具要说清来源')
+  assert.ok(src.includes('来源：宿主或别的插件注册的'), '其余工具要说清来源')
+  assert.ok(!/TOOL_HINTS\[name\]/.test(src), '未知工具不许再套旧表兜底')
+})
+
+test('插件页：registry 有说明就照显示，没有就只说来源（A27）', async () => {
+  const react = fakeReact({
+    0: stateWith({
+      tools: {
+        restrict: true,
+        allow: [],
+        known: ['known_tool', 'quiet_tool'],
+        own: ['quiet_tool'],
+        descriptions: { known_tool: '宿主自己写的一句说明' },
+      },
+    }),
+  })
+  const { exports } = await loadClient({ react })
+  const txt = textOf(openTab(exports, react, '插件')).join(' ')
+  assert.ok(txt.includes('known_tool'), '名字要在表里')
+  assert.ok(txt.includes('宿主自己写的一句说明'), '有说明就照 registry 的写')
+  assert.ok(txt.includes('quiet_tool'), '没说明的工具也要列出来')
+  assert.ok(txt.includes('来源：她自己那一层注册的'), 'own 层工具取不到说明时说来源')
+  assert.ok(!txt.includes('宿主按会话给的'), '不许再编一句「宿主按会话给的」')
+})
+
 test('组件里没有任何"改她性格"的控件（B §8 红线）', async () => {
   const raw = await readFile(CLIENT, 'utf8')
   // 2026-11-06：导入卡已删，整份源码里出现这些词都算红线。
