@@ -746,37 +746,42 @@ test('宿主旧卡片：缺 userQuestions 时说明白是关了一条路，不�
   assert.ok(src.includes('把 DSH 升到最新版再试'), '要给出恢复条件')
   // 2026-10-30 m03193：以前写死「0.2.1-rc.3 起才有」是错的——dsh-user-questions 从 0.1.x 就有包了。
   assert.ok(!src.includes('0.2.1-rc.3 起才有'), '不许再写死服务上线版本')
-  // 比升级自检更基础：先说「为什么有个功能没反应」，再说「升级有没有装进去」
+  // 比安装自检更基础：先说「为什么有个功能没反应」，再说「装进去的是不是这一份」
   const atCard = src.indexOf('const compatCard =')
   const atTree = src.indexOf('        compatCard,')
-  const atUpgrade = src.indexOf('        upgradeCard,', atTree)
+  const atInstall = src.indexOf('        installCard,', atTree)
   assert.ok(atCard > 0 && atTree > atCard, '卡片要定义再放进树里')
-  assert.ok(atUpgrade > atTree, '要排在升级自检前面')
+  assert.ok(atInstall > atTree, '要排在安装自检前面')
 })
 
-test('宿主版本卡：超范围只提醒，不拦人（0.8.1 m03193）', async () => {
+test('安装与宿主版本合成一张：只提醒，不拦人（A30）', async () => {
   const src = await readFile(CLIENT, 'utf8')
 
-  // 触发条件：有 host 信息，且既不是 supported 也不是 unknown——unknown 不许弹卡，
+  // 触发条件：升级对不上，或宿主超出范围。unknown 不许弹卡，
   // 否则桌面版（宿主在 app.asar 里读不到版本）每个用户都会看到一张假警告。
-  assert.ok(src.includes("const hostCard = state?.host && state.host.status !== 'supported' && state.host.status !== 'unknown'"),
+  assert.ok(src.includes('const upgradeBad = state?.upgrade?.stale === true'), '升级只看 stale')
+  assert.ok(src.includes("const hostBad = state?.host && state.host.status !== 'supported' && state.host.status !== 'unknown'"),
     'unknown 不弹卡')
+  assert.ok(src.includes('const installCard = (upgradeBad || hostBad)'), '两件事合成一张卡')
+  assert.ok(src.includes("h('h3', null, '安装与宿主版本')"), '合成后的标题')
   assert.ok(src.includes('这个 DSH 版本比插件要求的还旧'), 'older 的标题')
   assert.ok(src.includes('这个 DSH 版本比插件认识的还新'), 'newer 的标题')
   assert.ok(src.includes('插件不会因此拒绝启动'), '要说清只提醒')
+  assert.equal(src.includes('const hostCard ='), false, '旧的宿主卡不再单独存在')
+  assert.equal(src.includes('const upgradeCard ='), false, '旧的升级卡不再单独存在')
 
-  const atHost = src.indexOf('const hostCard =')
-  const atTree = src.indexOf('        hostCard,')
+  const atInstall = src.indexOf('const installCard =')
+  const atTree = src.indexOf('        installCard,')
   const atCompat = src.indexOf('        compatCard,')
-  assert.ok(atHost > 0 && atTree > atHost, '定义再放进树里')
+  assert.ok(atInstall > 0 && atTree > atInstall, '定义再放进树里')
   assert.ok(atTree > atCompat, '排在宿主兼容卡之后')
 })
 
-test('升级自检卡：版本对不上时要说清「改的是源目录」（0.7.6）', async () => {
+test('升级自检：版本对不上时要说清「改的是源目录」（0.7.6）', async () => {
   const src = await readFile(CLIENT, 'utf8')
 
   // 卡的触发条件只认 stale，不要因为 skipped（没查到）就弹一张吓人的卡
-  assert.ok(src.includes('const upgradeCard = state?.upgrade?.stale === true'), '只在对不上时出现')
+  assert.ok(src.includes('const upgradeBad = state?.upgrade?.stale === true'), '只在对不上时出现')
   assert.ok(src.includes('升级没有真正装进去'), '标题要点破')
   // 必须解释机制，否则用户只会以为是「升级没生效」这种玄学。
   // 路径里带反斜杠，这里不按字面钉死，只钉「说清了加载的是哪一份」。
@@ -787,8 +792,8 @@ test('升级自检卡：版本对不上时要说清「改的是源目录」（0.
   assert.ok(src.includes('删掉 node_modules'), '给删目录修法')
 
   // 位置：数据页最上面（在换家提示之前），别藏在别的页
-  const atCard = src.indexOf('const upgradeCard =')
-  const atTree = src.indexOf('        upgradeCard,')
+  const atCard = src.indexOf('const installCard =')
+  const atTree = src.indexOf('        installCard,')
   const atHomes = src.indexOf('state?.homes?.changed === true', atTree)
   assert.ok(atCard > 0 && atTree > atCard, '卡片要定义再放进树里')
   assert.ok(atHomes > atTree, '要排在换家提示前面（先看版本，再看住哪儿）')

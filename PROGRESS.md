@@ -4,7 +4,7 @@
 
 **0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过，正在按清单往下施工）。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1220 条 / 1209 过 / 9 红**（另有 2 skip，2026-11-07 A29 之后，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1221 条 / 1210 过 / 9 红**（另有 2 skip，2026-11-07 A30 之后，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
 
@@ -48,11 +48,11 @@
 
 ## 手上这一步（下一个会话从这里接）
 
-**A 段继续施工。** 真机首检 2026-11-07 01:06 已通过（A11 ✅，她直调 `her_note` / `bili_look` / `growth_commit`、QQ 私聊与群 @ 双向都通）。代码层按 `docs/约定清单.md` 头注的顺序往下做；每做完一条：定向测试 → 全量（只许 11 条已知环境红）→ 回写清单对应行 → 提交。
+**A 段继续施工。** 真机首检 2026-11-07 01:06 已通过（A11 ✅，她直调 `her_note` / `bili_look` / `growth_commit`、QQ 私聊与群 @ 双向都通）。代码层按 `docs/约定清单.md` 头注的顺序往下做；每做完一条：定向测试 → 全量（只许 9 条已知环境红）→ 回写清单对应行 → 提交。
 
 ## 之后（按顺序）
 
-1. ~~A27~~ ✅ ~~A28~~ ✅ ~~A29~~ ✅ A30 → A17 → A18 → A12 → A19 → A20 → A31 → A32 → A33；A8（B 站分镜）单独一轮；A13/A14 收尾；A10 随 A20 逐条核。
+1. ~~A27~~ ✅ ~~A28~~ ✅ ~~A29~~ ✅ ~~A30~~ ✅ A17 → A18 → A12 → A19 → A20 → A31 → A32 → A33；A8（B 站分镜）单独一轮；A13/A14 收尾；A10 随 A20 逐条核。
 2. 全做完再回头补 B 段的 19 条验收。
 
 ## 交接（2026-11-06 23:50，A 段进行中）
@@ -233,10 +233,20 @@
 - 测试：`test/owner.test.mjs` 7 条（分渠道互不覆盖、publicOwner 不带 cookie、清空不复活、只缺键才回落、读优先、未知渠道不落盘、HTTP 存与取）、`test/channel-router.test.mjs` 2 条（同一数字在 B 站/抖音各自映射；heard 的 origin=`owner`、influence=`constitution`）、`test/proactive.test.mjs` 1 条（owner.json 优先于老 config）、`test/settings.test.mjs` 1 条、`test/client.test.mjs` 1 条。
 - 全量 1220 条 / 1209 过 / 9 红 / 2 skip（/tmp/full-A29.log）。9 红与已知环境红逐条同名。
 
+**自检按新库重写（2026-11-07，已完 A30）**
+
+- 问题：环境自检还是 river 时代的清单——没有 QQ 三项；升级自检与宿主版本下限分成两张卡，各说一半。
+- `lib/selfcheck.js` 加三项，id 为 `qq-bridge` / `qq-connection` / `qq-token`：桥只报本机端口通不通；连接读渠道层实时状态（`connected` / `queued` / `received` / `sent` / `lastError`）；令牌只报填没填，绝不回显。QQ 没开时三项都在、都绿，写「QQ 渠道没开」。桥信息只在联网自检时探（`detectBridge`，只做 TCP 握手，不碰协议）。
+- `lib/observe.js`：`/selfcheck` 现读 `deps.channels.status()`，QQ 开着且 `net` 时调一次 `detectBridge`，把 `channels` 与 `bridge` 传给 `runChecks`；`/log/export` 也带 `channels`（`net:false`，不探桥）。
+- `lib/client.js`：删掉单独的 `upgradeCard` 与 `hostCard`，合成 `installCard`（`upgradeBad || hostBad`，标题「安装与宿主版本」），只在真的对不上时出现；`unknown` 与 `skipped` 都不弹卡。
+- 已删模块没有留下自检项（checked：outing / possess / keepsake / pocket / sessionnote / keep / dream / notify / update / selfupdate 都不在 `runChecks` 里），所以「去掉死项」这一条是核对，不是删代码。
+- 测试：`test/selfcheck.test.mjs` 1 条（QQ 开着且连上 → 三项绿、令牌不回显；桥连不上/连接失败 → 前两项红、令牌仍绿；QQ 没开 → 三项都在且绿）；`test/client.test.mjs` 3 条改成合成卡（无 `hostCard`/`upgradeCard`、`installCard` 位置、升级机制与修法仍在）。
+- 全量 1221 条 / 1210 过 / 9 红 / 2 skip（/tmp/full-A30.log）。9 红与已知环境红逐条同名。
+
 **下一步顺序**
 
 1. ~~A11 收尾~~：已 ✅。~~A21~~：已 ✅。~~A34 改名~~：已 ✅。~~A35 名字变量~~：已 ✅。
-2. ~~A22~~：已 ✅。~~A23~~：已 ✅。~~A24~~：已 ✅。~~A25~~：已 ✅。~~A26~~：已 ✅。~~A27~~：已 ✅。~~A28~~：已 ✅。~~A29~~：已 ✅。A30 → A17 → A18 → A12 → A19 → A20 → A31 → A32 → A33（A8 单独一轮；A13/A14 收尾；A10 随 A20 逐条核）。
+2. ~~A22~~：已 ✅。~~A23~~：已 ✅。~~A24~~：已 ✅。~~A25~~：已 ✅。~~A26~~：已 ✅。~~A27~~：已 ✅。~~A28~~：已 ✅。~~A29~~：已 ✅。~~A30~~：已 ✅。A17 → A18 → A12 → A19 → A20 → A31 → A32 → A33（A8 单独一轮；A13/A14 收尾；A10 随 A20 逐条核）。
 3. A1 真机拔网验收并入 A11 之后（代码与模拟已过）。
 
 **环境注意**

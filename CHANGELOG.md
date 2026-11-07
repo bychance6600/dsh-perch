@@ -34,6 +34,12 @@
 - **浏览器通道补齐 `evaluate`**：之前 `browseFeed` 与打开/评论都在调一个不存在的 `evaluate`，所以一直回 `no-transport`；这次补上，并加了网络事件的开启与读取。
 - **开发态也能用抖音子包**：包名解析不到时回落到仓库里的 `packages/dsh-roost-douyin/`，和分镜模块同一个口径。
 
+### 自检
+
+- **QQ 三项分开报**：桥（WS 在不在听）、连接（适配器连上没有、待发几条、收/发计数）、令牌（只报填没填，不回显）。QQ 没开时三项也在，写明「没开」；连不上时先说 `lastError`，再给核对 `wsUrl` / 令牌的路。
+- **安装与宿主版本合成一张卡**：源目录比正在跑的旧、或升级没真正装进去，同一条提醒；只提醒，不拦启动。删掉原来分开的两张卡。
+- **死项核对**：出门/请神、通知、自更新这些已删模块本来就不在自检清单里，这次确认没有遗留项；数据页仍是九项。
+
 ### 删除
 
 - 渠道：B 站私信、抖音私信/群（`lib/channels/bili.js`、抖音子包里的私信整机与相关测试已一并删除）。
@@ -61,4 +67,4 @@
 ### 兼容
 
 - `dsh >=0.2.0-rc.1 <0.3.0-0`，Node ≥ 22；`dependencies` / `peerDependencies` / `devDependencies` 仍为空。
-- 测试基线：`node --test --test-isolation=none` → 1220 条 / 1209 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。
+- 测试基线：`node --test --test-isolation=none` → 1221 条 / 1210 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。

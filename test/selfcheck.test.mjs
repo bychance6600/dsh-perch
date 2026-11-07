@@ -117,3 +117,58 @@ test('源码守门：/owner POST 只认登录账号，不许覆盖领养人', as
     '不许再把登录账号写进领养人那两格',
   )
 })
+
+test('自检：QQ 三项分开报——桥 / 连接 / 令牌（A30）', async () => {
+  await withRoot(async (root) => {
+    const config = {
+      channels: {
+        qq: { enabled: true, wsUrl: 'ws://127.0.0.1:3001', accessToken: 'secret-token' },
+      },
+    }
+    const live = [{
+      name: 'qq', connected: true, queued: 2, received: 7, sent: 3, since: Date.now(), lastError: '',
+    }]
+    const bridge = { listening: true, host: '127.0.0.1', port: 3001, pathExists: false, note: '' }
+    const ok = await runChecks({ root, config, channels: live, bridge, net: false, host: {}, peers: [] })
+    const byId = Object.fromEntries(ok.items.map((x) => [x.id, x]))
+    assert.equal(byId['qq-bridge'].ok, true, '桥在跑要绿')
+    assert.match(byId['qq-bridge'].detail, /127\.0\.0\.1:3001/)
+    assert.equal(byId['qq-connection'].ok, true, '连上了要绿')
+    assert.match(byId['qq-connection'].detail, /收 7 \/ 发 3/)
+    assert.equal(byId['qq-token'].ok, true, '填了令牌要绿')
+    assert.equal(JSON.stringify(ok).includes('secret-token'), false, '令牌不许回显')
+
+    const broken = await runChecks({
+      root,
+      config,
+      channels: [{ name: 'qq', connected: false, lastError: 'auth failed', queued: 0, received: 0, sent: 0, since: 0 }],
+      bridge: { listening: false, host: '127.0.0.1', port: 3001, pathExists: false, note: '127.0.0.1:3001 连不上（ECONNREFUSED）' },
+      net: false,
+      host: {},
+      peers: [],
+    })
+    const b = Object.fromEntries(broken.items.map((x) => [x.id, x]))
+    assert.equal(b['qq-bridge'].ok, false, '桥没起要红')
+    assert.match(b['qq-bridge'].detail, /ECONNREFUSED/)
+    assert.equal(b['qq-connection'].ok, false, '没连上要红')
+    assert.match(b['qq-connection'].detail, /auth failed/)
+    assert.equal(b['qq-token'].ok, true, '令牌填了就是填了，连接失败不是它的错')
+
+    const off = await runChecks({
+      root,
+      config: { channels: { qq: { enabled: false } } },
+      channels: null,
+      bridge: null,
+      net: false,
+      host: {},
+      peers: [],
+    })
+    for (const id of ['qq-bridge', 'qq-connection', 'qq-token']) {
+      const it = off.items.find((x) => x.id === id)
+      assert.ok(it, `没开 QQ 时也要有 ${id} 这一项`)
+      assert.equal(it.ok, true, '没开不算坏')
+      assert.match(it.detail, /没开/)
+    }
+  })
+})
+
