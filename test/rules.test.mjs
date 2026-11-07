@@ -22,8 +22,8 @@ function ev(type, day, extra = {}) {
   return { id: `ev_${String(day).padStart(26, '0')}`, type, day, ts: `2026-10-${String(day).padStart(2, '0')}T10:00:00.000Z`, text: extra.text || `${type}@${day}`, refs: [], flags: [], ...extra }
 }
 
-function modelOf(events, growthDays = 30) {
-  return deriveSelf(events, { growthDays })
+function modelOf(events, stageSpanDays = 30) {
+  return deriveSelf(events, { stageSpanDays })
 }
 
 test('物理层两条绝不进提示词', () => {

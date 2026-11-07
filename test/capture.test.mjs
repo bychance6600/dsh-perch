@@ -131,7 +131,7 @@ test('她无法靠自带 flag 把信念藏起来', async () => {
 
 test('事件信封带上当时的 day / stage（观测台和时间线要用）', async () => {
   await withRoot(async (root) => {
-    await writeConfig(normalizeConfig({ growthDays: 7 }), root)
+    await writeConfig(normalizeConfig({ stageSpanDays: 7 }), root)
     const ctx = fakeCtx()
     registerCapture(ctx, { root })
     const tool = ctx.regs.get('growth_commit')

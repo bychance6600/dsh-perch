@@ -2,9 +2,9 @@
 
 ## 现在在哪
 
-**0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。能跑测试，没上真机。
+**0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过，正在按清单往下施工）。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1204 条 / 1193 过 / 9 红**（另有 2 skip，2026-11-07 A27 之后，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1208 条 / 1197 过 / 9 红**（另有 2 skip，2026-11-07 A28 之后，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
 
@@ -213,10 +213,20 @@
 - 测试：`test/restrict.test.mjs` 1 条（Map 里的说明能取到、换行压平、没说明不出现、超长截断、复位清空）；`test/client.test.mjs` 2 条（源码里不再有 `TOOL_HINTS`、插件页渲染出 registry 说明与来源）；`test/p5.test.mjs` 的 /tools 断言加 `descriptions`，并在用例开头 `rememberKnownTools([])` 复位 own 层（全量里 `bash` 从别的用例漏进来，曾把 `ops_*_own` 那条判红）；`test/schedule.test.mjs` 从「源码里要有 schedule_create 的说明」改成「说明不许再写死在客户端」。
 - 全量 1204 条 / 1193 过 / 9 红 / 2 skip（/tmp/full-A27d.log）。9 红与已知环境红同名（own 层那条已转绿）；`withFileLock` 在 isolation=none 下偶发，单跑绿。
 
+**成长配置解耦（2026-11-07，已完 A28）**
+
+- 问题：`growthDays` 这名字读起来像「她最多只能活这么多天」，而它实际只是「四个阶段一共多少天」的尺子；`absence.js:90`、`ask.js:201/383`、`capture.js:144` 为了写事件信封里的 `day/stage`，每次都跑完整 `deriveSelf`（连信念、冲突、质量分一起算），改配置还会牵动这些旁路。
+- 配置键改名 `stageSpanDays`：`DEFAULTS` 与 `LIMITS`（7–180）跟着改，`normalizeConfig` 先迁移老配置——`growthDays` 的值接过来，新旧都有时以新键为准，保存时清掉旧键。全库（lib / test / tools）一起改名。
+- `lib/derive.js` 抽出 `constitutionEvents(ordered)`：把「哪些事件能参与她是谁」的过滤收成一份（驳回 id、dream、`influence:none`、非 constitution），`deriveSelf` 与新增的 `stampOf(events,{stageSpanDays,now})` 共用。`stampOf` 只返回 `{day,stage}`，不再算信念与质量。
+- 四处写事件信封改用它：`absence.js` 的 contact、`ask.js` 的两处、`capture.js` 的 growth_commit 与 seen。`capture.js` 里已无 `deriveSelf`。
+- 主动说话：`minIdleHours` 默认 6→3（内部默认，不上界面）；`maxPerDay` 夹在 1–6、不设 0（0 等于把「她自己开口」整条路关掉，那不是这个旋钮该管的事）。`client.js` 删掉 `proactiveOn`/`proactiveIdle` 两个已不渲染的死状态，只留 1–6 的上限，文案写「上限不是任务」。
+- 测试：settings 迁移 2 条（旧键接值且不留旧键、新键优先、落盘清旧键）、derive `stampOf` 1 条（与 deriveSelf 的 day/elapsedStage 一致，忽略 social/dream/none/驳回）、client 1 条（无总开关、无 minIdleHours 入口、有「上限不是任务」）；proactive 的夹紧断言从 12 改 6，并补默认 3 与 0→1。
+- 全量 1208 条 / 1197 过 / 9 红 / 2 skip（/tmp/full-A28.log）。9 红与已知环境红逐条同名。
+
 **下一步顺序**
 
 1. ~~A11 收尾~~：已 ✅。~~A21~~：已 ✅。~~A34 改名~~：已 ✅。~~A35 名字变量~~：已 ✅。
-2. ~~A22~~：已 ✅。~~A23~~：已 ✅。~~A24~~：已 ✅。~~A25~~：已 ✅。~~A26~~：已 ✅。A27 → A28 → A29 → A30 → A17 → A18 → A12 → A19 → A20 → A31 → A32 → A33（A8 单独一轮；A13/A14 收尾；A10 随 A20 逐条核）。
+2. ~~A22~~：已 ✅。~~A23~~：已 ✅。~~A24~~：已 ✅。~~A25~~：已 ✅。~~A26~~：已 ✅。~~A27~~：已 ✅。~~A28~~：已 ✅。A29 → A30 → A17 → A18 → A12 → A19 → A20 → A31 → A32 → A33（A8 单独一轮；A13/A14 收尾；A10 随 A20 逐条核）。
 3. A1 真机拔网验收并入 A11 之后（代码与模拟已过）。
 
 **环境注意**

@@ -69,7 +69,7 @@ test('metas 里的 react 归到对应的那次拒绝上，计数进 facts', () =
     ev('ev_B', 'refusal', 2, '我不想回答这个问题。'),
     ev('ev_M2', 'meta', 2, 'react:ev_B:accept'),
   ]
-  const m = deriveSelf(events, { growthDays: 30 })
+  const m = deriveSelf(events, { stageSpanDays: 30 })
   assert.equal(m.refusals.length, 2)
   assert.equal(m.refusals[0].reaction, 'insist')
   assert.equal(m.refusals[1].reaction, 'accept')
@@ -81,7 +81,7 @@ test('metas 里的 react 归到对应的那次拒绝上，计数进 facts', () =
 })
 
 test('没有归因的拒绝，reaction 是 null，不假装被接受', () => {
-  const m = deriveSelf([ev('ev_C', 'refusal', 1, '我不想听这个。')], { growthDays: 30 })
+  const m = deriveSelf([ev('ev_C', 'refusal', 1, '我不想听这个。')], { stageSpanDays: 30 })
   assert.equal(m.refusals[0].reaction, null)
   assert.equal(m.facts.hurts, 0)
 })
@@ -91,7 +91,7 @@ test('认识不了的 kind 不落进计数（别让一条坏 meta 污染数据�
     ev('ev_D', 'refusal', 1, '我不想做这个。'),
     ev('ev_M3', 'meta', 1, 'react:ev_D:angry'),
   ]
-  const m = deriveSelf(events, { growthDays: 30 })
+  const m = deriveSelf(events, { stageSpanDays: 30 })
   assert.equal(m.refusals[0].reaction, null)
   assert.equal(m.facts.reactions.other, 0)
 })
@@ -105,7 +105,7 @@ test('身份文档里带上"他听完怎么反应"，但只陈述事实，不评
     ev('ev_F', 'refusal', 2, '我不想回答这个问题。'),
     ev('ev_M5', 'meta', 2, 'react:ev_F:hurt'),
   ]
-  const m = deriveSelf(events, { growthDays: 30 })
+  const m = deriveSelf(events, { stageSpanDays: 30 })
   const text = personaLine(m, { budget: 4000 })
   assert.match(text, /## 你拒绝过/)
   assert.match(text, /他又说了一遍/)
@@ -117,7 +117,7 @@ test('身份文档里带上"他听完怎么反应"，但只陈述事实，不评
 })
 
 test('没人回过她的拒绝时，不出现后果那句（不许提前吓她）', () => {
-  const m = deriveSelf([ev('ev_G', 'refusal', 1, '我不想看这个视频。')], { growthDays: 30 })
+  const m = deriveSelf([ev('ev_G', 'refusal', 1, '我不想看这个视频。')], { stageSpanDays: 30 })
   const text = personaLine(m, { budget: 4000 })
   assert.match(text, /## 你拒绝过/)
   assert.doesNotMatch(text, /有几次他还是坚持了/)

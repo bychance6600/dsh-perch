@@ -10,6 +10,7 @@
 - **抖音改成材料层**：`lib/channels/douyin.js` 只留浏览器 transport、`api()` 与 `feed()`，没有 `send`/`onMessage`；`channels.douyin.enabled` 只表示「报纸能读」；`sub.js` 加 `loadSubModule()`；`host.js` 起材料时不建 people/journal/router。
 - **设置页**：页签按她的一天重排为 11 个（今天 / 状态 / 成长 / 住所 / 社会 / 上网 / 渠道 / 插件 / 原理 / 数据 / 反馈），默认「今天」。今天页四段（现状、时间线、今天变了什么、手边）；成长页四阶段实时生成、上下文与记忆并页；住所页只留状态与会话健康（连续两次发送失败自动换会话，新增 `POST /home/rotate`）；上网页合并 B 站与抖音的每日次数、看画面加今日计数、请求节奏与历史折叠；插件页改成收窄开关 + 可搜索工具表；反馈页只留仓库链接。
 - **插件页的工具说明取 registry**：不再在客户端写死工具说明。收窄时从宿主 `tools.view()` 的 `definition.description` 记下说明（压平空白、截 240 字），`/state` 与 `/tools` 一起下发；没有说明的工具只写来源（她自己那一层注册的 / 宿主或别的插件注册的），不编「宿主按会话给的」。搜索、状态列、加 / 移、底部保存不变。
+- **成长节奏的配置改名**：`growthDays` 改成 `stageSpanDays`——它只是「四个阶段一共多少天」的尺子，不是寿命上限。老配置里的 `growthDays` 在 `normalizeConfig` 里迁移一次（新旧都有时以新键为准，保存时清掉旧键）。`absence` / `ask` / `capture` 四处写事件信封不再跑完整 `deriveSelf`，改用只算 `{day,stage}` 的 `stampOf()`；过滤口径（驳回、梦、`influence:none`、非 constitution）收进 `constitutionEvents()` 与 `deriveSelf` 共用。主动说话默认隔 3 小时（内部值，不上界面），上限只留 1–6 且不设 0，界面不再有「允许她主动开口」总开关，文案写明「上限不是任务」。
 - **世界书**：面板从渠道页移到成长页；内容仍由会话侧生成、主人导入，插件不写。
 
 ### 报告
@@ -56,4 +57,4 @@
 ### 兼容
 
 - `dsh >=0.2.0-rc.1 <0.3.0-0`，Node ≥ 22；`dependencies` / `peerDependencies` / `devDependencies` 仍为空。
-- 测试基线：`node --test --test-isolation=none` → 1204 条 / 1193 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。
+- 测试基线：`node --test --test-isolation=none` → 1208 条 / 1197 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。

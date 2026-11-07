@@ -12,7 +12,7 @@ const iso = (msAgo = 0) => new Date(Date.now() - msAgo).toISOString()
 
 function model(over = {}) {
   return {
-    seed: 'seed', day: 3, growthDays: 30, stage: 4, stageName: '整合', name: null,
+    seed: 'seed', day: 3, stageSpanDays: 30, stage: 4, stageName: '整合', name: null,
     beliefs: [], beliefCount: 0, refuted: [], refusals: [], selfmodAttempts: [],
     reunions: [], corrected: 0, tested: [], narrative: null,
     needs: { autonomy: 0.5, competence: 0.2, relatedness: 0.5 },
@@ -50,23 +50,23 @@ test('scaledEveryDays：同一张卡在不同成长期下的冷却不同，且�
 test('isSpent 用缩放后的冷却：7 天成长期里 21 天的卡 10 天就能再出', () => {
   const tpl = findTemplate('comeback')
   const need = scaledEveryDays(tpl, 7)
-  assert.ok(isSpent(tpl, fired('comeback', need - 1), { growthDays: 7 }), '还没到冷却，应该拦')
-  assert.equal(isSpent(tpl, fired('comeback', need + 1), { growthDays: 7 }), false, '过了冷却，应该放')
+  assert.ok(isSpent(tpl, fired('comeback', need - 1), { stageSpanDays: 7 }), '还没到冷却，应该拦')
+  assert.equal(isSpent(tpl, fired('comeback', need + 1), { stageSpanDays: 7 }), false, '过了冷却，应该放')
   // 同样的历史，30 天成长期下仍在冷却中
-  assert.ok(isSpent(tpl, fired('comeback', need + 1), { growthDays: 30 }))
+  assert.ok(isSpent(tpl, fired('comeback', need + 1), { stageSpanDays: 30 }))
 })
 
 test('isSpent 接受 squeeze：空档补偿后冷却按比例缩短', () => {
   const tpl = findTemplate('comeback')
   const need = scaledEveryDays(tpl, 30) // 21 天
-  assert.ok(isSpent(tpl, fired('comeback', Math.floor(need / 2) + 1), { growthDays: 30 }), '正常冷却内')
+  assert.ok(isSpent(tpl, fired('comeback', Math.floor(need / 2) + 1), { stageSpanDays: 30 }), '正常冷却内')
   assert.equal(
-    isSpent(tpl, fired('comeback', Math.floor(need / 2) + 1), { growthDays: 30, squeeze: 0.5 }),
+    isSpent(tpl, fired('comeback', Math.floor(need / 2) + 1), { stageSpanDays: 30, squeeze: 0.5 }),
     false,
     '空档补偿后应该可以出',
   )
   // squeeze 传垃圾值不应崩，也不能变成 0 冷却
-  assert.doesNotThrow(() => isSpent(tpl, fired('comeback', 1), { growthDays: 30, squeeze: null }))
+  assert.doesNotThrow(() => isSpent(tpl, fired('comeback', 1), { stageSpanDays: 30, squeeze: null }))
 })
 
 // ---------- 久别门槛随成长期缩放 ----------
@@ -80,8 +80,8 @@ test('absenceThreshold：7 天里 2 天算久别，180 天里要更久', () => {
 test('absence_probe 的 cond 跟着成长期走，不写死 2 天', () => {
   const tpl = findTemplate('absence_probe')
   // 3 天没来：30 天成长期算久别；180 天成长期还不算
-  assert.equal(tpl.cond(model({ absenceDays: 3, growthDays: 30 })), true)
-  assert.equal(tpl.cond(model({ absenceDays: 3, growthDays: 180 })), false)
+  assert.equal(tpl.cond(model({ absenceDays: 3, stageSpanDays: 30 })), true)
+  assert.equal(tpl.cond(model({ absenceDays: 3, stageSpanDays: 180 })), false)
 })
 
 test('absence_probe 允许问「去哪了」（2026-10-25 用户改）', () => {
@@ -123,10 +123,10 @@ test('gapSqueeze：短空档不补偿，2 天以上减半，4 天以上更狠', 
   assert.equal(gapSqueeze(null), 1)
 })
 
-test('pick 把 growthDays 与 squeeze 传给 isSpent（源码级守门）', async () => {
+test('pick 把 stageSpanDays 与 squeeze 传给 isSpent（源码级守门）', async () => {
   const fs = await import('node:fs')
   const src = fs.readFileSync(new URL('../lib/generator.js', import.meta.url), 'utf8')
-  assert.match(src, /isSpent\(t, fired, \{ now, growthDays: model\.growthDays, squeeze: opts\.squeeze \}\)/)
+  assert.match(src, /isSpent\(t, fired, \{ now, stageSpanDays: model\.stageSpanDays, squeeze: opts\.squeeze \}\)/)
   const sched = fs.readFileSync(new URL('../lib/scheduler.js', import.meta.url), 'utf8')
   assert.match(sched, /gapSqueeze\(gapSinceLastWake\(events\)\)/)
   assert.equal((sched.match(/squeeze: gapSqueeze\(/g) || []).length, 2, '自动唤醒与手动唤醒都要补偿')
@@ -149,10 +149,10 @@ test('staleAfter：7 天里 2 天就算旧判断，180 天里放宽到 12 天', 
 test('consistency 的「旧判断」门槛跟着成长期走', () => {
   const tpl = findTemplate('consistency')
   const since = new Date(Date.now() - 3 * DAY).toISOString()
-  const m = model({ beliefs: [{ text: '我记得', since }], beliefCount: 1, growthDays: 7 })
+  const m = model({ beliefs: [{ text: '我记得', since }], beliefCount: 1, stageSpanDays: 7 })
   // 3 天前的一句判断：7 天成长期里已经算旧（门槛 2 天）
   assert.equal(tpl.cond(m), true)
   // 同样 3 天，在 30 天成长期里还没到 5 天门槛
-  assert.equal(tpl.cond(model({ beliefs: [{ text: '我记得', since }], beliefCount: 1, growthDays: 30 })), false)
+  assert.equal(tpl.cond(model({ beliefs: [{ text: '我记得', since }], beliefCount: 1, stageSpanDays: 30 })), false)
   assert.match(tpl.prompt(m), /3 天前/)
 })

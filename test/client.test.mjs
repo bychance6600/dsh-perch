@@ -189,7 +189,7 @@ test('组件在"有数据"时把关键信息渲染出来', async () => {
 
   // 用假的 fetch 喂一份完整状态，再手工触发一次 load 的效果
   const state = {
-    day: 5, growthDays: 30, stage: 1, stageName: '信任', stageForced: false,
+    day: 5, stageSpanDays: 30, stage: 1, stageName: '信任', stageForced: false,
     pendingGate: 'autonomy', name: null, beliefCount: 2, absenceDays: 0,
     counts: { utterance: 3, revise: 1, refusal: 0, reunion: 0, total: 6 },
     quality: { stability: 0.5, consistency: 0.6, novelty: 0.7 },
@@ -294,7 +294,7 @@ test('quality 是宿主那套 {score} 结构体时也要能渲染（2026-10-23 �
   // → React 渲染抛错 → 设置节被错误边界吞掉 → 用户看到**一片空白**。
   // 这个用例把"真实形状"钉死，谁再退回裸数字假设就会红。
   const realShape = {
-    day: 1, growthDays: 30, stage: 1, stageName: '信任', stageForced: false,
+    day: 1, stageSpanDays: 30, stage: 1, stageName: '信任', stageForced: false,
     pendingGate: 'trust', name: null, beliefCount: 0, absenceDays: 0,
     counts: { utterance: 0, revise: 0, refusal: 0, reunion: 0, total: 2 },
     quality: {
@@ -330,7 +330,7 @@ test('quality 是宿主那套 {score} 结构体时也要能渲染（2026-10-23 �
 test('quality 能测出稳定值时，数字和判读一起给（用户 m06350）', async () => {
   const react = fakeReact({
     0: {
-      day: 30, growthDays: 30, stage: 2, stageName: '自主', stageForced: false, pendingGate: null,
+      day: 30, stageSpanDays: 30, stage: 2, stageName: '自主', stageForced: false, pendingGate: null,
       name: '梦尘', beliefCount: 6, absenceDays: 0,
       counts: { utterance: 40, revise: 3, refusal: 2, reunion: 1, total: 60 },
       quality: {
@@ -355,7 +355,7 @@ test('quality 能测出稳定值时，数字和判读一起给（用户 m06350�
 test('判断漂移的三个值折叠在一行里（2026-11-06 改回）', async () => {
   const react = fakeReact({
     0: {
-      day: 30, growthDays: 30, stage: 2, stageName: '自主', stageForced: false, pendingGate: null,
+      day: 30, stageSpanDays: 30, stage: 2, stageName: '自主', stageForced: false, pendingGate: null,
       name: '梦尘', beliefCount: 6, absenceDays: 0,
       counts: { utterance: 40, revise: 3, refusal: 2, reunion: 1, total: 60 },
       quality: {
@@ -377,7 +377,7 @@ test('quality 缺失 / 是裸数字时也都能渲染', async () => {
   for (const q of [undefined, null, {}, { stability: 0.5, consistency: 0.6, novelty: 0.7 }]) {
     const react = fakeReact({
       0: {
-        day: 1, growthDays: 30, stage: 1, stageName: '信任', stageForced: false, pendingGate: null,
+        day: 1, stageSpanDays: 30, stage: 1, stageName: '信任', stageForced: false, pendingGate: null,
         name: null, beliefCount: 0, absenceDays: 0,
         counts: { utterance: 0, revise: 0, refusal: 0, reunion: 0, total: 0 },
         quality: q,
@@ -415,7 +415,7 @@ test('观测台有「在线状态」条：7 种状态都有颜色，且页面在
 /** 状态卡用的最小 /state 形状（用例按需覆盖字段） */
 function stateWith(extra = {}) {
   return {
-    day: 3, growthDays: 30, stage: 1, stageName: '信任', stageForced: false,
+    day: 3, stageSpanDays: 30, stage: 1, stageName: '信任', stageForced: false,
     pendingGate: null, name: null, beliefCount: 1, absenceDays: 0,
     counts: { utterance: 1, revise: 0, refusal: 0, reunion: 0, total: 1 },
     quality: { stability: 0, consistency: 1, novelty: 0 },
@@ -827,4 +827,19 @@ test('设置页切页不能把判据 showTab 当成开关用（issue #12）', as
   // ④ 对照：判据仍在、且只用于条件位置（防有人为了过测试把 showTab 删了）。
   assert.match(src, /const showTab = \(id\) => tab === id/, 'showTab 的定义不能被删')
   assert.match(src, /showTab\('bili'\) \? biliPage : null/, '判据照旧用于渲染条件')
+})
+
+// ---------------------------------------------------------------------------
+// 2026-11-07（A28）：主动开口没有总开关，只剩 1–6 的上限；minIdleHours 不上界面。
+// 这条守的是「配置项在界面上有入口」这件事本身——死状态留着，下一个人就会
+// 顺手把它接回界面。
+// ---------------------------------------------------------------------------
+
+test('主动开口：没有总开关，也没有 minIdleHours 入口（A28）', async () => {
+  const src = await readFile(CLIENT, 'utf8')
+  assert.ok(!src.includes('proactiveOn'), '总开关的死状态要删干净')
+  assert.ok(!src.includes('proactiveIdle'), 'minIdleHours 的界面状态要删干净')
+  assert.ok(!src.includes('允许她主动开口'), '界面上不再有「允许她主动开口」')
+  assert.match(src, /只留 1–6 的上限/, '只留上限这一个控件')
+  assert.match(src, /上限不是任务/, '上限的文案要写明它不是任务')
 })

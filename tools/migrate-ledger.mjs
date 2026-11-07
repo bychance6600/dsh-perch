@@ -41,7 +41,7 @@ for (const f of ['people.json', 'journal.json', 'config.json', 'owner.json', 'wo
   try { JSON.parse(fs.readFileSync(p, 'utf8')) } catch { bad.push(`${f} 不是 JSON`) }
 }
 
-const before = deriveSelf(srcEvents.events, { growthDays: 30 })
+const before = deriveSelf(srcEvents.events, { stageSpanDays: 30 })
 const summary = (d) => JSON.stringify({
   day: d.day, stage: d.stage, beliefs: d.beliefs?.length, refusals: d.facts?.refused ?? d.refused,
   scars: d.scars?.length, stances: d.stances?.length,
@@ -63,7 +63,7 @@ if (WRITE) {
   const hp = path.join(DST, 'home.json')
   if (fs.existsSync(hp)) fs.rmSync(hp)
   const dstEvents = readEvents(path.join(DST, 'events.jsonl'))
-  const after = deriveSelf(dstEvents.events, { growthDays: 30 })
+  const after = deriveSelf(dstEvents.events, { stageSpanDays: 30 })
   console.log('目标账本：', dstEvents.lines, '条')
   console.log('目标派生：', summary(after))
   ok(dstEvents.lines === srcEvents.lines, '两边行数不一致')

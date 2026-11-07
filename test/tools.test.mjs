@@ -96,7 +96,7 @@ test('六个工具定义都长成宿主认的形状', () => {
 })
 
 test('自检按 registry 里真的在不在判断，而不是配置名单', async () => {
-  const cfg = { growthDays: 30, window: { start: '20:00', end: '23:00' }, tools: {} }
+  const cfg = { stageSpanDays: 30, window: { start: '20:00', end: '23:00' }, tools: {} }
   const allThere = { get: (n) => (HER_TOOLS.includes(n) ? { name: n } : undefined) }
   const R = { allow: [...HER_TOOLS], applied: 1, failed: '' }
   const ok = await runChecks({ root: ROOT, config: cfg, host: {}, tools: allThere, restrict: R, net: false })
@@ -165,7 +165,7 @@ test('自检按 registry 里真的在不在判断，而不是配置名单', asyn
 // 这一条守的是反面：清单里有、registry 里没有，必须报红，不能因为「名单就是它」
 // 就当成已装（2026-10-28 read_image 误报是同一类错误）。
 test('自检按 FISH_TOOLS 全量核对：缺 her_note 要报，不能拿清单当已装', async () => {
-  const cfg = { growthDays: 30, window: { start: '20:00', end: '23:00' }, tools: {} }
+  const cfg = { stageSpanDays: 30, window: { start: '20:00', end: '23:00' }, tools: {} }
   const root = join(tmpdir(), `dsh-roost-sc-note-${process.pid}`)
   const missingNote = { get: (n) => (n === 'her_note' ? undefined : { name: n }) }
   const missRes = await runChecks({ root, config: cfg, host: {}, tools: missingNote, net: false })

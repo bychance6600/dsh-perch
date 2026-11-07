@@ -36,7 +36,7 @@ function model(extra = {}) {
     narrative: null,
     facts: { refused: 0, hurts: 0, scars: 0, scarsResolved: 0 },
     day: 60,
-    growthDays: 30,
+    stageSpanDays: 30,
     stage: 4,
     ...extra,
   }

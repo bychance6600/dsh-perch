@@ -66,7 +66,7 @@ test('递给她的那行：要求看 vs 可以自己定，措辞不同', () => {
 })
 
 test('身份档里写着这两档的区别', () => {
-  const model = deriveSelf([], { growthDays: 30 })
+  const model = deriveSelf([], { stageSpanDays: 30 })
   const withBrowse = renderSelfDoc(model, { browse: true })
   assert.match(withBrowse, /他有时会丢一条视频给我/)
   assert.match(withBrowse, /那只是问我/)

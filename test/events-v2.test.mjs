@@ -12,7 +12,7 @@ const iso = (msAgo = 0) => new Date(Date.now() - msAgo).toISOString()
 
 function model(over = {}) {
   return {
-    seed: 'seed', day: 3, growthDays: 30, stage: 4, stageName: '整合', name: null,
+    seed: 'seed', day: 3, stageSpanDays: 30, stage: 4, stageName: '整合', name: null,
     beliefs: [], beliefCount: 0, refuted: [], refusals: [], selfmodAttempts: [],
     reunions: [], corrected: 0, tested: [], narrative: null,
     needs: { autonomy: 0.5, competence: 0.5, relatedness: 0.5 },
@@ -137,7 +137,7 @@ test('deriveSelf：seen:/wake: 与"她说过话没有"都算得出来', () => {
     ev('utterance', 3 * DAY, { text: '我觉得他不太会骗人。' }),
     ev('meta', 2 * DAY, { text: `wake:2026-10-24 test_first` }),
   ]
-  const m = deriveSelf(events, { growthDays: 30 })
+  const m = deriveSelf(events, { stageSpanDays: 30 })
   assert.ok(m.lastSeenAt > 0, 'lastSeenAt 要有值')
   assert.ok(m.lastWakeAt > 0, 'lastWakeAt 要有值')
   assert.ok(m.lastWakeAt > m.lastSeenAt, '先被说、后被叫醒')

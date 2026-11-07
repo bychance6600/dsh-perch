@@ -1,7 +1,7 @@
 ﻿import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  stageBounds, stageOf, deriveSelf, consistency, novelty,
+  stageBounds, stageOf, deriveSelf, stampOf, consistency, novelty,
   similarity, pickName, DAY_MS,
 } from '../lib/derive.js'
 // 2026-10-26：stability 从 derive.js 搬到 quality.js（它要用到 persona 的渲染，
@@ -28,14 +28,32 @@ test('阶段边界对齐契约', () => {
   assert.equal(stageOf(27, 30), 4)
 })
 
-test('growthDays 现算：30 改成 7 不重启立即生效', () => {
+test('stageSpanDays 现算：30 改成 7 不重启立即生效', () => {
   const evs = [ev('ev_seed', 'seed', 1, '你是个好奇心重、不太会表达的存在。', { source: 'system' })]
   const now = T0 + 5 * DAY_MS
   // 时间轴立即生效（elapsedStage）；实际 stage 还受阶段门约束——
   // 一条信念都没有，她本就该停在 stage 1，不能因为改成 7 天就凭空长大。
-  assert.equal(deriveSelf(evs, { now, growthDays: 30 }).elapsedStage, 1)
-  assert.equal(deriveSelf(evs, { now, growthDays: 7 }).elapsedStage, 3)
-  assert.equal(deriveSelf(evs, { now, growthDays: 7 }).stage, 1)
+  assert.equal(deriveSelf(evs, { now, stageSpanDays: 30 }).elapsedStage, 1)
+  assert.equal(deriveSelf(evs, { now, stageSpanDays: 7 }).elapsedStage, 3)
+  assert.equal(deriveSelf(evs, { now, stageSpanDays: 7 }).stage, 1)
+})
+
+test('stampOf 只算 day/stage，过滤口径与 deriveSelf 一致（A28）', () => {
+  const events = [
+    ev('ev_seed', 'seed', 1, '种', { source: 'system' }),
+    ev('ev_social', 'utterance', 10, '群里听来的', { influence: 'social' }),
+    ev('ev_none', 'utterance', 10, '隔离带里的', { influence: 'none' }),
+    ev('ev_dream', 'dream', 10, '一个梦'),
+    ev('ev_x', 'utterance', 10, '被驳回的'),
+    ev('ev_rej', 'meta', 1, 'outing-reject:ev_x', { source: 'system' }),
+  ]
+  const now = T0 + 10 * DAY_MS
+  const stamp = stampOf(events, { stageSpanDays: 30, now })
+  assert.deepEqual(stamp, { day: 11, stage: 2 })
+  const full = deriveSelf(events, { stageSpanDays: 30, now })
+  assert.equal(stamp.day, full.day, '和 deriveSelf 的 day 必须是同一个数')
+  assert.equal(stamp.stage, full.elapsedStage, '和 deriveSelf 的 elapsedStage 必须是同一个数')
+  assert.equal(stampOf(events, { stageSpanDays: 7, now }).stage, stageOf(11, 7))
 })
 
 test('selfmod 不入 beliefs，但留证', () => {
@@ -230,7 +248,7 @@ function best(events, runs = 3) {
   let b = Infinity
   for (let i = 0; i < runs; i++) {
     const t0 = performance.now()
-    deriveSelf(events, { growthDays: 30, now: T0 + 400 * DAY_MS })
+    deriveSelf(events, { stageSpanDays: 30, now: T0 + 400 * DAY_MS })
     b = Math.min(b, performance.now() - t0)
   }
   return b
@@ -239,7 +257,7 @@ function best(events, runs = 3) {
 test('事件流变长后 deriveSelf 不是二次增长（issue #3）', () => {
   const small = synthetic(200)
   const big = synthetic(800)
-  assert.ok(deriveSelf(small, { growthDays: 30 }).beliefs.length > 0, '合成数据要真长出判断，否则测不到热点')
+  assert.ok(deriveSelf(small, { stageSpanDays: 30 }).beliefs.length > 0, '合成数据要真长出判断，否则测不到热点')
   best(small, 1)
   best(big, 1) // 预热
   const t1 = best(small)
@@ -250,8 +268,8 @@ test('事件流变长后 deriveSelf 不是二次增长（issue #3）', () => {
 test('stability 对同一批事件只算一次（issue #3 缓存）', () => {
   clearStabilityCache()
   const events = synthetic(120)
-  const a = stability(events, { growthDays: 30 })
-  const b = stability(events, { growthDays: 30 })
+  const a = stability(events, { stageSpanDays: 30 })
+  const b = stability(events, { stageSpanDays: 30 })
   assert.deepEqual(a, b)
   assert.ok(a.sample > 0, '有判断时应该真的抽过样')
 })

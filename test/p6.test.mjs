@@ -136,7 +136,7 @@ test('冷却期里她照常醒，只是没东西可看——而且会被告知�
 test('自检：正常环境全绿；缺 cookie 与缺宿主接口要如实报出来', async () => {
   const root = await mkdtemp(join(tmpdir(), 'fish-check-'))
   try {
-    const cfg = { growthDays: 30, wakesPerDay: 1, window: ['20:00', '23:00'] }
+    const cfg = { stageSpanDays: 30, wakesPerDay: 1, window: ['20:00', '23:00'] }
     const good = await runChecks({
       root,
       config: cfg,
@@ -173,7 +173,7 @@ test('自检：手上的工具——以 tools.restrict 的真实结果为准，�
   try {
     const base = {
       root,
-      config: { growthDays: 30, wakesPerDay: 1, window: ['20:00', '23:00'] },
+      config: { stageSpanDays: 30, wakesPerDay: 1, window: ['20:00', '23:00'] },
       net: false,
       host: { sessionController: {}, webServer: {}, connection: {} },
     }

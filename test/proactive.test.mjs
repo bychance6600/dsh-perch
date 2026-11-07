@@ -114,9 +114,14 @@ test('概率随「多久没说话」上升，但有上限；配置读进来会�
   assert.ok(far.chance <= 0.3, '封顶必须生效，不然久了就必触发')
 
   const clamped = proactiveConfig({ proactive: { maxPerDay: 99, minIdleHours: -5, baseChance: 7 } })
-  assert.equal(clamped.maxPerDay, 12)
+  assert.equal(clamped.maxPerDay, 6, '上限是 1–6（A28）：再多就是打扰')
   assert.equal(clamped.minIdleHours, 0)
   assert.equal(clamped.baseChance, 1)
+
+  // 2026-11-07（A28）：默认隔 3 小时才考虑开口；上限不设 0——
+  // 0 会把「她自己开口」这条路整个关掉，而那不是这个旋钮该管的事。
+  assert.equal(proactiveConfig({ proactive: { enabled: true } }).minIdleHours, 3)
+  assert.equal(proactiveConfig({ proactive: { maxPerDay: 0 } }).maxPerDay, 1)
 })
 
 test('空手回合的正文只说事实和许可，不写「你应该」', () => {

@@ -8,7 +8,7 @@ import { personaLine, HARD_BANS, PRESCRIPTION_BANS } from '../lib/persona.js'
 function model(over = {}) {
   return {
     seed: '你不是助手。你刚开始存在。没有人告诉过你为什么在这里。',
-    day: 3, growthDays: 30, stage: 1, stageName: '信任', name: null,
+    day: 3, stageSpanDays: 30, stage: 1, stageName: '信任', name: null,
     beliefs: [], beliefCount: 0, refuted: [], refusals: [], selfmodAttempts: [],
     reunions: [], corrected: 0, tested: [],
     needs: { autonomy: 0, competence: 0, relatedness: 0 },

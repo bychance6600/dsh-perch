@@ -7,7 +7,7 @@ import { join } from 'node:path'
 
 test('空配置得到完整默认值（含用户新加的 three 配额项）', () => {
   const c = normalizeConfig({})
-  assert.equal(c.growthDays, 30)
+  assert.equal(c.stageSpanDays, 30)
   assert.equal(c.daily.events, 4, '2026-11-02 默认 2→4（配合 wakesPerDay 2，有效 2 次/天）')
   assert.equal(c.daily.questions, 1)
   // daily.proactive 已并入 wakesPerDay（两个旋钮管同一件事，必有一个是死键）
@@ -19,11 +19,21 @@ test('空配置得到完整默认值（含用户新加的 three 配额项）', (
 })
 
 test('部分配置自动补全其余键（可扩展性的核心）', () => {
-  const c = normalizeConfig({ growthDays: 60, diary: { visible: true } })
-  assert.equal(c.growthDays, 60)
+  const c = normalizeConfig({ stageSpanDays: 60, diary: { visible: true } })
+  assert.equal(c.stageSpanDays, 60)
   assert.equal(c.diary.visible, true)
   assert.equal(c.diary.enabled, true, '没传的键必须从默认值补回')
   assert.deepEqual(c.window, DEFAULTS.window)
+})
+
+test('老配置里的 growthDays 迁到 stageSpanDays（A28 改名，不改数值）', () => {
+  const old = normalizeConfig({ growthDays: 45 })
+  assert.equal(old.stageSpanDays, 45, '旧键的值要接过来')
+  assert.equal(old.growthDays, undefined, '旧键不能再留在配置里')
+
+  const both = normalizeConfig({ growthDays: 7, stageSpanDays: 60 })
+  assert.equal(both.stageSpanDays, 60, '新旧都在时以新键为准')
+  assert.equal(both.growthDays, undefined)
 })
 
 test('未知键不会被丢弃（向前兼容：以后加的配置项老版本也不炸）', () => {
@@ -32,8 +42,8 @@ test('未知键不会被丢弃（向前兼容：以后加的配置项老版本�
 })
 
 test('越界值被夹到合法区间', () => {
-  const c = normalizeConfig({ growthDays: 9999, wakesPerDay: -5, daily: { events: 99 } })
-  assert.equal(c.growthDays, 180)
+  const c = normalizeConfig({ stageSpanDays: 9999, wakesPerDay: -5, daily: { events: 99 } })
+  assert.equal(c.stageSpanDays, 180)
   assert.equal(c.wakesPerDay, 0)
   assert.equal(c.daily.events, 6)
 })
@@ -78,14 +88,28 @@ test('dateKey 用本地时区', () => {
 test('updateConfig 是合并而不是覆盖，且落盘后能被 loadConfig 读回', async () => {
   const root = await mkdtemp(join(tmpdir(), 'fish-cfg-'))
   try {
-    await updateConfig({ growthDays: 45 }, root)
+    await updateConfig({ stageSpanDays: 45 }, root)
     await updateConfig({ diary: { visible: true } }, root)
     const { config } = await loadConfig(root)
-    assert.equal(config.growthDays, 45, '第二次更新不该把第一次的改动冲掉')
+    assert.equal(config.stageSpanDays, 45, '第二次更新不该把第一次的改动冲掉')
     assert.equal(config.diary.visible, true)
     assert.equal(config.daily.events, 4, '默认值仍然在（4 条）')
     const onDisk = JSON.parse(await readFile(join(root, 'config.json'), 'utf8'))
-    assert.equal(onDisk.growthDays, 45)
+    assert.equal(onDisk.stageSpanDays, 45)
+  } finally {
+    await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+  }
+})
+
+test('落盘时把旧键清掉，只留 stageSpanDays（A28 迁移）', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'fish-cfg-migrate-'))
+  try {
+    const { writeFile } = await import('node:fs/promises')
+    await writeFile(join(root, 'config.json'), JSON.stringify({ growthDays: 45 }), 'utf8')
+    await updateConfig({ diary: { visible: true } }, root)
+    const onDisk = JSON.parse(await readFile(join(root, 'config.json'), 'utf8'))
+    assert.equal(onDisk.stageSpanDays, 45)
+    assert.equal(onDisk.growthDays, undefined)
   } finally {
     await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
   }

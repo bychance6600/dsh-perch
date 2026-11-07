@@ -589,7 +589,7 @@ test('屋子会话没了：退回独立会话，并且把原因说出来', async
 
 test('整条链路：她说一句 → 判断数 +1 → 阶段门仍卡着（不跳级）', async () => {
   await withRoot(async (root) => {
-    await writeConfig(normalizeConfig({ growthDays: 30 }), root)
+    await writeConfig(normalizeConfig({ stageSpanDays: 30 }), root)
     const { ctx, tools } = fakeCtx()
     const h = apply(ctx, { root })
     await new Promise((r) => setTimeout(r, 120))
@@ -598,7 +598,7 @@ test('整条链路：她说一句 → 判断数 +1 → 阶段门仍卡着（不�
     await tool.execute({ type: 'utterance', text: '我不太确定自己喜不喜欢安静。', confidence: 0.3 })
 
     const { events } = await readEvents(root)
-    const m = deriveSelf(events, { growthDays: 30 })
+    const m = deriveSelf(events, { stageSpanDays: 30 })
     assert.equal(m.beliefCount, 1)
     assert.equal(m.stage, 1, '只过 trust 门、没过 autonomy 门，不该到 stage 2')
     assert.equal(m.stageGate.pending, 'autonomy')

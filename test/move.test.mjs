@@ -30,7 +30,7 @@ async function withEnv(fn) {
   await mkdir(join(src, 'diary'), { recursive: true })
   await mkdir(join(src, 'logs'), { recursive: true })
   await writeFile(join(src, 'events.jsonl'), '{"id":"ev_1"}\n')
-  await writeFile(join(src, 'config.json'), '{"growthDays":30}')
+  await writeFile(join(src, 'config.json'), '{"stageSpanDays":30}')
   await writeFile(join(src, 'home', '她的身份.md'), '# 我是谁\n')
   await writeFile(join(src, 'diary', '2026-10-28.md'), '今天\n')
   await writeFile(join(src, 'logs', 'dsh-roost.log'), '不该被搬走\n')
