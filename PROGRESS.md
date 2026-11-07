@@ -4,9 +4,18 @@
 
 **0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过）。A 段 35 条与 B 段 19 条验收全部收口（A1 于 2026-11-07 16:12 真机通过）。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1268 条 / 1257 过 / 9 红**（另有 2 skip，2026-11-07 工具白名单警告后核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1275 条 / 1264 过 / 9 红**（另有 2 skip，2026-11-07 两份说好的文件后核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
+
+## 两份说好的文件（2026-11-07，m08813）
+
+- 需求：她想跟另一个项目的需求窗口对接，只要能读写两份文件。用户选定 `docs/dsh-pet-功能清单.md` 与 `docs/dsh-pet-需求与验收.md`，并说（m09086）：新项目具体怎么实现还没定，能读写这两份就行。
+- 实现：主包加 `lib/pairfile.js` + 工具 `pair_file`（不做独立子包）。`config.pair = {enabled,a,b}` 放两个绝对路径；别名是文件名去掉扩展名（现为 `dsh-pet-功能清单` / `dsh-pet-需求与验收`）。动作只有 read / replace / append；replace 的 `oldText` 必须恰好出现一次；改和添都要带 read 回来的 16 位 hash；文件在两次之间变过就拒绝并给新 hash；写前留 `.bak`，用 `writeAtomic`。
+- 边界：只认配置里的两个路径；realpath 必须与配置一致，拒软链 / 目录 / 二进制 / 大于 512KB；禁止她家 `~/.dsh-roost`、`~/.dsh`、用户主目录本身与系统目录。不写 events.jsonl、不记 `looked:`，不算她看过。
+- 接线：`FISH_TOOLS` 加 `pair_file`（10→11，工具面 11→12）；`lib/index.js` 注册时把启动配置传进去，工具说明里带两个别名；`/config` 白名单加 `pair`；设置页插件页加「两份说好的文件」卡片（开关 + 两个路径 + hash/.bak 提示）。`~/.dsh-roost/config.json` 已打开并填好两个路径。
+- 测试：`test/pairfile.test.mjs` 7 条；`p5` / `pairfile` / `boot` 44/44；全量 **1275 条 / 1264 过 / 9 红 / 2 skip**（/tmp/full-pair2.log），9 红与已知环境红同名。
+- 还需重启 DSH 才会出现 `pair_file`（工具在启动时登记）。
 
 ## 工具白名单的警告（2026-11-07）
 
