@@ -17,6 +17,8 @@
 
 - **今天页只算点开与抽帧**：`/today` 时间线只收 `look:` / `looked:`（点开过）与 `watched:`（抽过帧），`browse:`、`searched:` 与热搜词不显示、不计数；同一条视频只留一次，抽过帧的优先。`browse:` 账本照记，报告与历史不受影响。
 
+- **报纸有了自己的两本账**：`seen.md` 判重表（每推一条一行，7 天窗口；读坏了这一轮不推，不再当成「没记录过」）、`runs.md` 执行记录（每轮一行，失败也写）。每轮带扫描 / 收取 / 跳过 / 无字幕，每条收取带「为什么值得」与「依据来源」——这两样只进账本，不进她看到的素材。重启或事件流为空都不会重推同一条。
+
 ### 删除
 
 - 渠道：B 站私信、抖音私信/群（`lib/channels/bili.js`、抖音子包里的私信整机与相关测试已一并删除）。
@@ -44,4 +46,4 @@
 ### 兼容
 
 - `dsh >=0.2.0-rc.1 <0.3.0-0`，Node ≥ 22；`dependencies` / `peerDependencies` / `devDependencies` 仍为空。
-- 测试基线：`node --test --test-isolation=none` → 1173 条 / 1159 过 / 11 条已知环境红 / 3 skip，见 `PROGRESS.md`。
+- 测试基线：`node --test --test-isolation=none` → 1184 条 / 1170 过 / 11 条已知环境红 / 3 skip，见 `PROGRESS.md`。
