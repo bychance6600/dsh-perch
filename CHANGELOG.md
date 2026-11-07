@@ -64,6 +64,7 @@
 - **三档细节**：`compact` / `normal` / `fine` 决定格子大小、采样密度与是否取波形；上网页设置九项里的「每条取几帧」换成「几张故事板 / 每张几格 / 细节档 / 清晰度」。
 - **画法共用**：B 站与抖音都用 `lib/frames.js` 拼宫格、画格号 / 时间码 / 波形，PNG 自己编，不引依赖。
 - **缺 ffmpeg 也说话**：取不到画面时返回真实原因并降级，不静默失败；`ffmpeg` 仍按 `DSH_ROOST_FFMPEG` → `bin/<平台>-<架构>/` → PATH 找。
+- **证书校验真机修好**：2026-11-07 真机上 `bili_watch` 回 `[tls] Peer certificate failed verification`，一帧都取不到——打包的 ffmpeg 9 默认校验证书，而它的 gnutls 构建在 Windows 上没有根证书。现在把 Node 自带的 `tls.rootCertificates` 写到 `media/ffmpeg-ca.pem`，联网抽帧固定 `-tls_verify 1 -ca_file`；用户给的 `DSH_ROOST_CA_FILE` 仍优先，不退回关闭校验。
 
 ### 自检
 
@@ -147,4 +148,4 @@
 ### 兼容
 
 - `dsh >=0.2.0-rc.1 <0.3.0-0`，Node ≥ 22；`dependencies` / `peerDependencies` / `devDependencies` 仍为空。
-- 测试基线：`node --test --test-isolation=none` → 1266 条 / 1255 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。
+- 测试基线：`node --test --test-isolation=none` → 1267 条 / 1256 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。

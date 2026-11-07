@@ -16,7 +16,7 @@ import { mkdtemp, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/prom
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { grabFrames, sampleTimes, normalizeAt, pickSceneTimes, frameDiff, matchCues, wavePeaks, DETAIL } from '../lib/video.js'
+import { grabFrames, sampleTimes, normalizeAt, pickSceneTimes, frameDiff, matchCues, wavePeaks, DETAIL, ensureCaFile } from '../lib/video.js'
 import { detectFfmpeg, mediaDir } from '../lib/media.js'
 
 const BVID = 'BV1ph4y1g75E'
@@ -206,11 +206,24 @@ test('源码守门：不给 ffmpeg 任何文件路径输出（issue #13 的核�
   }
 })
 
-test('源码守门：给了 CA 就必须同时开校验（光给 -ca_file 是空转）', async () => {
-  // 2026-10-30 实测：ffmpeg 默认 tls_verify=0，根本不校验证书。
-  // 只传 -ca_file 而不传 -tls_verify 1，CA 用不上——传一个**不存在**的 CA 文件
-  // 都照样出图，stderr 只有一句 `Error while reading file.`。
-  // 所以这两个参数必须成对出现，否则用户设了 DSH_ROOST_CA_FILE 却没有校验效果。
+test('ensureCaFile：用 Node 自带的根证书写出一份 PEM，第二次不重写', async () => {
+  const root = await tmpRoot()
+  const file = await ensureCaFile(root)
+  const txt = await readFile(file, 'utf8')
+  assert.match(txt, /^-----BEGIN CERTIFICATE-----/m)
+  assert.ok((txt.match(/BEGIN CERTIFICATE/g) ?? []).length >= 50, '根证书不该只有一两张')
+
+  const first = await stat(file)
+  const again = await ensureCaFile(root)
+  assert.equal(again, file)
+  const second = await stat(file)
+  assert.equal(second.mtimeMs, first.mtimeMs, '内容没变就别重写')
+})
+
+test('源码守门：联网抽帧永远带着 CA 且开着校验（2026-11-07 真机）', async () => {
+  // ffmpeg 9 的 tls_verify 默认是 true，但 gnutls 那份 Windows 构建没有根证书，
+  // 真机上 bili_watch 因此一帧都取不到。不能退回 tls_verify=0——那是为了看图
+  // 把整条链路的证书校验关掉；改成显式喂 Node 的根证书。
   const src = await readFile(new URL('../lib/video.js', import.meta.url), 'utf8')
 
   // 只数带引号的代码字面量，注释里提到的名字不算（否则注释写两遍就误报）
@@ -222,9 +235,11 @@ test('源码守门：给了 CA 就必须同时开校验（光给 -ca_file 是空
   // 成对还不够，顺序也得对：同一行里 -tls_verify 1 在前、-ca_file 在后
   assert.match(
     src,
-    /if \(caFile\) netArgs\.push\('-tls_verify', '1', '-ca_file', caFile\)/,
-    '给了 caFile 就该在同一处同时加 -tls_verify 1 和 -ca_file',
+    /netArgs\.push\('-tls_verify', '1', '-ca_file', caFile\)/,
+    '联网时该在同一处同时加 -tls_verify 1 和 -ca_file',
   )
+  assert.match(src, /ensureCaFile\(root\)/, '没指定 CA 时要自己生成一份')
+  assert.doesNotMatch(src, /'-tls_verify', '0'/, '不许为了出图关掉证书校验')
 })
 
 test('grabFrames：帧与拼图都从 stdout 拿，mp4 在本地也能跑通（不写盘给子进程）', async (t) => {

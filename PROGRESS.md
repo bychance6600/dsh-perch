@@ -4,7 +4,7 @@
 
 **0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过）。A 段 35 条与 B 段 19 条验收全部收口（A1 于 2026-11-07 16:12 真机通过）。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1266 条 / 1255 过 / 9 红**（另有 2 skip，2026-11-07 只吐脚手架那轮修完，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1267 条 / 1256 过 / 9 红**（另有 2 skip，2026-11-07 bili_watch 证书修完，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
 
@@ -35,12 +35,22 @@
 
 ## 只吐脚手架的一轮（2026-11-07）——已修
 
-- 用户递来 `C:/Users/by_ch/Downloads/dsh-session-session-d782502e-a35f-4a81-94be-93ce39e9ab21/session.v4.jsonl`：最后第 40 轮（18:56 本地）主人说「没关系的 有些问题慢慢就有答案了」，她先调 `her_note` 记下「那条界线答了一半……」，工具回「[记下了]」；第二步的 assistant 消息只有一个 text 块，正文是 `</｜｜DSML｜｜ invoke>` 与 `</｜｜DSML｜｜ calls>`（文件第 493 行），没有 tool/call，也没有一个字的话。整份 495 行里 DSML 只命中这一处。
+- 用户递来 `~/Downloads/dsh-session-session-d782502e-a35f-4a81-94be-93ce39e9ab21/session.v4.jsonl`：最后第 40 轮（18:56 本地）主人说「没关系的 有些问题慢慢就有答案了」，她先调 `her_note` 记下「那条界线答了一半……」，工具回「[记下了]」；第二步的 assistant 消息只有一个 text 块，正文是 `</｜｜DSML｜｜ invoke>` 与 `</｜｜DSML｜｜ calls>`（文件第 493 行），没有 tool/call，也没有一个字的话。整份 495 行里 DSML 只命中这一处。
 - 后果：`qq-outbox.jsonl` 最后一条停在 18:55，18:56 没有发出任何消息。她不是没收到、不是 QQ 断线、也不是 guard 误拦。
 - 链路：`lib/channels/router.js` 的 `saidText()` 对正文跑 `stripScaffold`，只剩标记时得到空串；`askHer()` 的 `reached.texts` 为空，`handleOne` 按「她一句话没说」返回 `{sent:false, why:'silent'}`，在出站那道 `scaffold` 日志之前就返回了，所以日志里只看到沉默。
 - 修法：`saidText()` 改成返回 `{text, scaffoldOnly}`；`askHer()` 在「有正文但剥完是空」时返回 `why:'scaffold'`；`handleOne` 只在 `scaffoldOnly` 时再问一次（`SCAFFOLD_RETRY_TEXT`：「刚才那一步只输出了模型标记，没有话。把刚才想说的直接说出来，不要输出任何标记。」），第二次还是空就按沉默收；真的一句话不说的轮次不重问。
 - 回归：`test/channel-router.test.mjs` 加「只吐脚手架时会再问一次；第二次说了就发」（假宿主按调用次序回两段），并在「她可以一句话不说」里钉住 `calls.length === 1`，防止把真沉默也重问。
 - 全量 **1266 条 / 1255 过 / 9 红 / 2 skip**（/tmp/full-scaffold.log），9 红与已知环境红同名。定向 channel-router / guard / turns / derive / mem / impression 130/130。
+
+## bili_watch 的证书校验（2026-11-07）——已修
+
+- 用户转来她在 DSH 里的话：`bili_watch` 回「画面还是取不到。同一处证书校验失败，试了两次，一样的错。」stderr 是 `[tls] Peer certificate failed verification` + `Error opening input: I/O error`。同一条视频的 `bili_look` 正常，所以不是登录、不是风控。
+- 根因不是 B 站证书坏了，是打包的 ffmpeg 9.0.2（gyan essentials，`--enable-gnutls`）在 Windows 上没有可用的根证书，而 ffmpeg 9 的 `tls_verify` 默认已经是 true。旧代码按「ffmpeg 默认 tls_verify=0」写成只在用户给了 `DSH_ROOST_CA_FILE` 时才加 `-tls_verify 1 -ca_file`，默认这条路等于让 gnutls 空手去校验。
+- 复现：`ffmpeg -ss 1 -i <playurl> ...` 默认报 `Peer certificate failed verification`；`-tls_verify 0` 能过 TLS（随后因缺 Referer/UA 被 403）；补上 `-headers` 后出图 465501 字节；把 Node 的 `tls.rootCertificates` 写成 PEM 再加 `-tls_verify 1 -ca_file` 同样出图 465501 字节。
+- 修法：`lib/video.js` 从 `node:tls` 取 `rootCertificates`，新增 `ensureCaFile(root)` 写 `media/ffmpeg-ca.pem`（内容没变就不重写）；`grabFrames` 对所有 http(s) 输入一律 `-tls_verify 1 -ca_file`。用户显式给的 `o.caFile` / `DSH_ROOST_CA_FILE` 仍然优先；**不退回 `-tls_verify 0`**。
+- 测试：`test/video.test.mjs` 加 `ensureCaFile` 一条、把原来的 CA 守门改成「联网永远带 CA 且不许 tls_verify 0」；定向 video 23 条 21 过 2 skip（本地造片那两条本来就跳）。
+- 真机：`grabFrames({ bvid:'BV1q541137ZE', at:[1,3] })` → ok，2 帧，`~/.dsh-roost/media/sheet-BV1q541137ZE-1794056294476-38521b-1.png`。
+- 全量 **1267 条 / 1256 过 / 9 红 / 2 skip**（/tmp/full-bili-tls.log），9 红与已知环境红同名。需要重启 DSH 重新加载 `lib/video.js`。
 
 ## 身份文档里的 DSML 垃圾（2026-11-07）——已修
 
@@ -50,17 +60,17 @@
 - 修法：`lib/derive.js` 的 `utterance` / `revise` 分支先 `const said = stripScaffold(ev.text)`，空的直接跳过（不算她开口），后面的 `detectSelfMod` / 让步判断 / beliefs / `pickName` / 更正判断 / narrative 全用 `said`；`herTexts` 与 `deriveSocial` 也先剥。`lib/recall.js` 的 `searchEvents` 同样先剥，只有脚手架的旧事件翻不到、也不端出来。
 - 回归测试：`test/derive.test.mjs`「DSML 脚手架不进判断」；`test/mem.test.mjs`「只有 DSML 脚手架的旧事件，不端出来」。
 - 定向 derive / beliefs / mem / a20 67/67、mem / guard 46/46；全量 **1262 条 / 1251 过 / 9 红 / 2 skip**（/tmp/full-dsml.log），9 红与已知环境红同名。
-- 已用修好的代码重生成 `C:/Users/by_ch/.dsh-roost/home/她的身份.md`：现在 `grep DSML` 无命中，那两条不再出现在「你自己说过的话」里。
+- 已用修好的代码重生成 `~/.dsh-roost/home/她的身份.md`：现在 `grep DSML` 无命中，那两条不再出现在「你自己说过的话」里。
 
 ## 世界书压过设置（2026-11-07）——已修
 
 - 用户报：她把「作息」记成「晚上八点到十一点，一天两次」，而设置里是 `08:00–23:00`、一天最多 3 次。她读不到 config，只能背世界书。
-- 直接原因：`C:/Users/by_ch/.dsh-roost/worldbook.json` 里的 `wmw0ons2i7`（11-03 一次性导入的 lorebook）写着旧作息，经 `lib/worldbook.js` 的 `knowledgeBlock` 与 `lib/selfdoc.js` 的「我知道的事」进她的身份文档。调度器本身没问题：`pickWakeTime` 用的是 config.window，当天 `sched:2026-11-07` 落在 14:43，下一次按设置算。
+- 直接原因：`~/.dsh-roost/worldbook.json` 里的 `wmw0ons2i7`（11-03 一次性导入的 lorebook）写着旧作息，经 `lib/worldbook.js` 的 `knowledgeBlock` 与 `lib/selfdoc.js` 的「我知道的事」进她的身份文档。调度器本身没问题：`pickWakeTime` 用的是 config.window，当天 `sched:2026-11-07` 落在 14:43，下一次按设置算。
 - 另两条旧账：`16:18` 的「叫了她一声」是 `lib/home.js` 换房间时的 `wakeIfBlank()`，不走 scheduler、不占当天配额；`00:34` 首次建屋同理。这条路径不归时段管，但只在空房间时发生。
-- 数据：删掉 `wmw0ons2i7`，备份在 `C:/Users/by_ch/.dsh-roost/worldbook.json.bak-20261107-schedule`；世界书剩 6 条。其余 6 条未动，其中「住在 dsh-fish-river / ~/.dsh-fish-river」与「抖音借号收发私信」仍是旧说法，等用户决定是否一起清。
+- 数据：删掉 `wmw0ons2i7`，备份在 `~/.dsh-roost/worldbook.json.bak-20261107-schedule`；世界书剩 6 条。其余 6 条未动，其中「住在 dsh-fish-river / ~/.dsh-fish-river」与「抖音借号收发私信」仍是旧说法，等用户决定是否一起清。
 - 代码：`lib/worldbook.js` 新增 `isSettingOwned()`，把「作息 / 几点 / 睡觉 / 醒来 / 叫醒」这类条目当设置管辖，`matchEntries()` 不再从世界书取；`lib/selfdoc.js` 的 `renderSelfDoc()` 新增 `wakeWindow` / `wakeLimit`，在「醒来的时候」按 config 现算写「定时叫醒落在 08:00–23:00 之间，一天最多 3 次」，并过滤 `enabled:false` 的条目；`writeSelfDoc()` 传 `config.window` 与 `Math.min(daily.events, wakesPerDay)`；`lib/observe.js` 在 `/config` 保存后 `refreshSelfDoc()`，设置一改身份文档马上跟着变。
 - 测试：`test/worldbook.test.mjs` 加 3 条（身份文档按设置写、对话里不取世界书作息、关掉定时叫醒写「关着」）。定向 worldbook / selfcheck / identity / settings / beliefs / memory 82/82；全量 **1265 条 / 1254 过 / 9 红 / 2 skip**（/tmp/full-worldbook.log），9 红与已知环境红同名。
-- 身份文档已重生成：`C:/Users/by_ch/.dsh-roost/home/她的身份.md:103` 是新句，旧的「晚上八点到十一点 / 一天两次」不再出现。
+- 身份文档已重生成：`~/.dsh-roost/home/她的身份.md:103` 是新句，旧的「晚上八点到十一点 / 一天两次」不再出现。
 - **真机复验（2026-11-07 17:29）**：她在 QQ 里自己报「现在：2026-11-07 17:29」，并把旧说法改成「设置是 08:00–23:00 之间定时叫我，一天最多三次；这个时段外有人说话，我照样醒，但那不算定时叫醒」；她还认出 16:18 那次是有人叫她、不是排出来的。世界书重写后的 6 条已进身份文档，旧「晚上八点到十一点 / 一天两次」不再出现。
 
 ## 已经做完
