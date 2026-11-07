@@ -4,7 +4,7 @@
 
 **0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过）。A 段 35 条与 B 段 19 条验收全部收口（A1 于 2026-11-07 16:12 真机通过）。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1265 条 / 1254 过 / 9 红**（另有 2 skip，2026-11-07 世界书作息修完，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1266 条 / 1255 过 / 9 红**（另有 2 skip，2026-11-07 只吐脚手架那轮修完，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
 
@@ -32,6 +32,15 @@
 - 定向 douyin-browse / douyin-look / douyin-adapter 55/55；全量 **1262 条 / 1251 过 / 9 红 / 2 skip**（/tmp/full-douyin.log），9 红与已知环境红逐条同名。
 - 已提交并推送 `3bec804`。
 - **真机复验通过（2026-11-07 16:40，重启后）**：她在私聊里试了推荐流，`meta dyfeed:2026-11-07` 记下两条（`7696069353590148378`、`7696524579947726985`），报回「推荐流这次正常返回了，没有再报那个 sleep is not defined」，并念出两条的标题、时长与点赞；随后自己搜了「画眉 学口」，`meta searched:画眉_学口 douyin` 落库，并据此写了一条 `revise`。推荐流与搜索页的选择器在真页上都取到了条目。
+
+## 只吐脚手架的一轮（2026-11-07）——已修
+
+- 用户递来 `C:/Users/by_ch/Downloads/dsh-session-session-d782502e-a35f-4a81-94be-93ce39e9ab21/session.v4.jsonl`：最后第 40 轮（18:56 本地）主人说「没关系的 有些问题慢慢就有答案了」，她先调 `her_note` 记下「那条界线答了一半……」，工具回「[记下了]」；第二步的 assistant 消息只有一个 text 块，正文是 `</｜｜DSML｜｜ invoke>` 与 `</｜｜DSML｜｜ calls>`（文件第 493 行），没有 tool/call，也没有一个字的话。整份 495 行里 DSML 只命中这一处。
+- 后果：`qq-outbox.jsonl` 最后一条停在 18:55，18:56 没有发出任何消息。她不是没收到、不是 QQ 断线、也不是 guard 误拦。
+- 链路：`lib/channels/router.js` 的 `saidText()` 对正文跑 `stripScaffold`，只剩标记时得到空串；`askHer()` 的 `reached.texts` 为空，`handleOne` 按「她一句话没说」返回 `{sent:false, why:'silent'}`，在出站那道 `scaffold` 日志之前就返回了，所以日志里只看到沉默。
+- 修法：`saidText()` 改成返回 `{text, scaffoldOnly}`；`askHer()` 在「有正文但剥完是空」时返回 `why:'scaffold'`；`handleOne` 只在 `scaffoldOnly` 时再问一次（`SCAFFOLD_RETRY_TEXT`：「刚才那一步只输出了模型标记，没有话。把刚才想说的直接说出来，不要输出任何标记。」），第二次还是空就按沉默收；真的一句话不说的轮次不重问。
+- 回归：`test/channel-router.test.mjs` 加「只吐脚手架时会再问一次；第二次说了就发」（假宿主按调用次序回两段），并在「她可以一句话不说」里钉住 `calls.length === 1`，防止把真沉默也重问。
+- 全量 **1266 条 / 1255 过 / 9 红 / 2 skip**（/tmp/full-scaffold.log），9 红与已知环境红同名。定向 channel-router / guard / turns / derive / mem / impression 130/130。
 
 ## 身份文档里的 DSML 垃圾（2026-11-07）——已修
 

@@ -23,6 +23,10 @@
 
 - **主人身份按渠道记，不混着比**：`owner.json` 新增 `channels`（QQ / B 站 / 抖音各一份 id 列表），设置页「渠道」的 QQ 主人号改走 `POST /channels/owner` 只写这一个渠道；`lib/channels/auth.js` 只拿当前消息所在的渠道去比对，同一个人在不同平台的 id 不会被认错。老配置里的 `channels.<渠道>.ownerId` 只在 `owner.json` 还没有该渠道键时兜底一次；空数组表示明确清掉，不会复活。认证（这句话算谁说的）留在渠道层，B 站 cookie 与登录仍只在 `owner.js`。
 
+### 回话
+
+- **只吐模型标记时再问一次**：2026-11-07 真机上，她记完 `her_note` 之后第二步只吐了 `</｜｜DSML｜｜ invoke>` 与 `</｜｜DSML｜｜ calls>`，没有一个字，渠道层把它当成「她选择不说话」，那一轮就静默了。现在 `saidText()` 会区分「真的空」与「只剩脚手架」；只有后者再问一次，第二次还是空才按沉默收。真的一句话不说的轮次不重问（`test/channel-router.test.mjs` 两处都钉住）。
+
 ### 0.9.1 六条
 
 - **EPERM / BOM / 归档认最近 / 群名片 / 只粘 cookie / her_say 上限**：六条逐条对过代码，行为都在：建会话只在 Windows 对文件占用错误退避重试；`readJson` 先剥开头 BOM；同屋有多条活会话时认 `sessionIds` 头一条；群名片与昵称按原文用，不把空格换成下划线；只粘 cookie 保存不动已填的 uid / 昵称；`her_say` 真按当天次数拦。补了两条原先没直接钉住的测试（群名片原文、只粘 cookie），生产代码没改。
@@ -143,4 +147,4 @@
 ### 兼容
 
 - `dsh >=0.2.0-rc.1 <0.3.0-0`，Node ≥ 22；`dependencies` / `peerDependencies` / `devDependencies` 仍为空。
-- 测试基线：`node --test --test-isolation=none` → 1265 条 / 1254 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。
+- 测试基线：`node --test --test-isolation=none` → 1266 条 / 1255 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。

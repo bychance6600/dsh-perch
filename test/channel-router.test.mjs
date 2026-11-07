@@ -32,13 +32,17 @@ function fakeHost(reply) {
   const sc = {
     async prompt(req) {
       calls.push(req)
+      // 按调用次序取话；给数组时第 N 次就用第 N 条（用完停在最后一条），
+      // 这样「第一次只吐脚手架、第二次说人话」也能在这里演出来。
+      const raw = Array.isArray(reply) ? reply[Math.min(calls.length - 1, reply.length - 1)] : reply
+      const text = typeof raw === 'string' ? raw : raw?.text
       setImmediate(() => {
         for (const h of handlers) {
           if (h.name !== 'session/event') continue
           const session = { header: { id: req.sessionId } }
           h.fn(session, {
             type: 'assistant/message',
-            data: { message: { id: `m${calls.length}`, content: [{ type: 'text', text: reply.text }] } },
+            data: { message: { id: `m${calls.length}`, content: [{ type: 'text', text }] } },
           })
           h.fn(session, { type: 'turn/end', data: {} })
         }
@@ -85,7 +89,7 @@ async function harness({ reply = '嗯。', stage = 3, config = {}, root, ownerId
   const journal = createJournal(r)
   const people = createPeople(r)
   const adapter = fakeAdapter(status)
-  const { ctx, calls } = fakeHost({ text: reply })
+  const { ctx, calls } = fakeHost(reply)
   const router = createRouter({
     ctx,
     root: r,
@@ -200,9 +204,31 @@ test('router：回复里只剩脚手架时，不发也不记（2026-11-05 真机
   assert.equal(r.sent, false)
   // 空话在更早一步就按 silent 收掉了；出站那道是兜底，两者都算「没发」
   assert.ok(['silent', 'scaffold'].includes(r.why), `why=${r.why}`)
+  assert.equal(h.calls.length, 2, '第一次空掉之后只再问一次，不会一直重问')
   assert.equal(h.adapter.sent.length, 0, '标记不能出门')
   const { events } = await readEvents(h.root)
   assert.equal(events.filter((e) => e.type === 'utterance').length, 0, '标记不能写进她的事件流')
+  await fs.rm(h.root, { recursive: true, force: true })
+})
+
+test('router：只吐脚手架时会再问一次；第二次说了就发（2026-11-07 真机）', async () => {
+  const cfg = { channels: { qq: { enabled: true, ownerId: '10086' } } }
+  const h = await harness({
+    stage: 1,
+    config: cfg,
+    ownerIds: { qq: '10086' },
+    // 第一次：和真机一样，her_note 之后只剩两行关闭标记；第二次：正常说一句。
+    reply: ['</｜｜DSML｜｜ invoke>\n</｜｜DSML｜｜ calls>', '我在。'],
+  })
+  const r = await h.router.handle(groupMsg({ kind: 'dm', conversationId: '10086', personId: 'u_10086', text: '没关系的 有些问题慢慢就有答案了' }))
+  assert.equal(r.sent, true, JSON.stringify(r))
+  assert.equal(h.calls.length, 2, '第一次空掉之后只再问一次')
+  assert.match(h.calls[1].content[0].text, /模型标记/, '再问的那句要说清为什么再问')
+  assert.equal(h.adapter.sent.length, 1)
+  assert.equal(h.adapter.sent[0].text, '我在。')
+  const { events } = await readEvents(h.root)
+  assert.equal(events.filter((e) => e.type === 'utterance').length, 1, '只记第二次真的说出口的那句')
+  assert.equal(events.find((e) => e.type === 'utterance').text, '我在。')
   await fs.rm(h.root, { recursive: true, force: true })
 })
 
@@ -263,6 +289,7 @@ test('router：她可以一句话不说——这不是错误', async () => {
   const r = await h.router.handle(groupMsg())
   assert.equal(r.sent, false)
   assert.equal(r.why, 'silent')
+  assert.equal(h.calls.length, 1, '真沉默不重问——只有脚手架才重问')
   assert.equal(h.adapter.sent.length, 0)
   await fs.rm(h.root, { recursive: true, force: true })
 })
