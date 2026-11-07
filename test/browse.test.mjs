@@ -387,6 +387,29 @@ test('lookOnce：search 缺关键词 / related BV 号非法 → 明确拒绝且�
   })
 })
 
+test('lookOnce：总闸关掉就什么都不看；时段只拦逛，不拦点名看那一条（B15）', async () => {
+  await withRoot(async (root) => {
+    const off = normalizeConfig({ browse: { enabled: false } })
+    const a = await lookOnce({ what: 'home', cfg: off, root, client: fakeClient(), events: [], now: new Date(2026, 0, 1, 12, 0) })
+    assert.equal(a.ok, false)
+    assert.match(a.note, /打不开/)
+
+    const cfg = normalizeConfig({ browse: { window: ['09:00', '10:00'] } })
+    const at = new Date(2026, 0, 1, 3, 0)
+    const b = await lookOnce({ what: 'home', cfg, root, client: fakeClient(), events: [], now: at })
+    assert.equal(b.ok, false)
+    assert.match(b.note, /这会儿不看/)
+    const c = await lookOnce({ what: 'search', keyword: '深海', cfg, root, client: fakeClient(), events: [], now: at })
+    assert.equal(c.ok, false)
+    assert.match(c.note, /这会儿不看/)
+    // 点名看那一条不看表——即使给的是坏 BV，回的也该是「要哪条」，不是时段。
+    const d = await lookOnce({ what: 'related', cfg, root, client: fakeClient(), events: [], now: at })
+    assert.equal(d.ok, false)
+    assert.match(d.note, /BV/)
+    assert.doesNotMatch(d.note, /这会儿不看/)
+  })
+})
+
 test('lookOnce：接口全挂 → ok:false，note 是人类能读的句子（不吐堆栈）', async () => {
   await withRoot(async (root) => {
     const cfg = normalizeConfig({})

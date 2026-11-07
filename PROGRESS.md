@@ -2,11 +2,18 @@
 
 ## 现在在哪
 
-**0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过，正在按清单往下施工）。
+**0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过）。A 段只剩 A1 真机拔网，B 段 19 条验收已完成。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1253 条 / 1242 过 / 9 红**（另有 2 skip，2026-11-07 A10 之后，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1259 条 / 1248 过 / 9 红**（另有 2 skip，2026-11-07 B15 之后，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
+
+## B 段验收（2026-11-07）
+
+- 19 条全部 ✅，判据表在 docs/约定清单.md 的 B 节。做法：334/334 条验收相关测试 + 静态审计（rules.js 与上游逐字节同 5630 字节、三个依赖字段 {}、无删 events 路径、QQ 只发标准动作、social-open: 只有 lib/social.js 一处等）。
+- 全量 node --test --test-isolation=none = 1259 条 / 1248 过 / 9 红 / 2 skip（/tmp/full-B15b.log），9 红与已知环境红逐条同名。
+- B15 收口：browse.enabled=false 同时挡 B 站和抖音（含 zoom），并从工具面摘掉 BROWSE_TOOLS（web_search / web_fetch / bilibili_* / bili_* / douyin_look）；时段只拦逛（B 站 home/search，抖音 feed/search/hot，宿主 web_search / bilibili_search 由兜底守卫挡），不拦点击单条；B 站与抖音共用一个 0–6 的每日上限，当天计数相加。
+- 只剩 A1 真机拔网：需要断网 30 秒后发一句，检查提示词里的「刚才这边断了一下」、heard 与渠道页。
 
 ## 已经做完
 
@@ -48,12 +55,13 @@
 
 ## 手上这一步（下一个会话从这里接）
 
-**A 段继续施工。** 真机首检 2026-11-07 01:06 已通过（A11 ✅，她直调 `her_note` / `bili_look` / `growth_commit`、QQ 私聊与群 @ 双向都通）。代码层按 `docs/约定清单.md` 头注的顺序往下做；每做完一条：定向测试 → 全量（只许 9 条已知环境红）→ 回写清单对应行 → 提交。
+**A 段与 B 段都已收口。** A 段只剩 A1 真机拔网（代码与模拟已过）；B 段 19 条验收 2026-11-07 全 ✅（见上节，证据在 docs/约定清单.md 的 B 节）。等用户配合断网 30 秒，确认她下一句带「刚才这边断了一下」、渠道页记下断线，再回写 A1。
 
 ## 之后（按顺序）
 
-1. ~~A27~~ ✅ ~~A28~~ ✅ ~~A29~~ ✅ ~~A30~~ ✅ ~~A17~~ ✅ ~~A18~~ ✅ ~~A12~~ ✅ ~~A19~~ ✅ ~~A20~~ ✅ ~~A31~~ ✅ ~~A32~~ ✅ ~~A33~~ ✅；~~A8~~ ✅；~~A13~~ ✅ ~~A14~~ ✅；~~A15~~ ✅；~~A10~~ ✅。
-2. 全做完再回头补 B 段的 19 条验收。
+1. A 段 34 条 ✅；A1 的代码与模拟已过，只差真机拔网。
+2. B 段 19 条验收 2026-11-07 全 ✅，判据表在 docs/约定清单.md 的 B 节。
+3. 待办只剩 A1 真机拔网（断网 30 秒）；之后按发布前清单复核 README / 版本 / 备份。
 
 ## 交接（2026-11-06 23:50，A 段进行中）
 

@@ -104,6 +104,32 @@ test('开关都没开：不拉浏览器，直说没开', async () => {
   assert.match(r.note, /没开/)
 })
 
+test('总闸关掉连 zoom 都不给；时段只拦逛，不拦点名看那一条（B15）', async () => {
+  const root = tmpRoot()
+  const off = { ...cfgOn, browse: { ...cfgOn.browse, enabled: false, window: ['00:00', '23:59'] } }
+  const a = await lookFeedOnce({ root, cfg: off, what: 'zoom', sampleId: 'deadbeef', cell: 1, waitMs: 0 })
+  assert.equal(a.ok, false)
+  assert.match(a.note, /打不开/)
+
+  const timed = { ...cfgOn, browse: { ...cfgOn.browse, enabled: true, window: ['09:00', '10:00'] } }
+  const t = fakeTransport(FEED)
+  const b = await lookFeedOnce({ root, cfg: timed, transport: t, waitMs: 0, now: new Date(2026, 0, 1, 3, 0) })
+  assert.equal(b.ok, false)
+  assert.match(b.note, /这会儿不看/)
+  assert.equal(t.state.navigated, '', '时段外不该开页面')
+
+  const c = await lookFeedOnce({
+    root,
+    cfg: timed,
+    transport: fakeTransport(FEED),
+    what: 'comments',
+    id: '7700000000000000001',
+    waitMs: 0,
+    now: new Date(2026, 0, 1, 3, 0),
+  })
+  assert.notEqual(c.note, '这会儿不看。')
+})
+
 test('翻到了：返回素材，并记住今天翻过哪几条', async () => {
   const root = tmpRoot()
   const t = fakeTransport(FEED)

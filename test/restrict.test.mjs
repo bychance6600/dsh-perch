@@ -13,7 +13,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { HER_TOOLS, currentToolSurface, isHerAgent, knownToolNames, knownToolDescriptions, ownLayerNames, registerToolRestrict, rememberFromView, rememberKnownTools, readRestrictState, describeRestrict, toolSurfaceText, toolSurfaceFor, outsideSurfaceText, visibleToolsOf } from '../lib/restrict.js'
+import { HER_TOOLS, currentToolSurface, isHerAgent, knownToolNames, knownToolDescriptions, ownLayerNames, registerToolRestrict, rememberFromView, rememberKnownTools, readRestrictState, describeRestrict, toolSurfaceText, toolSurfaceFor, outsideSurfaceText, visibleToolsOf, withoutBrowseTools } from '../lib/restrict.js'
 
 /** 一个够用的假插件 ctx：能 on('agent/created')，也能被我们主动触发。 */
 function fakeCtx() {
@@ -381,6 +381,38 @@ test('currentToolSurface：默认就是放行清单；收窄关掉时为空', ()
 
   registerToolRestrict(fakeCtx(), { herDir: 'C:\\\\h', enabled: false, log: () => {} })
   assert.equal(currentToolSurface(), '', '收窄关着就不能替她列家当')
+})
+
+test('上网总闸关掉：浏览工具连白名单一起摘（B15）', () => {
+  registerToolRestrict(fakeCtx(), { herDir: 'C:\\h', extra: ['web_search', 'schedule_create'], browseEnabled: false, log: () => {} })
+  const txt = currentToolSurface()
+  assert.doesNotMatch(txt, /web_search|bili_look|douyin_look|bili_watch/)
+  assert.match(txt, /schedule_create/)
+  assert.deepEqual(withoutBrowseTools(['web_search', 'schedule_create'], false), ['schedule_create'])
+  assert.deepEqual(withoutBrowseTools(['web_search'], true), ['web_search'])
+  // 复位，别把总闸状态漏给后面的用例
+  registerToolRestrict(fakeCtx(), { herDir: 'C:\\h', log: () => {} })
+  assert.match(currentToolSurface(), /bili_look/)
+})
+
+test('时段外 web_search / bilibili_search 被守卫挡下，点开一条不挡（B15）', () => {
+  const at = (x) => () => new Date(x)
+  const mount = (opts) => {
+    const ctx = fakeCtx()
+    registerToolRestrict(ctx, opts)
+    const a = fakeAgent('C:\h')
+    ctx.emit('agent/created', { agent: a.agent })
+    return a.guards[0]
+  }
+  const night = mount({ herDir: 'C:\h', extra: ['web_search', 'bilibili_search', 'bilibili_video'], browseWindow: ['09:00', '10:00'], now: at('2026-11-07T03:00:00'), log: () => {} })
+  assert.equal(night({ name: 'web_search' }), '这会儿不看。')
+  assert.equal(night({ name: 'bilibili_search' }), '这会儿不看。')
+  assert.equal(night({ name: 'bilibili_video' }), undefined)
+  const day = mount({ herDir: 'C:\h', extra: ['web_search'], browseWindow: ['09:00', '10:00'], now: at('2026-11-07T09:30:00'), log: () => {} })
+  assert.equal(day({ name: 'web_search' }), undefined)
+  const off = mount({ herDir: 'C:\h', browseWindow: ['09:00', '10:00'], now: at('2026-11-07T03:00:00'), log: () => {} })
+  assert.equal(off({ name: 'web_search' }), '这件事我做不到。')
+  registerToolRestrict(fakeCtx(), { herDir: 'C:\h', log: () => {} })
 })
 
 test('currentToolSurface：白名单里额外放行的会跟着进提示词', () => {

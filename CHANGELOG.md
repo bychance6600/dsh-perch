@@ -129,7 +129,11 @@
 
 - 账本从旧目录迁到 `~/.dsh-roost`（1475 条，派生结果一致）；事件流仍然只追加。
 
+### 验收
+
+- **B 段 19 条全部走完**：判据表在 docs/约定清单.md 的 B 节；334 条验收相关测试全绿，另做了静态审计（rules.js 与上游逐字节同、三个依赖字段空、事件流无删除路径、QQ 只发 OneBot 标准动作、social-open: 只有 lib/social.js 一处）。
+- **B15 总闸与时段**：browse.enabled=false 时 B 站与抖音一起关（含放大），浏览类宿主工具也从她的工具面摘掉；时段只拦逛（B 站 home/search，抖音 feed/search/hot，宿主 web_search / bilibili_search 也由兜底守卫挡），点开单条与看画面不受影响；B 站与抖音共用一个 0–6 的每日上限，当天计数相加。
 ### 兼容
 
 - `dsh >=0.2.0-rc.1 <0.3.0-0`，Node ≥ 22；`dependencies` / `peerDependencies` / `devDependencies` 仍为空。
-- 测试基线：`node --test --test-isolation=none` → 1253 条 / 1242 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。
+- 测试基线：`node --test --test-isolation=none` → 1259 条 / 1248 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。

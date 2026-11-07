@@ -14,7 +14,7 @@ import assert from 'node:assert/strict'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { lookBeforeWake } from '../lib/scheduler.js'
+import { lookBeforeWake, dailyBrowseQuota } from '../lib/scheduler.js'
 import { normalizeConfig } from '../lib/settings.js'
 import { devMode } from '../lib/devmode.js'
 
@@ -74,4 +74,34 @@ test('devMode：有 .dev 文件才算本机测试版', async () => {
     else delete process.env.DSH_ROOST_DEV
     await cleanup(root)
   }
+})
+
+
+test('B 站和抖音共用一个每日总数：两边各刷一次就到了上限（B15）', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'fish-quota-'))
+  try {
+    const biliCalls = []
+    const feedCalls = []
+    const client = new Proxy({}, {
+      get: (_t, k) => (...a) => { biliCalls.push(String(k)); return { ok: false, note: 'stub' } },
+    })
+    const cfg = normalizeConfig({
+      browse: { enabled: true, perDay: 2, window: ['00:00', '23:59'], douyin: { enabled: true, perDay: 2 } },
+    })
+    assert.equal(dailyBrowseQuota(cfg), 2)
+    const today = '2026-10-23'
+    const events = [
+      { type: 'meta', text: 'browse:' + today + ' []' },
+      { type: 'meta', text: 'dy-browse:' + today + ' []' },
+    ]
+    const out = await lookBeforeWake(root, { name: '测试' }, cfg, today, {
+      client,
+      now: new Date(2026, 9, 23, 15, 0, 0),
+      events,
+      douyinFeed: async () => { feedCalls.push(1); return { ok: true, items: [] } },
+    }, () => {})
+    assert.deepEqual(biliCalls, [], 'B 站那一半看见总数满了，就不该再发请求')
+    assert.deepEqual(feedCalls, [], '抖音那一半也不该再开浏览器')
+    assert.equal(out.text, '')
+  } finally { await cleanup(root) }
 })

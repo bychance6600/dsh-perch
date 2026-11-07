@@ -188,3 +188,13 @@ test('看画面的设置：默认一张、正常档、720P；乱写会被夹回�
   assert.equal(low.video.detail, 'compact')
   assert.equal(low.video.quality, 16)
 })
+
+
+test('B 站与抖音共用一个 0–6 的每日上限（B15）', () => {
+  const c = normalizeConfig({ browse: { perDay: 9, douyin: { perDay: 8 } } })
+  assert.equal(c.browse.perDay, 6, '总数最多 6')
+  assert.equal(c.browse.douyin.perDay, 6, '旧配置里那个也夹到 6')
+  const z = normalizeConfig({ browse: { perDay: -3, douyin: { perDay: -1 } } })
+  assert.equal(z.browse.perDay, 0)
+  assert.equal(z.browse.douyin.perDay, 0)
+})
