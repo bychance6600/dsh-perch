@@ -236,6 +236,27 @@ test('群名用群的，不用发言人的名片；桥没给群名时退回上�
   adapter.stop()
 })
 
+test('群名片按原文用，空格和下划线都不改写（A10，0.9.1）', async () => {
+  const { adapter, messages, ws } = await started()
+
+  ws.push(group({
+    message_id: 613,
+    group_name: '测试群',
+    user_id: 20004,
+    sender: { card: '阿 岚_测试', nickname: '阿岚' },
+    message: [
+      { type: 'at', data: { qq: String(SELF), name: '小 满' } },
+      { type: 'text', data: { text: '在吗' } },
+    ],
+  }))
+
+  assert.equal(messages.length, 1)
+  assert.equal(messages[0].personName, '阿 岚_测试', '群名片就是原文：不把空格换成下划线，也不改下划线')
+  assert.equal(messages[0].mentionedSelf, true)
+  assert.equal(messages[0].text, '在吗')
+  adapter.stop()
+})
+
 test('群里 @ 她会被洗掉；只有图片时 text 为空但消息仍然上报', async () => {
   const { adapter, messages, ws } = await started()
 

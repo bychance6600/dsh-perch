@@ -17,6 +17,10 @@
 
 - **主人身份按渠道记，不混着比**：`owner.json` 新增 `channels`（QQ / B 站 / 抖音各一份 id 列表），设置页「渠道」的 QQ 主人号改走 `POST /channels/owner` 只写这一个渠道；`lib/channels/auth.js` 只拿当前消息所在的渠道去比对，同一个人在不同平台的 id 不会被认错。老配置里的 `channels.<渠道>.ownerId` 只在 `owner.json` 还没有该渠道键时兜底一次；空数组表示明确清掉，不会复活。认证（这句话算谁说的）留在渠道层，B 站 cookie 与登录仍只在 `owner.js`。
 
+### 0.9.1 六条
+
+- **EPERM / BOM / 归档认最近 / 群名片 / 只粘 cookie / her_say 上限**：六条逐条对过代码，行为都在：建会话只在 Windows 对文件占用错误退避重试；`readJson` 先剥开头 BOM；同屋有多条活会话时认 `sessionIds` 头一条；群名片与昵称按原文用，不把空格换成下划线；只粘 cookie 保存不动已填的 uid / 昵称；`her_say` 真按当天次数拦。补了两条原先没直接钉住的测试（群名片原文、只粘 cookie），生产代码没改。
+
 ### 报告
 
 - **日报按来源三栏**：`out/YYYY-MM-DD.md` 现在固定三栏——她说的（她的原话）、听到的（渠道里别人说的话，带时刻 / 渠道 / 私聊或群里 / 主人）、看到的（看过画面 / 只翻到过 / 你递过来的）。只转写，不评价、不总结；「只翻到过」仍不许写成「看过」。
@@ -128,4 +132,4 @@
 ### 兼容
 
 - `dsh >=0.2.0-rc.1 <0.3.0-0`，Node ≥ 22；`dependencies` / `peerDependencies` / `devDependencies` 仍为空。
-- 测试基线：`node --test --test-isolation=none` → 1251 条 / 1240 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。
+- 测试基线：`node --test --test-isolation=none` → 1253 条 / 1242 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。

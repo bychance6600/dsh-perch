@@ -4,7 +4,7 @@
 
 **0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过，正在按清单往下施工）。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1251 条 / 1240 过 / 9 红**（另有 2 skip，2026-11-07 A15 之后，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1253 条 / 1242 过 / 9 红**（另有 2 skip，2026-11-07 A10 之后，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
 
@@ -52,7 +52,7 @@
 
 ## 之后（按顺序）
 
-1. ~~A27~~ ✅ ~~A28~~ ✅ ~~A29~~ ✅ ~~A30~~ ✅ ~~A17~~ ✅ ~~A18~~ ✅ ~~A12~~ ✅ ~~A19~~ ✅ ~~A20~~ ✅ ~~A31~~ ✅ ~~A32~~ ✅ ~~A33~~ ✅；~~A8~~ ✅；~~A13~~ ✅ ~~A14~~ ✅；~~A15~~ ✅；A10 随 A20 逐条核。
+1. ~~A27~~ ✅ ~~A28~~ ✅ ~~A29~~ ✅ ~~A30~~ ✅ ~~A17~~ ✅ ~~A18~~ ✅ ~~A12~~ ✅ ~~A19~~ ✅ ~~A20~~ ✅ ~~A31~~ ✅ ~~A32~~ ✅ ~~A33~~ ✅；~~A8~~ ✅；~~A13~~ ✅ ~~A14~~ ✅；~~A15~~ ✅；~~A10~~ ✅。
 2. 全做完再回头补 B 段的 19 条验收。
 
 ## 交接（2026-11-06 23:50，A 段进行中）
@@ -334,6 +334,18 @@
 - 测试：新增 `test/leftovers.test.mjs` 2 条（已删模块/配置键/界面字样不在；`readme.js` 数据表是实际文件）；定向 derive/proactive/settings/paths/client/p1/log/principle/askinchat/outside-surface/leftovers/schedule 全绿。
 - 全量 1251 条 / 1240 过 / 9 红 / 2 skip（/tmp/full-A15.log），9 红与已知环境红逐条同名。基线从 1254 降到 1251 = 删 `isolation` 5 条 + 新增 2 条。
 
+**0.9.1 六条逐条核（2026-11-07，已完 A10）**
+
+- 问题：0.1.0 从 river 0.1.68 分出来，父项 0.9.1 的六条修复没有逐条对过；A20 只在全量表里笼统说「已覆盖」，A10 要的是每条都有代码位置与测试，不靠「上游改过」当证据。
+- ① EPERM 重试：`lib/home.js:42-64` 的 `createSessionWithRetry` 只在 win32 对 `EPERM/EACCES/EBUSY/ENOTEMPTY` 重试，间隔 0/120/400ms，每次留一行日志；别的平台真失败就是真失败。测试 `test/a20.test.mjs:91`（三次成功 + linux 不重试）。
+- ② BOM：`lib/store.js:110-116` 的 `readJson` 只剥最前面一个 U+FEFF，正文里的不碰。测试 `test/a20.test.mjs:85`（`\uFEFF{"a":1}` 能读）。
+- ③ 归档认最近：`lib/home.js:223-234` 取 `sessionIds` 头一条（宿主把新会话插在前面），不是末尾的最旧那条。测试 `test/a20.test.mjs:106`（`['ses-new','ses-old']` 认 `ses-new`）。
+- ④ 群 @ 昵称按原文：`lib/channels/qq.js:515-518` 的 `personName = kind === 'group' ? card || nick : nick || card`，不做空格换下划线，也不改下划线；群名用 `group_name`，不用发言人的名片。新增 `test/qq-channel.test.mjs`「群名片按原文用，空格和下划线都不改写（A10，0.9.1）」（`阿 岚_测试` 原样保留）。
+- ⑤ 只粘 cookie 不清 uid：`lib/owner.js:169-190` 的 `saveOwner` 只改传进来的字段，cookie 分支不碰 `mid`/`nickname`；新增 `test/owner.test.mjs`「只粘 cookie 保存时，不清空已填的 uid 与昵称（A10，0.9.1）」。
+- ⑥ `her_say` 上限真拦：`lib/proactive.js:257-264` 数当天 `proactive-say:<日>:` 记账，达到 `maxPerDay` 就不写事件；测试 `test/proactive.test.mjs:188`（默认 2 次，第三次挡在写盘前，坐标用 `deriveSelf`）。
+- 测试净增 2 条；定向 qq-channel/a20/owner/proactive 79+23 全绿；全量 **1253 条 / 1242 过 / 9 红 / 2 skip**（/tmp/full-A10.log），9 红与已知环境红逐条同名。
+- 结论：六条都已在新库里按修好的行为落着，不需要改生产代码；补了两条原先没直接钉住的测试（群名片原文、只粘 cookie）。
+
 **原理页与反馈页收尾（2026-11-07，已完 A13/A14）**
 
 - A13：`lib/client.js` 的 `principlePage` 还在，两张原理图仍走 `/media/principle-loop.svg` 与 `/media/principle-memory.svg`（`lib/observe.js` 的 `/media` 白名单只放这两张），缩放 / 拖动 / `Esc` 由 `test/principle.test.mjs`、`test/principle-zoom.test.mjs` 守着。本轮验收是「页面还在，内容不更新」，所以没改理论卡；等代码定型后再按新库重写、给卡片标文件与行号。
@@ -343,7 +355,7 @@
 **下一步顺序**
 
 1. ~~A11 收尾~~：已 ✅。~~A21~~：已 ✅。~~A34 改名~~：已 ✅。~~A35 名字变量~~：已 ✅。
-2. ~~A22~~：已 ✅。~~A23~~：已 ✅。~~A24~~：已 ✅。~~A25~~：已 ✅。~~A26~~：已 ✅。~~A27~~：已 ✅。~~A28~~：已 ✅。~~A29~~：已 ✅。~~A30~~：已 ✅。~~A17~~：已 ✅。~~A18~~：已 ✅。~~A12~~：已 ✅。~~A19~~：已 ✅。~~A20~~：已 ✅。~~A31~~：已 ✅。~~A32~~：已 ✅。~~A33~~：已 ✅。~~A8~~：已 ✅。~~A13~~：已 ✅。~~A14~~：已 ✅。~~A15~~：已 ✅。A10 随 A20 逐条核。
+2. ~~A22~~：已 ✅。~~A23~~：已 ✅。~~A24~~：已 ✅。~~A25~~：已 ✅。~~A26~~：已 ✅。~~A27~~：已 ✅。~~A28~~：已 ✅。~~A29~~：已 ✅。~~A30~~：已 ✅。~~A17~~：已 ✅。~~A18~~：已 ✅。~~A12~~：已 ✅。~~A19~~：已 ✅。~~A20~~：已 ✅。~~A31~~：已 ✅。~~A32~~：已 ✅。~~A33~~：已 ✅。~~A8~~：已 ✅。~~A13~~：已 ✅。~~A14~~：已 ✅。~~A15~~：已 ✅。~~A10~~：已 ✅。
 3. A1 真机拔网验收并入 A11 之后（代码与模拟已过）。
 
 **环境注意**

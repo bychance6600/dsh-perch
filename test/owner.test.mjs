@@ -131,6 +131,21 @@ test('saveOwner 认不出 cookie 时也把 mid / 昵称存下（用户 m00802 �
   }
 })
 
+test('只粘 cookie 保存时，不清空已填的 uid 与昵称（A10，0.9.1）', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'fish-ow6-'))
+  try {
+    await saveOwner({ mid: '42', nickname: '大肥鱼' }, root)
+    const r = await saveOwner({ cookie: 'SESSDATA=s1; bili_jct=j1' }, root)
+    assert.equal(r.ok, true, r.note)
+    const ow = await readOwner(root)
+    assert.equal(ow.mid, '42', '只粘 cookie 时 uid 要留着')
+    assert.equal(ow.nickname, '大肥鱼', '只粘 cookie 时昵称要留着')
+    assert.equal(ow.cookie, 'SESSDATA=s1; bili_jct=j1')
+  } finally {
+    await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+  }
+})
+
 test('saveOwner 传空 cookie 是「清除」，不是「没传」', async () => {
   const root = await mkdtemp(join(tmpdir(), 'fish-ow2-'))
   try {
