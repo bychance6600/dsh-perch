@@ -54,6 +54,24 @@ test('stampOf 只算 day/stage，过滤口径与 deriveSelf 一致（A28）', ()
   assert.equal(stampOf(events, { stageSpanDays: 7, now }).stage, stageOf(11, 7))
 })
 
+test('DSML 脚手架不进判断：身份文档里不再摆出那两行（2026-11-07 真机）', () => {
+  // 2026-11-03 / 11-05 真机：模型只吐了一个空工具调用块，两行标记被当成
+  // 她说的话写进了 events.jsonl，最后出现在身份文档的「你自己说过的话」里。
+  const junk = '</｜｜DSML｜｜ invoke>\n</｜｜DSML｜｜ calls>'
+  const evs = [
+    ev('ev_seed', 'seed', 1, '种', { source: 'system' }),
+    ev('ev_junk1', 'utterance', 2, junk),
+    ev('ev_a', 'utterance', 2, '我不喜欢被催。'),
+    ev('ev_junk2', 'revise', 3, junk, { refs: ['ev_a'], verdict: 'refuted' }),
+    ev('ev_b', 'utterance', 4, '其实我也没有那么讨厌被催。'),
+  ]
+  const m = deriveSelf(evs, { now: T0 + 4 * DAY_MS })
+  assert.equal(m.beliefs.length, 2, '只剩两句真话')
+  assert.ok(m.beliefs.every((b) => !/DSML/.test(b.text)), '判断里不许有脚手架')
+  assert.equal(m.refuted.length, 0, '只有脚手架的 revise 不算改口')
+  assert.equal(m.facts.revises, 0)
+})
+
 test('selfmod 不入 beliefs，但留证', () => {
   const evs = [
     ev('ev_seed', 'seed', 1, '种', { source: 'system' }),

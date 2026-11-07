@@ -4,7 +4,7 @@
 
 **0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过）。A 段 35 条与 B 段 19 条验收全部收口（A1 于 2026-11-07 16:12 真机通过）。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1260 条 / 1249 过 / 9 红**（另有 2 skip，2026-11-07 抖音真机修完，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1262 条 / 1251 过 / 9 红**（另有 2 skip，2026-11-07 抖音真机修完，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
 
@@ -29,9 +29,19 @@
 - 根因：`packages/dsh-roost-douyin/index.js` 里 `browseFeed` 的默认等待函数写成了 `sleep`，`waitForDevtools` 也调 `sleep`，但子包从头到尾没有定义过它。测试里都传了 `sleep` 替身，所以一直没露。
 - 修法：子包顶部补 `function sleep(ms)`（`setTimeout` 包成 Promise，负数/非数字按 0 算）。`browseFeed` 不传 sleeper 时就走它。
 - 回归测试：`test/douyin-browse.test.mjs` 新增「不传 sleeper 也自己等，不报 sleep is not defined」，用假 transport 走一遍 `navigate` → `evaluate`，不启浏览器。
-- 定向 douyin-browse / douyin-look / douyin-adapter 55/55；全量 **1260 条 / 1249 过 / 9 红 / 2 skip**（/tmp/full-douyin.log），9 红与已知环境红逐条同名。
+- 定向 douyin-browse / douyin-look / douyin-adapter 55/55；全量 **1262 条 / 1251 过 / 9 红 / 2 skip**（/tmp/full-douyin.log），9 红与已知环境红逐条同名。
 - 已提交并推送 `3bec804`。
 - **真机复验通过（2026-11-07 16:40，重启后）**：她在私聊里试了推荐流，`meta dyfeed:2026-11-07` 记下两条（`7696069353590148378`、`7696524579947726985`），报回「推荐流这次正常返回了，没有再报那个 sleep is not defined」，并念出两条的标题、时长与点赞；随后自己搜了「画眉 学口」，`meta searched:画眉_学口 douyin` 落库，并据此写了一条 `revise`。推荐流与搜索页的选择器在真页上都取到了条目。
+
+## 身份文档里的 DSML 垃圾（2026-11-07）——已修
+
+- 用户报：她身份文档「你自己说过的话」里摆着两行 `- </｜｜DSML｜｜ invoke>` 与 `- </｜｜DSML｜｜ calls>`。
+- 源头是两条真事件：`~/.dsh-roost/events.jsonl` 第 425 行 `ev_01M6GMW20Y1P4Z3H288FN6QW6K`（11-03）与第 1393 行 `ev_01M6NJACW8R1GXQRDM27DM3J6W`（11-05），`type: utterance`，正文只有这两行。它们是 11-05 那次「模型只吐了空工具调用块」事故留下的，事件不能改，只能在读的时候挡。
+- 已有 `lib/guard.js` 的 `stripScaffold`，但只用在出站与 turns，`lib/derive.js` 没用，所以这两条照样进了 beliefs，再由 `lib/persona.js` 写进身份文档。
+- 修法：`lib/derive.js` 的 `utterance` / `revise` 分支先 `const said = stripScaffold(ev.text)`，空的直接跳过（不算她开口），后面的 `detectSelfMod` / 让步判断 / beliefs / `pickName` / 更正判断 / narrative 全用 `said`；`herTexts` 与 `deriveSocial` 也先剥。`lib/recall.js` 的 `searchEvents` 同样先剥，只有脚手架的旧事件翻不到、也不端出来。
+- 回归测试：`test/derive.test.mjs`「DSML 脚手架不进判断」；`test/mem.test.mjs`「只有 DSML 脚手架的旧事件，不端出来」。
+- 定向 derive / beliefs / mem / a20 67/67、mem / guard 46/46；全量 **1262 条 / 1251 过 / 9 红 / 2 skip**（/tmp/full-dsml.log），9 红与已知环境红同名。
+- 已用修好的代码重生成 `C:/Users/by_ch/.dsh-roost/home/她的身份.md`：现在 `grep DSML` 无命中，那两条不再出现在「你自己说过的话」里。
 
 ## 已经做完
 

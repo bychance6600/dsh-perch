@@ -274,6 +274,19 @@ test('回忆：翻不到就说翻不到，不编', () => {
   assert.equal(rows.length, 0)
 })
 
+test('回忆：只有 DSML 脚手架的旧事件，不端出来（2026-11-07 真机）', () => {
+  const now = Date.now()
+  const junk = '</｜｜DSML｜｜ invoke>\n</｜｜DSML｜｜ calls>'
+  const events = [
+    { id: 'junk', type: 'utterance', ts: new Date(now - DAY).toISOString(), text: junk },
+    { id: 'mixed', type: 'utterance', ts: new Date(now - 2 * DAY).toISOString(), text: junk + '\n我不喜欢被催。' },
+  ]
+  const { rows } = searchEvents(events, '被催', { now })
+  assert.equal(rows.length, 1)
+  assert.equal(rows[0].id, 'mixed')
+  assert.equal(rows[0].text, '我不喜欢被催。')
+})
+
 test('回忆：超长原文被截断，不给她整段历史', () => {
   const now = Date.now()
   const events = [{ id: '1', type: 'utterance', ts: new Date(now).toISOString(), text: '评论' + '很'.repeat(500) }]
