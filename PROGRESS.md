@@ -4,7 +4,7 @@
 
 **0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。能跑测试，没上真机。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1175 条 / 1161 过 / 11 红**（另有 3 skip，2026-11-07 A22 之后）。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1178 条 / 1164 过 / 11 红**（另有 3 skip，2026-11-07 A23 之后）。全量约 110 秒。
 - 11 条红都是已知环境项：`test/dylink.test.mjs` 的「下视频要带 Referer」（先探测 ffmpeg，沙箱里 `spawnSync EPERM`），其余为跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、ops_*_own、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
 
@@ -52,7 +52,7 @@
 
 ## 之后（按顺序）
 
-1. A23（whatseen 口径）→ A24（判重表与执行记录）→ A25 → A26 → A27 → A28 → A29 → A30 → A17 → A18 → A12 → A19 → A20 → A31 → A32 → A33；A8（B 站分镜）单独一轮；A13/A14 收尾；A10 随 A20 逐条核。
+1. A24（判重表与执行记录）→ A25 → A26 → A27 → A28 → A29 → A30 → A17 → A18 → A12 → A19 → A20 → A31 → A32 → A33；A8（B 站分镜）单独一轮；A13/A14 收尾；A10 随 A20 逐条核。
 2. 全做完再回头补 B 段的 19 条验收。
 
 ## 交接（2026-11-06 23:50，A 段进行中）
@@ -169,10 +169,18 @@
 - 看到的保留原来的三档子节（看过画面 / 只翻到过 / 你递过来的），口径仍由 `whatseen.js` 给——2026-10-30 那条教训（只有标题不能写成看过）继续守着。
 - 测试：`test/browse.test.mjs` 加 2 条（三栏顺序、空的一天三栏也齐；听到的只转写、隔日不串），`test/whatseen.test.mjs` 改成三栏 + 子节顺序。全量 1175 / 1161 / 11 / 3 skip，11 红与已知环境红同名。
 
+**今天页只看点开与抽帧（2026-11-07，已完 A23）**
+
+- 问题：`/today` 原来把 `browse:` 也归成「翻到」，她只扫了一眼标题，今天页就写着她看过。
+- `lib/whatseen.js` 新增 `seenKindOfText(text)`：`watched:` → `watched`；`look:` / `looked:` → `opened`；`looked:hot` / `browse:` / `searched:` → 空。`lib/observe.js` 的 `/today` 用它分类，只翻到标题与搜过的词不显示、不计数；同一条视频的 `looked:` 与 `look:` 只留一条，抽过帧的优先。
+- `lib/client.js` 的 KIND 改成 `watched: 看过画面`、`opened: 点开`，不再有「翻到」。
+- `browse:` 账本照记，报告与历史不动。
+- 测试：`test/today.test.mjs` 3 条（口径分类、今天页过滤去重、抽帧优先）；全量 1178 / 1164 / 11 / 3 skip。
+
 **下一步顺序**
 
 1. ~~A11 收尾~~：已 ✅。~~A21~~：已 ✅。~~A34 改名~~：已 ✅。~~A35 名字变量~~：已 ✅。
-2. ~~A22~~：已 ✅。A23（whatseen 口径）→ A24（判重表与执行记录）→ A25 → A26 → A27 → A28 → A29 → A30 → A17 → A18 → A12 → A19 → A20 → A31 → A32 → A33（A8 单独一轮；A13/A14 收尾；A10 随 A20 逐条核）。
+2. ~~A22~~：已 ✅。~~A23~~：已 ✅。A24（判重表与执行记录）→ A24（判重表与执行记录）→ A25 → A26 → A27 → A28 → A29 → A30 → A17 → A18 → A12 → A19 → A20 → A31 → A32 → A33（A8 单独一轮；A13/A14 收尾；A10 随 A20 逐条核）。
 3. A1 真机拔网验收并入 A11 之后（代码与模拟已过）。
 
 **环境注意**
