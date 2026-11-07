@@ -52,6 +52,7 @@
 - 代码：`lib/worldbook.js` 新增 `isSettingOwned()`，把「作息 / 几点 / 睡觉 / 醒来 / 叫醒」这类条目当设置管辖，`matchEntries()` 不再从世界书取；`lib/selfdoc.js` 的 `renderSelfDoc()` 新增 `wakeWindow` / `wakeLimit`，在「醒来的时候」按 config 现算写「定时叫醒落在 08:00–23:00 之间，一天最多 3 次」，并过滤 `enabled:false` 的条目；`writeSelfDoc()` 传 `config.window` 与 `Math.min(daily.events, wakesPerDay)`；`lib/observe.js` 在 `/config` 保存后 `refreshSelfDoc()`，设置一改身份文档马上跟着变。
 - 测试：`test/worldbook.test.mjs` 加 3 条（身份文档按设置写、对话里不取世界书作息、关掉定时叫醒写「关着」）。定向 worldbook / selfcheck / identity / settings / beliefs / memory 82/82；全量 **1265 条 / 1254 过 / 9 红 / 2 skip**（/tmp/full-worldbook.log），9 红与已知环境红同名。
 - 身份文档已重生成：`C:/Users/by_ch/.dsh-roost/home/她的身份.md:103` 是新句，旧的「晚上八点到十一点 / 一天两次」不再出现。
+- **真机复验（2026-11-07 17:29）**：她在 QQ 里自己报「现在：2026-11-07 17:29」，并把旧说法改成「设置是 08:00–23:00 之间定时叫我，一天最多三次；这个时段外有人说话，我照样醒，但那不算定时叫醒」；她还认出 16:18 那次是有人叫她、不是排出来的。世界书重写后的 6 条已进身份文档，旧「晚上八点到十一点 / 一天两次」不再出现。
 
 ## 已经做完
 
