@@ -21,6 +21,7 @@
 - **叫醒时段**：默认窗口改 `08:00–23:00`，设置页与身份文档统一写「每天几点可以被叫醒」，并说明「不是在这段时间里一直醒着」；`lib/client.js` 的兜底也跟着改。
 - **两份说好的文件**：插件页新增一张卡，填两个绝对路径并打开后，她多一个 `pair_file` 工具，只能读、按原文改一段、在末尾添一句。改 / 添都要带 read 回来的 16 位 hash；文件在两次之间变过会让她重读；写前留 `.bak`。只认这两个路径，拒软链 / 目录 / 二进制 / 大于 512KB，也不许指进她家、`~/.dsh` 或系统目录。这条路不写事件流、不记 `looked:`。默认关着。
 - **成长节奏的配置改名**：`growthDays` 改成 `stageSpanDays`——它只是「四个阶段一共多少天」的尺子，不是寿命上限。老配置里的 `growthDays` 在 `normalizeConfig` 里迁移一次（新旧都有时以新键为准，保存时清掉旧键）。`absence` / `ask` / `capture` 四处写事件信封不再跑完整 `deriveSelf`，改用只算 `{day,stage}` 的 `stampOf()`；过滤口径（驳回、梦、`influence:none`、非 constitution）收进 `constitutionEvents()` 与 `deriveSelf` 共用。主动说话默认隔 3 小时（内部值，不上界面），上限只留 1–6 且不设 0，界面不再有「允许她主动开口」总开关，文案写明「上限不是任务」。
+- **立场分三类，按同题归组**：除「喜欢」与「绝不」外，新增第三类「我守的线」（boundary）——不接什么、不签什么、谁不能替她。归组不再只看整段字面相似度：先认话题（名字 / 自主 / 说话），同题才算一组；没话题的守线要有三条或被疤背书，避免把一段反思当立场。`(?<!想)` 修掉「想不想要」被当成「不想」。身份文档分「我守的线 / 我不做的 / 我喜欢的」三小节，设置页与原理卡跟着写「守哪几条线」。
 - **世界书**：面板从渠道页移到成长页；内容仍由会话侧生成、主人导入，插件不写。
 - **作息归设置，世界书不再压过它**：`lib/worldbook.js` 新增 `isSettingOwned()`，把「作息 / 几点 / 睡觉 / 醒来 / 叫醒」这类条目当设置管辖，对话里不再从世界书取；`lib/selfdoc.js` 的「醒来的时候」改成按 `config.window` 与 `Math.min(daily.events, wakesPerDay)` 现算，停用条目不念。真机上她把 11-03 导入的旧作息背成「晚八点到十一点、一天两次」，压过了设置里的 `08:00–23:00`；现在设置一改，身份文档跟着变。
 
@@ -159,4 +160,4 @@
 ### 兼容
 
 - `dsh >=0.2.0-rc.1 <0.3.0-0`，Node ≥ 22；`dependencies` / `peerDependencies` / `devDependencies` 仍为空。
-- 测试基线：`node --test --test-isolation=none` → 1341 条 / 1330 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。
+- 测试基线：`node --test --test-isolation=none` → 1344 条 / 1333 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。

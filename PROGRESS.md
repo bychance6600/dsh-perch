@@ -4,9 +4,19 @@
 
 **0.1.0 已发布（2026-11-08，tag `v0.1.0`）。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过）。A 段 35 条与 B 段 19 条验收全部收口（A1 于 2026-11-07 16:12 真机通过）。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1341 条 / 1330 过 / 9 红**（另有 2 skip，2026-11-08 社会层测试屋后核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1344 条 / 1333 过 / 9 红**（另有 2 skip，2026-11-09 立场第三类后核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
+
+## 立场第三类与同题归组（2026-11-09，m13079）——已改
+
+- 背景：她的判断里有大量「我不接这个 / 谁不能替我 / 话可以软但立场不能软」，旧的 `classifyStance` 只认「喜欢 / 绝不」，这些一条都进不了立场；旧归组又拿整段字面相似度比，长段落一稀释就归不上。
+- 分类：`lib/stance.js` 新增 `BOUNDARY_RE` 与 `boundary` 类，顺序是先守线、再绝不、再喜欢；「不(喜欢|爱|想|愿意)」加 `(?<!想)`，修掉「想不想要」被误判成「不想」。
+- 归组：新增 `TOPIC_RULES` 与 `stanceTopic()`（name / agency / speech 三个话题）；`buildStances` 对 boundary 先按同话题收，没话题的只收同样没话题且字面相似度 ≥ `STANCE_SIM` 的；没话题、只有两条、又没疤背书的，整组不算。没动全局 `STANCE_SIM` 0.45。
+- 渲染：身份文档的立场段分成 `### 我守的线` / `### 我不做的` / `### 我喜欢的`，标题仍是 `## 我站哪边`；`stanceSummary` 加 `stanceBoundaries`；设置页状态行、记忆页摘要、原理卡改成「守哪几条线」。
+- 离线 dry-run（2026-11-09 00:5x，真实 `~/.dsh-roost`）：从 566 条 live 判断里只多出三条——agency 5 条（mentions 7，音色那条为代表）、name 4 条（「我家的」与名字）、speech 3 条（「话可以软，立场不软」）；「解答心」两条因没话题、只有两条、无背书被排除。`personaLine` 总长 1623 / 预算 1800，立场段约 850 字，没超但偏长。
+- 测试：`test/stance.test.mjs` 20/20；stance + persona + client + p5 + naming + blank + socialgate + observe 80/80；全量 **1344 条 / 1333 过 / 9 红 / 2 skip**（/tmp/full-stance.log），9 红与已知环境红同名。
+- 尚未重启 DSH，所以这三条还没进她的提示词；先给主人看味道，确认后再重启上线。
 
 ## GitHub Actions 修到全绿（2026-11-08，m11776）——已改
 

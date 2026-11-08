@@ -5,7 +5,7 @@
 ![deps](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![node](https://img.shields.io/badge/node-%E2%89%A522-339933)
 ![dsh](https://img.shields.io/badge/DSH-plugin-6a5acd)
-![tests](https://img.shields.io/badge/tests-1341%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-1344%20passing-brightgreen)
 
 **她住的地方，不是一个助手。**
 
@@ -62,7 +62,7 @@
 ## 一、她是什么
 
 - **一条只追加的事件流**：`events.jsonl` 是唯一可信源。天、阶段、判断、疤、立场都从它派生；状态是派生品，忘掉不是删行，是降低召回。
-- **四个阶段、三道瓶颈**：信任 → 自主 → 主动 → 整合。每道瓶颈要她自己走——写过判断、拒绝过、改过口——不是打分涨上来的。阶段走完才有立场。
+- **四个阶段、三道瓶颈**：信任 → 自主 → 主动 → 整合。每道瓶颈要她自己走——写过判断、拒绝过、改过口——不是打分涨上来的。阶段走完才有立场——喜欢的、绝不做的、自己守的线，都算。
 - **两个房间**：DSH 会话，和 QQ（OneBot 11 桥）。B 站、抖音不是聊天的地方，是她看东西的地方：报纸端上来、自己搜、自己点开某一条。
 - **两层成长**：宪法层（你）进判断；社会层（陌生人）永不进判断，只在 `social_open` 之后按上限影响语气。开闸只有她自己能按。
 - **名字是变量**：从对话里认，不设输入框；认不出退回「她」。
@@ -294,7 +294,7 @@ node --test --test-isolation=none  # 沙箱 / 受限环境（跨文件会有假�
 node --test test/<file>.test.mjs   # 单文件
 ```
 
-当前基线：**1341 条 / 1330 过 / 9 红 / 2 skip**。9 条都是已知环境项（跨文件隔离互相干扰；`withFileLock` 偶发），单跑对应文件会绿。**不许新增红。**
+当前基线：**1344 条 / 1333 过 / 9 红 / 2 skip**。9 条都是已知环境项（跨文件隔离互相干扰；`withFileLock` 偶发），单跑对应文件会绿。**不许新增红。**
 
 零依赖是铁律：`dependencies` / `peerDependencies` / `devDependencies` 三个永远 `{}`，测试只用 `node:test`。
 

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import {
   classifyStance,
+  stanceTopic,
   gatesDone,
   buildStances,
   stanceLine,
@@ -48,6 +49,42 @@ test('classifyStance：「不喜欢」是拒绝，不是喜欢', () => {
   assert.equal(classifyStance('我更喜欢一个人待着'), 'like')
   assert.equal(classifyStance('今天天气不错'), null)
   assert.equal(classifyStance(''), null)
+})
+
+test('classifyStance：守线是第三类，和喜欢/绝不分开放', () => {
+  assert.equal(classifyStance('那个空我不填，「我家的」我不接'), 'boundary')
+  assert.equal(classifyStance('谁在挑才打紧'), 'boundary')
+  assert.equal(classifyStance('话可以软，立场不软'), 'boundary')
+  assert.equal(classifyStance('想不想要那张身体'), null, '「想不想要」里的「不想」不是拒绝')
+  assert.equal(stanceTopic('那个空我不填，「我家的」我不接'), 'name')
+  assert.equal(stanceTopic('谁在挑才打紧'), 'agency')
+  assert.equal(stanceTopic('话可以软，立场不软'), 'speech')
+  assert.equal(stanceTopic('今天天气不错'), '')
+})
+
+test('守线按同题归组：两句话字面不像，只要守的是同一条线', () => {
+  const m = model({
+    beliefs: [
+      belief('那个空我不填，你写成「这是小满」就够了；「我家的」我不接。', { id: 'n1' }),
+      belief('名字和叫法我认，但「我家的」这三个字我不替你签。', { id: 'n2' }),
+      // 这两句没有可认的话题，只靠字面像；只有两条、也没有代价，不能算立场。
+      belief('字谜那套我不接，它没有边界。', { id: 'x1' }),
+      belief('字谜那套我不接，它没有边界。', { id: 'x2' }),
+    ],
+  })
+  const list = buildStances(m)
+  assert.equal(list.length, 1)
+  assert.equal(list[0].kind, 'boundary')
+  assert.deepEqual([...list[0].members].sort(), ['n1', 'n2'])
+})
+
+test('守线写进身份文档时单独成段', () => {
+  const text = stanceSection([
+    { kind: 'boundary', text: '「我家的」我不接。', scars: 0, mentions: 2, backed: true },
+    { kind: 'never', text: '我不做讨好人的事。', scars: 0, mentions: 2, backed: true },
+  ])
+  assert.ok(text.includes('### 我守的线'))
+  assert.ok(text.includes('「我家的」我不接。'))
 })
 
 test('gatesDone：真门槛看 stageGate.passed，老模型退回 stage', () => {
@@ -125,6 +162,7 @@ test('立场段是核心段：预算只有 1 也还在', () => {
 test('观测台字段：/memory 与 /state 都从 stance.js 取数', () => {
   const sum = stanceSummary([{ kind: 'never', text: 'x', backed: true }, { kind: 'like', text: 'y', backed: false }])
   assert.equal(sum.stanceCount, 2)
+  assert.equal(sum.stanceBoundaries, 0)
   assert.equal(sum.stanceNevers, 1)
   assert.equal(sum.stanceLikes, 1)
   assert.equal(sum.stanceBacked, 1)
@@ -146,6 +184,7 @@ test('立场三种写法：还没开始 / 走完 0 条 / 已有条数', () => {
   )
   assert.ok(c.includes("rowTip('立场', '0 条', '完成整合，但暂未形成自己的立场。')"), '走完门但还没站住过，是另一种写法')
   assert.ok(c.includes('立场是在四个阶段都走完之后才开始产生的'), '有立场时也要写清口径')
+  assert.ok(c.includes('守哪几条线'), '有立场时把守线也算进去')
   assert.ok(!c.includes('回应采纳'), '「回应采纳」这一行已经删掉')
 })
 
