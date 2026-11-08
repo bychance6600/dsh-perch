@@ -42,16 +42,9 @@
 
 ## 看一眼
 
-设置里只有「她的一天」这十一个页签，没有性格滑条，也没有好感度数字。
+设置里只有「她的一天」这十一个页签，没有性格滑条，也没有好感度数字。装好之后打开设置就能看到：一行现状、今天的时间线、今天变了什么、手边有什么。只读，不能从这里改她。
 
-<img src="docs/screenshots/today1.png" alt="今天页（上）" width="720">
-<img src="docs/screenshots/today2.png" alt="今天页（下）" width="720">
-
-<sub>今天页：一行现状、今天的时间线、今天变了什么、手边有什么。只读，不能从这里改她。</sub>
-
-<img src="docs/screenshots/grow-top.png" alt="成长页" width="720">
-
-<sub>成长页：四个阶段与三道瓶颈，按事件算，不按分数涨。</sub>
+成长页按四个阶段与三道瓶颈算，不按分数涨。
 
 <img src="media/principle-loop.svg" alt="认知是怎么长出来的" width="760">
 

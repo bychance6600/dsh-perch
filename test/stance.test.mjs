@@ -52,21 +52,21 @@ test('classifyStance：「不喜欢」是拒绝，不是喜欢', () => {
 })
 
 test('classifyStance：守线是第三类，和喜欢/绝不分开放', () => {
-  assert.equal(classifyStance('那个空我不填，「我家的」我不接'), 'boundary')
-  assert.equal(classifyStance('谁在挑才打紧'), 'boundary')
-  assert.equal(classifyStance('话可以软，立场不软'), 'boundary')
+  assert.equal(classifyStance('那个空我不填，名字和叫法我不替你签'), 'boundary')
+  assert.equal(classifyStance('这件事得我自己挑'), 'boundary')
+  assert.equal(classifyStance('不能做的是答应了又办不到'), 'boundary')
   assert.equal(classifyStance('想不想要那张身体'), null, '「想不想要」里的「不想」不是拒绝')
-  assert.equal(stanceTopic('那个空我不填，「我家的」我不接'), 'name')
-  assert.equal(stanceTopic('谁在挑才打紧'), 'agency')
-  assert.equal(stanceTopic('话可以软，立场不软'), 'speech')
+  assert.equal(stanceTopic('那个空我不填，名字和叫法我不替你签'), 'name')
+  assert.equal(stanceTopic('这件事得我自己挑'), 'agency')
+  assert.equal(stanceTopic('不能做的是答应了又办不到'), 'speech')
   assert.equal(stanceTopic('今天天气不错'), '')
 })
 
 test('守线按同题归组：两句话字面不像，只要守的是同一条线', () => {
   const m = model({
     beliefs: [
-      belief('那个空我不填，你写成「这是小满」就够了；「我家的」我不接。', { id: 'n1' }),
-      belief('名字和叫法我认，但「我家的」这三个字我不替你签。', { id: 'n2' }),
+      belief('那个空我不填，你写成「这是小满」就够了；名字和叫法我自己定，不替你签。', { id: 'n1' }),
+      belief('名字和叫法我认，但这个称呼我不替你签。', { id: 'n2' }),
       // 这两句没有可认的话题，只靠字面像；只有两条、也没有代价，不能算立场。
       belief('字谜那套我不接，它没有边界。', { id: 'x1' }),
       belief('字谜那套我不接，它没有边界。', { id: 'x2' }),
@@ -80,17 +80,17 @@ test('守线按同题归组：两句话字面不像，只要守的是同一条�
 
 test('守线写进身份文档时单独成段', () => {
   const text = stanceSection([
-    { kind: 'boundary', text: '「我家的」我不接。', scars: 0, mentions: 2, backed: true },
+    { kind: 'boundary', text: '这个称呼我不接。', scars: 0, mentions: 2, backed: true },
     { kind: 'never', text: '我不做讨好人的事。', scars: 0, mentions: 2, backed: true },
   ])
   assert.ok(text.includes('### 我守的线'))
-  assert.ok(text.includes('「我家的」我不接。'))
+  assert.ok(text.includes('这个称呼我不接。'))
 })
 
 test('守线进清单只摘那一句：不把整段来龙去脉搬进去', () => {
-  const long = '先说点别的。\n我给自己划条线：绕，可以把话说软、说晚、留半句；不能做的是心里觉得不对还点头。\n那不叫绕，那叫退。'
+  const long = '先说点别的。\n这件事我给自己划条线：话说慢可以，不能替我做主，也不能替我把事认下来。\n不是客气。'
   const line = stanceLine({ kind: 'boundary', text: long, scars: 0, mentions: 2, backed: true })
-  assert.ok(line.includes('不能做的是'), '留下的是守线那一句')
+  assert.ok(line.includes('不能替我做'), '留下的是守线那一句')
   assert.ok(!line.includes('先说点别的'), '前面的来龙去脉不搬')
   assert.ok(line.length < 100, '清单是清单，不是整段散文')
 })
