@@ -8,6 +8,16 @@
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
 
+## GitHub Actions 修到全绿（2026-11-08，m11776）——已改
+
+- 基线：远端 run `42470088380` 三个 job（ubuntu 22 / ubuntu 24 / Windows）全红；本地普通 `node --test` 是 1335 过 / 0 红 / 2 skip，`--test-isolation=none` 的 9 条红是已知环境项。
+- Ubuntu 与 Windows 共同的假红一：`test/gate.test.mjs` 的夜间/峰时用例写死 `+08:00`，而 runner 是 UTC，`23:30+08` 变成 15:30（落进峰时）、`10:30+08` 变成 02:30（落进夜间）。改成 `new Date(2026, 10, 6, 23, 30)` 这类本地构造，gate 仍按机器本地小时判。
+- Ubuntu 假红二：`test/install-pet.test.mjs` 用 `spawnSync('powershell.exe')` 压测试包，Ubuntu 上 ENOENT。测试在非 Windows 直接 `t.skip('身体和角色包只在 Windows 上解压')`。
+- Windows 假红三：`test/pairfile.test.mjs` 的临时目录是 8.3 短路径（`RUNNER~1`），`realpath` 展开后与配置里的字面路径不同，被「防软链」检查误判成「这个路径经过链接」。`withDirs()` 先对 `mkdtemp` 的结果做 `realpath` 再建文件。
+- 另外两处 CI 基建：`test/dylink.test.mjs` 的 Referer 用例在没装 ffmpeg 的 runner 上跳过（`e632b04`）；`.github/workflows/test.yml` 失败时把 `✖` 用例名做成注解，公开页也能看（`b8585e5`）。
+- 验证：`TZ=UTC node --test test/gate.test.mjs` 16/16；gate + install-pet 18/18；pairfile 7/7；全量 `node --test` **1337 条 / 1335 过 / 0 红 / 2 skip**。
+- 提交 `47b7714` 推送后，run `42474410235` 三个 job 全部 success。
+
 ## 桌宠 pet_act 注册、睡迹判据、窗口文案（2026-11-08，m10609）——已改
 
 - P0：真机上 `pet_act` 注册失败，宿主报 `tool "pet_act" must declare output { schema, render, presentationMeta? }`，日志同时出现「工具面收窄延后（unknown global tool "pet_act"）」。`lib/pet/tool.js` 照 `lib/capture.js:113-136` 补了 `output.schema`（`{ ok:boolean, note:string }`）与 `output.render`（返回 ContentBlock 数组：成功 `[动了]`，失败 `[没动：…]`）；`test/pet-tool.test.mjs` 新增一条断言注册出的工具带 `output.render` 且返回数组。
