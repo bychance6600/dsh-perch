@@ -29,7 +29,17 @@ jobs:
         run: node -e "const p=require('./package.json');for(const k of ['dependencies','devDependencies','peerDependencies'])if(p[k]&&Object.keys(p[k]).length)throw new Error(k+' 不是空的');console.log('零依赖 OK')"
 
       - name: 跑测试
-        run: npm test
+        shell: bash
+        run: |
+          set -o pipefail
+          if npm test 2>&1 | tee test.log; then
+            exit 0
+          fi
+          # 日志要登录才能看；把失败的用例名做成注解，公开页也能读到。
+          grep -E '^✖' test.log | head -40 | while IFS= read -r line; do
+            echo "::error title=CI 测试失败::$line"
+          done
+          exit 1
 
   # Windows 单独跑一轮：路径归一化、chmod 语义、ffmpeg 探测在这边和 Linux 不一样，
   # 而这些正是这个插件最容易出问题的地方。
@@ -43,5 +53,14 @@ jobs:
           node-version: '22'
 
       - name: 跑测试
-        run: npm test
         shell: bash
+        run: |
+          set -o pipefail
+          if npm test 2>&1 | tee test.log; then
+            exit 0
+          fi
+          # 日志要登录才能看；把失败的用例名做成注解，公开页也能读到。
+          grep -E '^✖' test.log | head -40 | while IFS= read -r line; do
+            echo "::error title=CI 测试失败::$line"
+          done
+          exit 1
