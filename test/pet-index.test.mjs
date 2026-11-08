@@ -103,15 +103,22 @@ test('petEnabled 只认 true；路径空着也算开，会去默认位置找身�
   assert.equal(petEnabled({}), false)
 })
 
-test('戳一下：回合里只记账；闲下来且隔够了才起一轮（2026-11-08 17:47）', () => {
+test('戳一下：隔够了就排一轮，回合进行中也不早退（2026-11-08 23:20）', async () => {
   const now = 1_800_000_000_000
-  assert.equal(pokeKind(true, 0, now, 60_000), 'note')
-  assert.equal(pokeKind(false, now - 59_999, now, 60_000), 'ignore')
-  assert.equal(pokeKind(false, now - 60_000, now, 60_000), 'turn')
-  assert.equal(pokeKind(false, 0, now, 60_000), 'turn')
+  assert.equal(pokeKind(now - 59_999, now, 60_000), 'ignore')
+  assert.equal(pokeKind(now - 60_000, now, 60_000), 'turn')
+  assert.equal(pokeKind(0, now, 60_000), 'turn')
   // 配置坏值 / 越界都夹回 5–600 秒。
-  assert.equal(pokeKind(false, now - 4_000, now, 1), 'ignore')
-  assert.equal(pokeKind(false, now - 5_000, now, 1), 'turn')
+  assert.equal(pokeKind(now - 4_000, now, 1), 'ignore')
+  assert.equal(pokeKind(now - 5_000, now, 1), 'turn')
+
+  // 2026-11-08 23:20 协调板：回合中只记 meta 的话，meta 不进上下文，她永远看不见。
+  // 现在 pokeKind 不再看 turnActive；pokeTurn 也不因 turnActive 早退，交给 mode:'queue' 等这一轮结束。
+  const src = await readFile(new URL('../lib/pet/index.js', import.meta.url), 'utf8')
+  assert.doesNotMatch(src, /pokeKind\(base\.turnActive/)
+  assert.doesNotMatch(src, /if \(base\.turnActive \|\| !base\.sessionId\) return/)
+  assert.match(src, /if \(!base\.sessionId\) return/)
+  assert.match(src, /mode: 'queue'/)
 })
 
 test('戳一下不写 seen、不进 heard；只记 meta 和一句固定的轻提示', async () => {
@@ -120,5 +127,6 @@ test('戳一下不写 seen、不进 heard；只记 meta 和一句固定的轻提
   assert.match(src, /他伸手戳了你一下。回不回应、怎么回应，你自己定。/)
   assert.match(src, /void notePoke\(iso\)/)
   assert.match(src, /void pokeTurn\(\)\.catch\(\(\) => \{\}\)/)
+  assert.match(src, /poke 间隔不到/)
   assert.doesNotMatch(src, /poke[\s\S]{0,200}seen:/i)
 })

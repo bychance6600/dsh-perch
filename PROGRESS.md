@@ -50,7 +50,7 @@
 ## 桌宠交付形态、poke、动态动作（2026-11-08，m11289）——已改
 
 - 交付形态（17:44 协调板）：`lib/pet/entry.js` 新增 `PET_BODY_NAME='dsh-roost-pet.exe'`、`defaultPetPath(root)`、`petPathOf(pet,root)`；`pet.path` 空着就找 `<root>/pet/dsh-roost-pet.exe`。`lib/pet/index.js` 的 `petStatus(cfg,root)` 多返回 `installed/path/pack/dead`，没装时不 spawn、`lastError` 留空、why 写「等：还没装身体（把 zip 解压到 ~/.dsh-roost/pet/）」。新增 `tools/install-pet.mjs`（零依赖，PowerShell `Expand-Archive`）：`--body <zip>` 必填、`--pack <zip>` 可选，解到 `<root>/pet/` 与 `<root>/pets/<id>/`，改 config 前先备份。设置页桌宠卡显示「已安装/未安装 · 路径」。
-- poke（17:47）：`pokeKind()` 三档——睡着 `ignore`（只让身体晃）、回合中 `note`（只记 `meta poke:<ISO>`）、醒着且隔够 `pokeMinGapMs` 才 `turn`（起一轮轻提示，不写 `seen`）。`pokeMinGapMs` 默认 60000、夹 5000–600000，保存后热更。
+- poke（17:47 初版；23:20 协调板修订）：`pokeKind(lastPokeAt, now, minGapMs)` 只看间隔，返回 `turn` / `ignore`；睡着由身体自己只晃、不叫醒。隔够 `pokeMinGapMs` 就记 `meta poke:<ISO>` 并排一轮轻提示（不写 `seen`），回合中也不早退，`sc.prompt` 的 `mode:'queue'` 会等她这一轮结束；间隔内的点击只写日志，不写 meta、不排回合。`pokeMinGapMs` 默认 60000、夹 5000–600000，保存后热更。
 - 动态动作（17:50）：新增 `lib/pet/actions.js`，按 `pet.dir` → `<root>/pets/<pack>/pet.json` → `<repo>/pets/<pack>/pet.json` 找包，读 `animations.actions`，过滤不安全名字；读不到/全坏/空都回落内置 10 个。`pet_act` 的 enum 与描述都跟着动作表走，未知动作回「没有这个动作：X。手边有：…」。
 - 测试：`pet-index` 改「没装不 spawn」与默认路径；新增 `pet-actions` 4 条、`install-pet` 2 条；`pet-tool` 加角色包动作表与坏名回落；`settings` 加 `pokeMinGapMs` 夹取。定向 102/102；全量 **1337 条 / 1326 过 / 9 红 / 2 skip**（/tmp/full-pet-final2.log），9 红与已知环境红同名。
 - 顺手修了一条跨文件假红：`test/look-video.test.mjs` 的两条 `resolveUrl` 用例先 `resetRisk()`，否则会被 `bili-risk` 留在进程里的读冷却串成 `COOLDOWN`（全量里多出 2 条红，单跑是绿的）。
