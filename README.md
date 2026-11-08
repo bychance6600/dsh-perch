@@ -5,7 +5,7 @@
 ![deps](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![node](https://img.shields.io/badge/node-%E2%89%A522-339933)
 ![dsh](https://img.shields.io/badge/DSH-plugin-6a5acd)
-![tests](https://img.shields.io/badge/tests-1344%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-1345%20passing-brightgreen)
 
 **她住的地方，不是一个助手。**
 
@@ -294,7 +294,7 @@ node --test --test-isolation=none  # 沙箱 / 受限环境（跨文件会有假�
 node --test test/<file>.test.mjs   # 单文件
 ```
 
-当前基线：**1344 条 / 1333 过 / 9 红 / 2 skip**。9 条都是已知环境项（跨文件隔离互相干扰；`withFileLock` 偶发），单跑对应文件会绿。**不许新增红。**
+当前基线：**1345 条 / 1334 过 / 9 红 / 2 skip**。9 条都是已知环境项（跨文件隔离互相干扰；`withFileLock` 偶发），单跑对应文件会绿。**不许新增红。**
 
 零依赖是铁律：`dependencies` / `peerDependencies` / `devDependencies` 三个永远 `{}`，测试只用 `node:test`。
 

@@ -165,7 +165,7 @@ ctx.on('session/event', (session, event) => {
 - `test/pet-actions.test.mjs`：安全动作名、角色包候选顺序、坏名过滤、缺/坏/空回落内置。
 - `test/install-pet.test.mjs`：没 `--body` 报用法；用 PowerShell `Compress-Archive` 造 zip，解身体与角色包、写 config、备份旧 config。
 - 测试不碰真实数据目录；用 `tmp` root。
-- 全量基线：`node --test --test-isolation=none`，本次完成后为 1344 条 / 1333 过 / 9 条已知红 / 2 skip；加了测试要更新 `AGENTS.md` 的基线数字。
+- 全量基线：`node --test --test-isolation=none`，本次完成后为 1345 条 / 1334 过 / 9 条已知红 / 2 skip；加了测试要更新 `AGENTS.md` 的基线数字。
 
 ---
 

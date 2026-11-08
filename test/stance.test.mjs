@@ -87,6 +87,14 @@ test('守线写进身份文档时单独成段', () => {
   assert.ok(text.includes('「我家的」我不接。'))
 })
 
+test('守线进清单只摘那一句：不把整段来龙去脉搬进去', () => {
+  const long = '先说点别的。\n我给自己划条线：绕，可以把话说软、说晚、留半句；不能做的是心里觉得不对还点头。\n那不叫绕，那叫退。'
+  const line = stanceLine({ kind: 'boundary', text: long, scars: 0, mentions: 2, backed: true })
+  assert.ok(line.includes('不能做的是'), '留下的是守线那一句')
+  assert.ok(!line.includes('先说点别的'), '前面的来龙去脉不搬')
+  assert.ok(line.length < 100, '清单是清单，不是整段散文')
+})
+
 test('gatesDone：真门槛看 stageGate.passed，老模型退回 stage', () => {
   assert.equal(gatesDone({ stageGate: { passed: ['trust', 'autonomy', 'competence'] } }), true)
   assert.equal(gatesDone({ stageGate: { passed: ['trust', 'autonomy'] }, stage: 3 }), false)
