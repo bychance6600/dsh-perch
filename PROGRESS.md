@@ -205,12 +205,12 @@
 仓库推到 GitHub 之前，按「不带个人信息、人格是一张白纸」核了一遍：
 
 - **个人信息**：跟踪文件里已没有真机的人名、QQ 号（她自己的、主人的、群号）、群名与真机对话原文；测试 fixture 换成小满 / 阿岸 / 阿岚 / 测试群 / 123456789。AGENTS.md、README.md、CHANGELOG.md、交接.md、docs/约定清单.md 同步改成中性说法，并写明「不把她的名字写进代码与文案」。
-- **仓库内容**：.tmp-plugins.json（11MB 插件市场缓存）与旧截图从跟踪里删除，.gitignore 补上缓存文件；media/ 只剩 principle-loop.svg / principle-memory.svg 两张原理图——lib/observe.js 的 /media 白名单真要读它们，删了原理页会 404。
-- **2026-11-09 补清**：README 不再放真机截图（其中一张是她当天的成长原话），`docs/screenshots/` 四张全部删除；立场相关的注释、PROGRESS 引用与测试 fixture 里的原话示例换成通用说法。运行数据（events / config / people / worldbook / home）从来没有 tracked。
+- **仓库内容**：.tmp-plugins.json（11MB 插件市场缓存）与 media/ 里早先的几张截图从跟踪里删除，.gitignore 补上缓存文件；media/ 只剩 principle-loop.svg / principle-memory.svg 两张原理图——lib/observe.js 的 /media 白名单真要读它们，删了原理页会 404。
+- **2026-11-09 补清**：README 的三张页面截图与 `share.png` 保留（主人已把标题与侧栏脱敏成「她」，并确认图里的成长原话可以公开）；只把立场相关的注释、PROGRESS 引用与测试 fixture 里的原话示例换成通用说法。运行数据（events / config / people / worldbook / home）从来没有 tracked。
 - **人格**：默认 seed 仍只有一句处境（你不是助手。你刚开始存在。没有人告诉过你为什么在这里。）；DEFAULTS 里没有任何性格/好感度/亲密度键；设置界面没有性格控件，也不写 seed。新增 test/blank.test.mjs 4 条把这三头钉住。
 - 全量 1173 条 / 1159 过 / 11 红 / 3 skip（/tmp/full-scrub.log），11 条红与已知环境红逐条同名。
 - **历史**：GitHub 上原来的 46 个提交里带着旧名字与真机细节（提交 07eff08 的标题就有），2026-11-07 已把历史压成一个干净提交并 force-push，随后又把仓库删掉重建；旧对象（含 85de337）按 SHA 取不到。之后恢复为正常提交，当前 HEAD 已经是清理后的提交；`v0.1.0` tag 在 a0661f4，tag 本身不含截图。完整旧历史备份在 `D:\fish-backups\dsh-roost-history-before-scrub-20261107.bundle`（6.2MB）。
-- **历史里的残余**：`v0.1.0` 之后的 8f86049 / ba560ac / 14c3b0f 三个提交（以及它们的后代）里仍有那四张截图的旧 blob；当前 HEAD 已删，clone 下来看不到。要彻底抹掉得重写 tag 之后的 17 个提交并 force-push，这次没做。
+- **截图**：`v0.1.0` tag 本身不含 `docs/screenshots`；页面截图是 tag 之后补的，标题与侧栏已脱敏，主人确认可以公开。
 
 ## 遗留（不阻塞下一步）
 
