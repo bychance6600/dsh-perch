@@ -4,7 +4,7 @@
 
 **0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过）。A 段 35 条与 B 段 19 条验收全部收口（A1 于 2026-11-07 16:12 真机通过）。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1326 条 / 1315 过 / 9 红**（另有 2 skip，2026-11-08 桌宠睡醒改按回合与动静判后核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1337 条 / 1326 过 / 9 红**（另有 2 skip，2026-11-08 桌宠睡醒改按回合与动静判后核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
 
@@ -19,6 +19,14 @@
 - 角色包（17:31 协调板）：配置键从 `pet.petId` 改成 `pet.pack`（老配置自动迁过来，不丢已选角色），设置页「插件」卡加「角色包」输入；spawn 仍传 `--pet=<id>`，由 body 按 `~/.dsh-roost/pets/<id>` 找素材。仓库只留模板，素材不进 git。
 - 重启后又发现一层：`parameters` 是手写标准形态，宿主报 `tool "pet_act" parameters must be lossless JSON before schema projection`，并连带整批工具不可用。协调侧已改成 `toJsonSchema({ action, why })`（提交 `6ae9d20`），输出是 `{type:'object',properties,required:['action'],additionalProperties:false}`；`test/pet-tool.test.mjs` 补了一条钉住这个形状。
 - 真机确认（2026-11-08 15:22）：`工具面收窄：她这条会话只留 15 个工具，另有兜底守卫`；日志里不再出现 `工具注册失败` / `lossless JSON` / `工具面收窄延后`。15:27 她调 `pet_act` 点头，屏幕出现 done 绿圈；姿态也不再按时段判睡。`origin/main` 已到 `6ae9d20`。
+
+## 桌宠交付形态、poke、动态动作（2026-11-08，m11289）——已改
+
+- 交付形态（17:44 协调板）：`lib/pet/entry.js` 新增 `PET_BODY_NAME='dsh-roost-pet.exe'`、`defaultPetPath(root)`、`petPathOf(pet,root)`；`pet.path` 空着就找 `<root>/pet/dsh-roost-pet.exe`。`lib/pet/index.js` 的 `petStatus(cfg,root)` 多返回 `installed/path/pack/dead`，没装时不 spawn、`lastError` 留空、why 写「等：还没装身体（把 zip 解压到 ~/.dsh-roost/pet/）」。新增 `tools/install-pet.mjs`（零依赖，PowerShell `Expand-Archive`）：`--body <zip>` 必填、`--pack <zip>` 可选，解到 `<root>/pet/` 与 `<root>/pets/<id>/`，改 config 前先备份。设置页桌宠卡显示「已安装/未安装 · 路径」。
+- poke（17:47）：`pokeKind()` 三档——睡着 `ignore`（只让身体晃）、回合中 `note`（只记 `meta poke:<ISO>`）、醒着且隔够 `pokeMinGapMs` 才 `turn`（起一轮轻提示，不写 `seen`）。`pokeMinGapMs` 默认 60000、夹 5000–600000，保存后热更。
+- 动态动作（17:50）：新增 `lib/pet/actions.js`，按 `pet.dir` → `<root>/pets/<pack>/pet.json` → `<repo>/pets/<pack>/pet.json` 找包，读 `animations.actions`，过滤不安全名字；读不到/全坏/空都回落内置 10 个。`pet_act` 的 enum 与描述都跟着动作表走，未知动作回「没有这个动作：X。手边有：…」。
+- 测试：`pet-index` 改「没装不 spawn」与默认路径；新增 `pet-actions` 4 条、`install-pet` 2 条；`pet-tool` 加角色包动作表与坏名回落；`settings` 加 `pokeMinGapMs` 夹取。定向 102/102；全量 **1337 条 / 1326 过 / 9 红 / 2 skip**（/tmp/full-pet-final2.log），9 红与已知环境红同名。
+- 顺手修了一条跨文件假红：`test/look-video.test.mjs` 的两条 `resolveUrl` 用例先 `resetRisk()`，否则会被 `bili-risk` 留在进程里的读冷却串成 `COOLDOWN`（全量里多出 2 条红，单跑是绿的）。
 
 ## 桌宠入口按 launch.md（2026-11-08，m10008）——已改
 

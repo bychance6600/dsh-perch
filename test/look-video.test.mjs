@@ -21,7 +21,7 @@ import { join } from 'node:path'
 
 import { lookOnce, registerLook } from '../lib/look.js'
 import { absorb } from '../lib/browse.js'
-import { createClient } from '../lib/bili.js'
+import { createClient, resetRisk } from '../lib/bili.js'
 import { normalizeConfig, dateKey } from '../lib/settings.js'
 import { readEvents } from '../lib/store.js'
 
@@ -174,6 +174,7 @@ test('absorb：调用方已经取回详情时不再请求一次', async () => {
 
 // ---------------------------------------------------------------- resolveUrl
 test('resolveUrl：带 BV 的链接不联网；b23 短链跟随跳转取落地地址', async () => {
+  resetRisk()
   const calls = []
   const fetchImpl = async (url) => {
     calls.push(String(url))
@@ -193,6 +194,7 @@ test('resolveUrl：带 BV 的链接不联网；b23 短链跟随跳转取落地�
 })
 
 test('resolveUrl：跟随关了就从正文里抠，抠不到就说不是视频', async () => {
+  resetRisk()
   const c = createClient({
     fetchImpl: async () => ({
       url: 'https://b23.tv/xyz',

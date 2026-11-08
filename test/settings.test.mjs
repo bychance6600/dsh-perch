@@ -205,8 +205,9 @@ test('桌宠入口参数：大小夹住、位置只认白名单、穿透默认�
   assert.equal(d.pet.position, '')
   assert.equal(d.pet.clickThrough, true)
   assert.equal(d.pet.idleSleepMin, 5)
+  assert.equal(d.pet.pokeMinGapMs, 60_000)
 
-  const c = normalizeConfig({ pet: { enabled: true, path: ' D:/pet.exe ', repo: ' D:/body ', size: 9, position: '../x', clickThrough: false, pack: 'cat-2', idleSleepMin: 99 } })
+  const c = normalizeConfig({ pet: { enabled: true, path: ' D:/pet.exe ', repo: ' D:/body ', size: 9, position: '../x', clickThrough: false, pack: 'cat-2', idleSleepMin: 99, pokeMinGapMs: 120_000 } })
   assert.equal(c.pet.enabled, true)
   assert.equal(c.pet.path, 'D:/pet.exe')
   assert.equal(c.pet.repo, 'D:/body')
@@ -216,6 +217,7 @@ test('桌宠入口参数：大小夹住、位置只认白名单、穿透默认�
   assert.equal(c.pet.pack, 'cat-2')
   assert.equal(c.pet.petId, undefined)
   assert.equal(c.pet.idleSleepMin, 60)
+  assert.equal(c.pet.pokeMinGapMs, 120_000)
 
   assert.equal(normalizeConfig({ pet: { size: 0.1 } }).pet.size, 0.5)
   assert.equal(normalizeConfig({ pet: { size: 'abc' } }).pet.size, 1.0)
@@ -227,4 +229,8 @@ test('桌宠入口参数：大小夹住、位置只认白名单、穿透默认�
   assert.equal(normalizeConfig({ pet: { petId: 'legacy-1', pack: 'cat-2' } }).pet.pack, 'cat-2')
   assert.equal(normalizeConfig({ pet: { idleSleepMin: 0 } }).pet.idleSleepMin, 1)
   assert.equal(normalizeConfig({ pet: { idleSleepMin: 'abc' } }).pet.idleSleepMin, 5)
+  // 两次点击之间：默认 60 秒，夹在 5–600 秒。
+  assert.equal(normalizeConfig({ pet: { pokeMinGapMs: 1 } }).pet.pokeMinGapMs, 5_000)
+  assert.equal(normalizeConfig({ pet: { pokeMinGapMs: 999_999 } }).pet.pokeMinGapMs, 600_000)
+  assert.equal(normalizeConfig({ pet: { pokeMinGapMs: 'abc' } }).pet.pokeMinGapMs, 60_000)
 })

@@ -69,3 +69,31 @@ test('关着 / 没连上都不抛，只说一句', async () => {
   registerPetAct(down, { enabled: () => true, sendAct: () => false })
   assert.deepEqual(await down.list[0].execute({ action: 'laugh' }), { ok: false, note: '桌宠没连上，动作没送出去。' })
 })
+
+test('动作表跟着角色包走：enum、说明、回收都用包里的名字（2026-11-08 17:50）', async () => {
+  const ctx = fakeCtx()
+  const sent = []
+  registerPetAct(ctx, {
+    enabled: () => true,
+    sendAct: (a, w) => { sent.push([a, w]); return true },
+    actions: ['wave', 'nod'],
+    labels: { wave: '挥手' },
+  })
+  const tool = ctx.list[0]
+  assert.deepEqual(tool.parameters.properties.action.enum, ['wave', 'nod'])
+  assert.match(tool.description, /wave 挥手/)
+  assert.match(tool.description, /nod 点了点头/)
+  assert.deepEqual(await tool.execute({ action: 'wave' }), { ok: true, note: '挥手' })
+  assert.deepEqual(sent, [['wave', '']])
+  const bad = await tool.execute({ action: 'bounce' })
+  assert.equal(bad.ok, false)
+  assert.match(bad.note, /没有这个动作：bounce/)
+  assert.match(bad.note, /手边有：wave、nod/)
+  assert.equal(sent.length, 1)
+})
+
+test('角色包给的动作名不合法时，整份回落内置，不把坏名字塞进 schema', () => {
+  const ctx = fakeCtx()
+  registerPetAct(ctx, { enabled: () => true, sendAct: () => true, actions: ['bad name', ''] })
+  assert.deepEqual(ctx.list[0].parameters.properties.action.enum, [...PET_ACTIONS])
+})

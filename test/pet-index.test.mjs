@@ -3,11 +3,11 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { petApplyConfig, petEnabled, petSendAct, petStatus, startPet } from '../lib/pet/index.js'
+import { petApplyConfig, petEnabled, petSendAct, petStatus, pokeKind, startPet } from '../lib/pet/index.js'
 
 const ctx = { on: () => () => {}, tools: { register: () => ({ dispose() {} }) } }
 
@@ -27,7 +27,7 @@ test('pet 关着：不 spawn、不订阅、状态就是没开', async () => {
   await rm(root, { recursive: true, force: true })
 })
 
-test('开着但没填路径：记一句原因，也不 spawn', async () => {
+test('开着但没装：installed:false、只说还没装身体，不刷错误也不 spawn', async () => {
   const root = await mkdtemp(join(tmpdir(), 'dsh-roost-pet-empty-'))
   let spawned = 0
   const pet = await startPet(ctx, {
@@ -36,11 +36,27 @@ test('开着但没填路径：记一句原因，也不 spawn', async () => {
     spawn: () => { spawned += 1; throw new Error('不该走到这里') },
   })
   assert.equal(spawned, 0)
-  assert.equal(petStatus().enabled, true)
-  assert.equal(petStatus().lastError, '没填宠物包的路径')
-  assert.match(petStatus().why, /还没填宠物包的路径/)
+  const s = petStatus()
+  assert.equal(s.enabled, true)
+  assert.equal(s.installed, false)
+  assert.equal(s.path, join(root, 'pet', 'dsh-roost-pet.exe'))
+  assert.equal(s.lastError, '')
+  assert.match(s.why, /还没装身体/)
   pet.off()
   assert.equal(petStatus().enabled, false)
+  await rm(root, { recursive: true, force: true })
+})
+
+test('路径空着时默认找 <root>/pet/dsh-roost-pet.exe；文件在就算装了', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-roost-pet-default-'))
+  await mkdir(join(root, 'pet'), { recursive: true })
+  const exe = join(root, 'pet', 'dsh-roost-pet.exe')
+  await writeFile(exe, '')
+  const s = petStatus({ pet: { enabled: true, path: '', pack: 'cat' } }, root)
+  assert.equal(s.enabled, true)
+  assert.equal(s.installed, true)
+  assert.equal(s.path, exe)
+  assert.equal(s.pack, 'cat')
   await rm(root, { recursive: true, force: true })
 })
 
@@ -52,7 +68,7 @@ test('状态只给中文档位，不出现 need / 内部英文名', () => {
 
 test('启动参数、握手超时、退出码都走入口约定，不各写一份', async () => {
   const src = await readFile(new URL('../lib/pet/index.js', import.meta.url), 'utf8')
-  assert.match(src, /entrySpec\(cfg\.pet/)
+  assert.match(src, /entrySpec\(\{ \.\.\.\(cfg\.pet \?\? \{\}\), path: petPath \}\)/)
   assert.match(src, /env: childEnv\(process\.env\)/)
   assert.match(src, /helloTimeoutMs: HELLO_TIMEOUT_MS/)
   assert.match(src, /classifyExit\(code, signal/)
@@ -80,9 +96,29 @@ test('设置页改 idleSleepMin 当场热更，不用重启（2026-11-08 16:53�
   assert.equal(typeof petApplyConfig, 'function')
 })
 
-test('petEnabled 只认 true + 非空路径', () => {
+test('petEnabled 只认 true；路径空着也算开，会去默认位置找身体', () => {
   assert.equal(petEnabled({ pet: { enabled: true, path: 'D:/pet.exe' } }), true)
   assert.equal(petEnabled({ pet: { enabled: 'true', path: 'D:/pet.exe' } }), false)
-  assert.equal(petEnabled({ pet: { enabled: true, path: '   ' } }), false)
+  assert.equal(petEnabled({ pet: { enabled: true, path: '   ' } }), true)
   assert.equal(petEnabled({}), false)
+})
+
+test('戳一下：回合里只记账；闲下来且隔够了才起一轮（2026-11-08 17:47）', () => {
+  const now = 1_800_000_000_000
+  assert.equal(pokeKind(true, 0, now, 60_000), 'note')
+  assert.equal(pokeKind(false, now - 59_999, now, 60_000), 'ignore')
+  assert.equal(pokeKind(false, now - 60_000, now, 60_000), 'turn')
+  assert.equal(pokeKind(false, 0, now, 60_000), 'turn')
+  // 配置坏值 / 越界都夹回 5–600 秒。
+  assert.equal(pokeKind(false, now - 4_000, now, 1), 'ignore')
+  assert.equal(pokeKind(false, now - 5_000, now, 1), 'turn')
+})
+
+test('戳一下不写 seen、不进 heard；只记 meta 和一句固定的轻提示', async () => {
+  const src = await readFile(new URL('../lib/pet/index.js', import.meta.url), 'utf8')
+  assert.match(src, /text: `poke:\$\{iso\}`/)
+  assert.match(src, /他伸手戳了你一下。回不回应、怎么回应，你自己定。/)
+  assert.match(src, /void notePoke\(iso\)/)
+  assert.match(src, /void pokeTurn\(\)\.catch\(\(\) => \{\}\)/)
+  assert.doesNotMatch(src, /poke[\s\S]{0,200}seen:/i)
 })

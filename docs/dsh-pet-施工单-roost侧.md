@@ -35,13 +35,15 @@ roost 是脑子，pet 是身体。roost 负责：开关、起进程、订阅她�
 ```js
 pet: {
   enabled: false,        // 默认关；改完要重启才生效（boot 时读）
-  path: '',              // 打包后的 body 可执行文件；开发态可填 electron.exe
+  path: '',              // 空 = <root>/pet/dsh-roost-pet.exe；开发态可填 electron.exe
   repo: '',              // 仅开发态：body 仓库根（electron.exe <repo>）；打包产物不用
   args: [],              // 额外参数
   size: 1.0,             // 0.5–2.0
   position: '',          // '' = body 记住上次位置；或 'bottom-right'
   clickThrough: true,
   pack: 'default',       // 角色包文件夹名（~/.dsh-roost/pets/<id>）；--pet=<id>
+  idleSleepMin: 5,       // 多久没动静算睡着，1–60；保存后热更
+  pokeMinGapMs: 60000,   // 两次点击之间至少隔多久，5000–600000
 },
 ```
 
@@ -54,18 +56,25 @@ pet: {
 ## 3. roost 侧文件
 
 ```
-lib/pet/index.js     startPet(ctx, deps) → off()
+lib/pet/index.js     startPet(ctx, deps) → off()；状态、poke、配置热更
 lib/pet/bridge.js    协议编解码、行缓冲、hello 超时、背压
 lib/pet/state.js     事件 → 五档/睡醒（纯函数）
 lib/pet/mirror.js    assistantText → 分条、去重、节流（纯函数）
 lib/pet/status.js    给 /pet/status 与设置页的只读快照
+lib/pet/entry.js     入口解析：pet.path 优先，空则 <root>/pet/dsh-roost-pet.exe
+lib/pet/actions.js   角色包动作表：读 pet.json、过滤坏名、回落内置 10 个
+lib/pet/tool.js      注册 pet_act，enum 与描述跟着动作表走
+tools/install-pet.mjs  解压身体/角色包 zip，写 config（零依赖）
 test/pet-bridge.test.mjs  test/pet-state.test.mjs  test/pet-mirror.test.mjs
+test/pet-index.test.mjs  test/pet-actions.test.mjs  test/pet-tool.test.mjs
+test/install-pet.test.mjs
 ```
 
 ### 3.1 `startPet(ctx, deps)`
 
 - 读 `deps.config.pet`；`enabled` 假 → 直接返回 `() => {}`（不 spawn、不注册工具、不挂事件）。
-- `const spec = entrySpec(pet); spawn(spec.path, spec.args, { stdio: ['pipe','pipe','pipe'], cwd: spec.cwd, windowsHide: true })`。两种入口由 `lib/pet/entry.js` 的 `entrySpec()` 统一解析：打包产物直接起、`cwd` 是 exe 所在目录；开发态 `pet.path` 指 `node_modules/electron/dist/electron.exe`，`pet.repo` 填 body 仓库根（缺省只从标准布局反推，推不出就报错，不猜别的路径），参数前面加仓库根、`cwd` 也是仓库根。`pet.args` 原样接在最后。
+- `pet.path` 空时用 `petPathOf()` 找 `<root>/pet/dsh-roost-pet.exe`；文件不存在就算没装：不 spawn、`lastError` 留空、why 写「等：还没装身体（把 zip 解压到 ~/.dsh-roost/pet/）」。
+- `const spec = entrySpec({ ...pet, path: petPath }); spawn(spec.path, spec.args, { stdio: ['pipe','pipe','pipe'], cwd: spec.cwd, windowsHide: true })`。两种入口由 `lib/pet/entry.js` 的 `entrySpec()` 统一解析：打包产物直接起、`cwd` 是 exe 所在目录；开发态 `pet.path` 指 `node_modules/electron/dist/electron.exe`，`pet.repo` 填 body 仓库根（缺省只从标准布局反推，推不出就报错，不猜别的路径），参数前面加仓库根、`cwd` 也是仓库根。`pet.args` 原样接在最后。
 - 参数由 `lib/pet/entry.js` 生成：`--protocol=1 --size=… [--position=…] --click-through=0|1 --pet=<id>`，再接 `pet.args`。`<id>` 取 `config.pet.pack`（老配置的 `petId` 自动迁过来）。spawn 前从 env 删掉 `ELECTRON_RUN_AS_NODE`。
   入口约定正文在 body 仓库的 `docs/launch.md`；不要在这里另写一份。
 - 子进程 stdout 按行读；stderr 收进 roost 日志（前缀 `[pet]`）。
@@ -124,14 +133,15 @@ ctx.on('session/event', (session, event) => {
 - **不进** `FISH_TOOLS`（2026-11-08 m09369）：常驻白名单由 selfcheck 逐项核对，宠物默认关着，
   放进去会让每次正常安装都报「少一个工具」。改成：`pet.enabled` 为真时由 `lib/index.js`
   通过 `registerToolRestrict` 的 `extra` 追加；`selfcheck` 的 `expected` 也跟 `petOn` 条件走。
-- 参数 `{ action: 'nod'|'shake'|'bounce'|'shy'|'laugh'|'stretch'|'sleep'|'wake'|'quiet'|'loud' }`。
+- 动作表从角色包现读：`lib/pet/actions.js` 的 `readPetPack(pet, root)` 按 `pet.dir`（开发态）→ `<root>/pets/<pack>/pet.json` → `<repo>/pets/<pack>/pet.json` 顺序找，读 `animations.actions` 的键，过滤不安全的名字；读不到、全坏或空都回落内置 10 个：`nod|shake|bounce|shy|laugh|stretch|sleep|wake|quiet|loud`。
+- `parameters.action.enum` 与描述都跟动作表走；描述列前 20 个「名字 中文」，超过 20 个补「等 N 个」。未知动作回「没有这个动作：X。手边有：…」。
 - 描述：一句话说清「身体语言，不代表说话；说话时同时调它，字和动作一起出；只能做这些，不能替你说」。
 - `execute` 只回 `{ ok, note }`，不回状态、不回表情数字。
 
 ### 3.7 只读状态
 
-- `GET /pet/status`：`{ enabled, connected, state, why, pet, lastError }`。
-- 设置页「插件」页加只读块：桌宠（连上/没开/连不上）、当前档 + 依据、宠物包、最近一次错误（有才显示）。
+- `GET /pet/status`：`{ enabled, installed, path, pack, connected, state, why, pet, lastError, dead }`。
+- 设置页「插件」页加只读块：桌宠（已安装/未安装、路径、连上/没开/连不上）、当前档 + 依据、角色包、身体包、最近一次错误（有才显示）。
 - **不加**：唤醒按钮、语音开关、模型/性格/嗓子、自动重启。
 
 ---
@@ -143,7 +153,7 @@ ctx.on('session/event', (session, event) => {
 - 发：`hello`、`say`、`state`、`act`、`bye`
 - 收：`hello`、`input`、`poke`、`ack`、`log`、`bye`
 - 行缓冲：按 `\n` 切；单行 >16KB 丢弃并记日志；坏 JSON 丢弃并记日志（不要崩）。
-- `poke` 可以不理（body 自己演一下）。
+- `poke` 按三档处理：睡着 → 只让 body 晃一下，不算戳、不记；回合进行中 → 只记一条 `meta poke:<ISO>`，不另起一轮；醒着且距上次戳够 `pokeMinGapMs` → 记 meta 并起一轮轻提示（不写 `seen`）。`poke` 不是「她听过」，不进记忆。
 
 ---
 
@@ -152,8 +162,10 @@ ctx.on('session/event', (session, event) => {
 - `test/pet-state.test.mjs`：给定事件序列 → 期望的 `state` 序列（含 done/error 停留、按回合与动静判睡）。
 - `test/pet-mirror.test.mjs`：分句、200 字、去重、短句过滤、final。
 - `test/pet-bridge.test.mjs`：用一个假 body（`test/fixtures/fake-body.mjs`，Node 脚本说协议）跑：握手、say 排队、ack 超时、脏行、EOF、重试三次后 dead。
+- `test/pet-actions.test.mjs`：安全动作名、角色包候选顺序、坏名过滤、缺/坏/空回落内置。
+- `test/install-pet.test.mjs`：没 `--body` 报用法；用 PowerShell `Compress-Archive` 造 zip，解身体与角色包、写 config、备份旧 config。
 - 测试不碰真实数据目录；用 `tmp` root。
-- 全量基线：`node --test --test-isolation=none`，本次完成后为 1326 条 / 1315 过 / 9 条已知红 / 2 skip；加了测试要更新 `AGENTS.md` 的基线数字。
+- 全量基线：`node --test --test-isolation=none`，本次完成后为 1337 条 / 1326 过 / 9 条已知红 / 2 skip；加了测试要更新 `AGENTS.md` 的基线数字。
 
 ---
 
@@ -169,6 +181,9 @@ ctx.on('session/event', (session, event) => {
 | 6 | 聊天框输入原文到达 `sayToHer`；guard 命中时零输出 |
 | 7 | body 没装/路径错/崩溃 → 只记日志，她的话与工具不受影响 |
 | 8 | 退出 roost → body 2 秒内退出，无残留 |
+| 9 | `pet.path` 空、`<root>/pet/dsh-roost-pet.exe` 不存在 → 状态是「未安装」，不 spawn、`lastError` 为空；把 zip 解压进去后重启就能连上 |
+| 10 | 角色包 `pet.json` 的 `animations.actions` 改了 → `pet_act` 的 enum 与描述跟着变；坏名被滤掉，整份坏回内置 10 个 |
+| 11 | 戳一下：睡着只晃；回合中只记 `meta poke:`；醒着且隔够 `pokeMinGapMs` 才起一轮轻提示 |
 
 ---
 
