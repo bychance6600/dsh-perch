@@ -49,6 +49,17 @@ test('注册出来的工具带 output.render，render 返回 ContentBlock 数组
   assert.match(bad[0].text, /没动/)
 })
 
+test('parameters 过 toJsonSchema：干净标准 JSON，不是手写形态（2026-11-08 真机）', () => {
+  const ctx = fakeCtx()
+  registerPetAct(ctx, { enabled: () => true, sendAct: () => true })
+  const p = ctx.list[0].parameters
+  assert.equal(p.type, 'object')
+  assert.equal(p.additionalProperties, false)
+  assert.deepEqual(p.required, ['action'])
+  assert.deepEqual(p.properties.action.enum, [...PET_ACTIONS])
+  assert.deepEqual(JSON.parse(JSON.stringify(p)), p)
+})
+
 test('关着 / 没连上都不抛，只说一句', async () => {
   const off = fakeCtx()
   registerPetAct(off, { enabled: () => false })

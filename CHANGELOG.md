@@ -13,7 +13,7 @@
 - **白名单不是万能口**：插件页与 README 都写明不要把 `read` / `write` / `edit` / `glob` / `grep` / `bash` / `run_code` 这类通用文件与命令工具加进来；它们不是按目录授权的，会读到她的身份文档、配置和状态，绕过「不能读自己的数值与设定」；要看源码用 `web_fetch`。
 - **桌宠（身体）**：新增 `lib/pet/`，按 `dsh-roost-pet` 的协议 v1 用 stdio 一行一 JSON 对话。身体只负责显示五档（思考 / 动手 / 等 / 出错 / 成了）和做十种动作，不生成台词、不自动打招呼；`pet_act` 只在开启时通过 `registerToolRestrict` 的 `extra` 追加，不进 `FISH_TOOLS`，`selfcheck` 的期望名单也跟着开关走。聊天框里的原文只走 `sayToHer`，`looksLikeRewriting` 命中就静默丢；`/pet/status` 返回中文档位与事实，不出现模型英文名。默认关着，关着不启动进程、不订阅会话、不多一个工具；`talkSessionId` 拿不到就不挂，spawn 连续三次失败置 dead 且只记一次。测试用注入的 `PassThrough` 假身体，不真 spawn。
 - **桌宠启动按 launch.md 对齐**：`pet.path` 指向打包后的可执行文件；开发态用 `electron.exe <repo>`，`repo` 从 `pet.repo` 取，没填才按标准布局反推。stdio 三个 pipe、不 detached、不经 shell、cwd 按打包/开发两种；spawn 前删 `ELECTRON_RUN_AS_NODE`；参数补 `--pet=<id>`。退出码按 `launch.md`：0 正常 / 1 崩溃 / 2 握手或协议失败 / 3 已有实例 / 4 参数或配置错，0 与 bye 不重拉，3/4 置 dead，其余按 1 秒、5 秒退避最多三次。
-- **`pet_act` 补上 output**：宿主现在要求工具声明 `output { schema, render }`；`lib/pet/tool.js` 照 `capture.js` 的写法补了 `{ ok, note }` 与返回 ContentBlock 数组的 render，真机上的「工具注册失败 / 工具面收窄延后」不再出现。
+- **`pet_act` 补上 output 与 parameters 转换**：宿主现在要求工具声明 `output { schema, render }`；`lib/pet/tool.js` 照 `capture.js` 的写法补了 `{ ok, note }` 与返回 ContentBlock 数组的 render。真机又发现手写 `parameters` 会被宿主以 `must be lossless JSON` 拒掉并连带整批工具不可用，已改成 `toJsonSchema()`；现在工具面收窄到 15 个，`pet_act` 能正常调用。
 - **睡不睡看她自己的睡迹**：桌宠的 `checkAwake` 不再按时段推，改看账本里最后一条 `meta sleep:<当天>` 之后有没有事件；不读 `window`、不读「今天醒过吗」。翻转时才发 sleep / wake 动作。
 - **叫醒时段**：默认窗口改 `08:00–23:00`，设置页与身份文档统一写「每天几点可以被叫醒」，并说明「不是在这段时间里一直醒着」；`lib/client.js` 的兜底也跟着改。
 - **两份说好的文件**：插件页新增一张卡，填两个绝对路径并打开后，她多一个 `pair_file` 工具，只能读、按原文改一段、在末尾添一句。改 / 添都要带 read 回来的 16 位 hash；文件在两次之间变过会让她重读；写前留 `.bak`。只认这两个路径，拒软链 / 目录 / 二进制 / 大于 512KB，也不许指进她家、`~/.dsh` 或系统目录。这条路不写事件流、不记 `looked:`。默认关着。
@@ -156,4 +156,4 @@
 ### 兼容
 
 - `dsh >=0.2.0-rc.1 <0.3.0-0`，Node ≥ 22；`dependencies` / `peerDependencies` / `devDependencies` 仍为空。
-- 测试基线：`node --test --test-isolation=none` → 1323 条 / 1312 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。
+- 测试基线：`node --test --test-isolation=none` → 1324 条 / 1313 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。
