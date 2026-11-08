@@ -97,7 +97,7 @@ ctx.on('session/event', (session, event) => {
 | `turnActive===false` 且距 `lastActivityAt` ≥ `idleSleepMin` | `act:sleep` | 下一次她自己的动静前一直睡 |
 | `turnActive===true` 或距 `lastActivityAt` < `idleSleepMin` | `act:wake` | — |
 
-`idleSleepMin` 默认 5、范围 1–60（`config.pet.idleSleepMin`，设置页「插件」页）。判据只看回合与动静：回合进行中一律算醒，五分钟只在回合结束后起算；余额 / 通知 / 日历 / 到点本身不算动静。
+`idleSleepMin` 默认 5、范围 1–60（`config.pet.idleSleepMin`，设置页「插件」页）。设置页保存后由 `petApplyConfig(next)` 当场热更并重判，不用重启。判据只看回合与动静：回合进行中一律算醒，五分钟只在回合结束后起算；余额 / 通知 / 日历 / 到点本身不算动静。
 
 `why` 只用事实：`思考：回合进行中`、`思考：工具已返回`、`动手：在翻 B 站`、`等：回合已结束，等下一次动静`、`出错：回合失败`、`成了：这一轮结束了`。说哪一段、从哪儿来，不写评价。
 
@@ -151,7 +151,7 @@ ctx.on('session/event', (session, event) => {
 - `test/pet-mirror.test.mjs`：分句、200 字、去重、短句过滤、final。
 - `test/pet-bridge.test.mjs`：用一个假 body（`test/fixtures/fake-body.mjs`，Node 脚本说协议）跑：握手、say 排队、ack 超时、脏行、EOF、重试三次后 dead。
 - 测试不碰真实数据目录；用 `tmp` root。
-- 全量基线：`node --test --test-isolation=none`，本次完成后为 1325 条 / 1314 过 / 9 条已知红 / 2 skip；加了测试要更新 `AGENTS.md` 的基线数字。
+- 全量基线：`node --test --test-isolation=none`，本次完成后为 1326 条 / 1315 过 / 9 条已知红 / 2 skip；加了测试要更新 `AGENTS.md` 的基线数字。
 
 ---
 

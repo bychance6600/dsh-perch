@@ -14,7 +14,7 @@
 - **桌宠（身体）**：新增 `lib/pet/`，按 `dsh-roost-pet` 的协议 v1 用 stdio 一行一 JSON 对话。身体只负责显示五档（思考 / 动手 / 等 / 出错 / 成了）和做十种动作，不生成台词、不自动打招呼；`pet_act` 只在开启时通过 `registerToolRestrict` 的 `extra` 追加，不进 `FISH_TOOLS`，`selfcheck` 的期望名单也跟着开关走。聊天框里的原文只走 `sayToHer`，`looksLikeRewriting` 命中就静默丢；`/pet/status` 返回中文档位与事实，不出现模型英文名。默认关着，关着不启动进程、不订阅会话、不多一个工具；`talkSessionId` 拿不到就不挂，spawn 连续三次失败置 dead 且只记一次。测试用注入的 `PassThrough` 假身体，不真 spawn。
 - **桌宠启动按 launch.md 对齐**：`pet.path` 指向打包后的可执行文件；开发态用 `electron.exe <repo>`，`repo` 从 `pet.repo` 取，没填才按标准布局反推。stdio 三个 pipe、不 detached、不经 shell、cwd 按打包/开发两种；spawn 前删 `ELECTRON_RUN_AS_NODE`；参数补 `--pet=<id>`。退出码按 `launch.md`：0 正常 / 1 崩溃 / 2 握手或协议失败 / 3 已有实例 / 4 参数或配置错，0 与 bye 不重拉，3/4 置 dead，其余按 1 秒、5 秒退避最多三次。
 - **`pet_act` 补上 output 与 parameters 转换**：宿主现在要求工具声明 `output { schema, render }`；`lib/pet/tool.js` 照 `capture.js` 的写法补了 `{ ok, note }` 与返回 ContentBlock 数组的 render。真机又发现手写 `parameters` 会被宿主以 `must be lossless JSON` 拒掉并连带整批工具不可用，已改成 `toJsonSchema()`；现在工具面收窄到 15 个，`pet_act` 能正常调用。
-- **睡不睡按「在不在做事」**：桌宠的 `checkAwake` 改成 `awake = 回合进行中 || 距最后一次动静 < idleSleepMin`。回合进行中一律算醒，五分钟只在回合结束后起算；睡着之后只有 `turn/start`、`tool/call`、`assistant/message` 能叫醒，余额 / 通知 / 日历 / 到点本身不算。`pet.idleSleepMin` 默认 5、范围 1–60，设置页「插件」页可改；旧的 `asleepFromEvents()` 只留给 scheduler 的「想一想」记账。状态文字同时改成说「哪一段、从哪儿来」：`思考：回合进行中` / `思考：工具已返回` / `等：回合已结束，等下一次动静` / `成了：这一轮结束了`。
+- **睡不睡按「在不在做事」**：桌宠的 `checkAwake` 改成 `awake = 回合进行中 || 距最后一次动静 < idleSleepMin`。回合进行中一律算醒，五分钟只在回合结束后起算；睡着之后只有 `turn/start`、`tool/call`、`assistant/message` 能叫醒，余额 / 通知 / 日历 / 到点本身不算。`pet.idleSleepMin` 默认 5、范围 1–60，设置页「插件」页可改；旧的 `asleepFromEvents()` 只留给 scheduler 的「想一想」记账。状态文字同时改成说「哪一段、从哪儿来」：`思考：回合进行中` / `思考：工具已返回` / `等：回合已结束，等下一次动静` / `成了：这一轮结束了`。设置页保存 `idleSleepMin` 后由 `petApplyConfig()` 当场热更并重判，不用重启。
 - **叫醒时段**：默认窗口改 `08:00–23:00`，设置页与身份文档统一写「每天几点可以被叫醒」，并说明「不是在这段时间里一直醒着」；`lib/client.js` 的兜底也跟着改。
 - **两份说好的文件**：插件页新增一张卡，填两个绝对路径并打开后，她多一个 `pair_file` 工具，只能读、按原文改一段、在末尾添一句。改 / 添都要带 read 回来的 16 位 hash；文件在两次之间变过会让她重读；写前留 `.bak`。只认这两个路径，拒软链 / 目录 / 二进制 / 大于 512KB，也不许指进她家、`~/.dsh` 或系统目录。这条路不写事件流、不记 `looked:`。默认关着。
 - **成长节奏的配置改名**：`growthDays` 改成 `stageSpanDays`——它只是「四个阶段一共多少天」的尺子，不是寿命上限。老配置里的 `growthDays` 在 `normalizeConfig` 里迁移一次（新旧都有时以新键为准，保存时清掉旧键）。`absence` / `ask` / `capture` 四处写事件信封不再跑完整 `deriveSelf`，改用只算 `{day,stage}` 的 `stampOf()`；过滤口径（驳回、梦、`influence:none`、非 constitution）收进 `constitutionEvents()` 与 `deriveSelf` 共用。主动说话默认隔 3 小时（内部值，不上界面），上限只留 1–6 且不设 0，界面不再有「允许她主动开口」总开关，文案写明「上限不是任务」。
@@ -156,4 +156,4 @@
 ### 兼容
 
 - `dsh >=0.2.0-rc.1 <0.3.0-0`，Node ≥ 22；`dependencies` / `peerDependencies` / `devDependencies` 仍为空。
-- 测试基线：`node --test --test-isolation=none` → 1325 条 / 1314 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。
+- 测试基线：`node --test --test-isolation=none` → 1326 条 / 1315 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。

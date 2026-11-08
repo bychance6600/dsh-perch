@@ -4,7 +4,7 @@
 
 **0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过）。A 段 35 条与 B 段 19 条验收全部收口（A1 于 2026-11-07 16:12 真机通过）。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1325 条 / 1314 过 / 9 红**（另有 2 skip，2026-11-08 桌宠睡醒改按回合与动静判后核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1326 条 / 1315 过 / 9 红**（另有 2 skip，2026-11-08 桌宠睡醒改按回合与动静判后核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
 
@@ -15,6 +15,7 @@
 - 窗口：`lib/client.js` 的兜底与设置页初始值从 `20:00` 改成 `08:00`；`lib/settings.js` 的 `DEFAULTS.window` 也改成 `08:00–23:00`。设置页这一段改叫「每天几点可以被叫醒」，提示写明「定时叫醒只落在这个时段里；不是在这段时间里一直醒着」；`lib/persona.js:466`、`lib/settings.js` 注释、`lib/selfcheck.js`、`lib/proactive.js` 的「醒着时段 / 醒来」同步改成「叫醒时段」。
 - 测试：`pet-state` 新增动静判据（回合中、4:59 / 5:00、1 分钟档、坏值回落）与睡迹旧的记账用例；`pet-index` 改源码断言（必须用 `awakeByActivity`、记 `turnActive` / `lastActivityAt` / `idleSleepMin`，不许再出现 `asleepFromEvents`）；`settings` 新增 `idleSleepMin` 默认 5 与 1–60 夹取。定向 pet + settings 37/37；全量 **1325 条 / 1314 过 / 9 红 / 2 skip**（/tmp/full-pet-why.log），9 红与已知环境红同名。
 - 状态文字（16:41 协调板）：`why` 从判语改成「说哪一段、从哪儿来」——`等：回合已结束，等下一次动静`、`思考：回合进行中`、`思考：工具已返回`、`动手：在翻 B 站`、`成了：这一轮结束了`、`出错：回合失败`；施工单的表格、验收 #5 与 body 侧样例同步改。
+- 热更（16:53 协调板）：`idleSleepMin` 原来只在启动时读一次，设置页改完不重启不生效。现在 `/config` 保存后调 `petApplyConfig(next)` 写进运行中的 `base.idleSleepMin`，并立刻 `checkAwake()` 重判；`test/pet-index.test.mjs` 有源码守门。
 - 重启后又发现一层：`parameters` 是手写标准形态，宿主报 `tool "pet_act" parameters must be lossless JSON before schema projection`，并连带整批工具不可用。协调侧已改成 `toJsonSchema({ action, why })`（提交 `6ae9d20`），输出是 `{type:'object',properties,required:['action'],additionalProperties:false}`；`test/pet-tool.test.mjs` 补了一条钉住这个形状。
 - 真机确认（2026-11-08 15:22）：`工具面收窄：她这条会话只留 15 个工具，另有兜底守卫`；日志里不再出现 `工具注册失败` / `lossless JSON` / `工具面收窄延后`。15:27 她调 `pet_act` 点头，屏幕出现 done 绿圈；姿态也不再按时段判睡。`origin/main` 已到 `6ae9d20`。
 

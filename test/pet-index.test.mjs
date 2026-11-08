@@ -7,7 +7,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { petEnabled, petSendAct, petStatus, startPet } from '../lib/pet/index.js'
+import { petApplyConfig, petEnabled, petSendAct, petStatus, startPet } from '../lib/pet/index.js'
 
 const ctx = { on: () => () => {}, tools: { register: () => ({ dispose() {} }) } }
 
@@ -67,6 +67,17 @@ test('睡不睡按回合与最后一次动静算，不读睡迹、时段和 woke
   assert.doesNotMatch(src, /asleepFromEvents/)
   assert.doesNotMatch(src, /deriveStatus/)
   assert.doesNotMatch(src, /wokeToday/)
+})
+
+test('设置页改 idleSleepMin 当场热更，不用重启（2026-11-08 16:53）', async () => {
+  const src = await readFile(new URL('../lib/pet/index.js', import.meta.url), 'utf8')
+  assert.match(src, /export function petApplyConfig\(cfg\)/)
+  assert.match(src, /runtime\.idleSleepMin = idleMinutes\(cfg\?\.pet\?\.idleSleepMin\)/)
+  assert.match(src, /runtime\.checkAwake\?\.\(\)/)
+  assert.match(src, /base\.checkAwake = checkAwake/)
+  const obs = await readFile(new URL('../lib/observe.js', import.meta.url), 'utf8')
+  assert.match(obs, /petApplyConfig\(next\)/)
+  assert.equal(typeof petApplyConfig, 'function')
 })
 
 test('petEnabled 只认 true + 非空路径', () => {
