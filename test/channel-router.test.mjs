@@ -232,6 +232,35 @@ test('router：只吐脚手架时会再问一次；第二次说了就发（2026-
   await fs.rm(h.root, { recursive: true, force: true })
 })
 
+test('router：她复述了整段提示词时，只发前面真说的那句（2026-11-08 真机）', async () => {
+  const cfg = { channels: { qq: { enabled: true, ownerId: '10086' } } }
+  const raw = [
+    '那 29 我改口了，文件里已经改成「不要」。',
+    '',
+    '（QQ 上，跟一个人单独说话。是他本人。）',
+    '（私下说话：你怎么看就怎么说。直接说，不用交代你怎么处理这件事。）',
+    '',
+    '（前面几句：',
+    '你：两份都看完了。',
+    '煎饼：这个我我跟项目讨论会话他问我答。',
+    '）',
+    '',
+    '（你知道的事——这些是事实，不是要求。）',
+    '</｜｜DSML｜｜ parameter>',
+  ].join('\n')
+  const h = await harness({ stage: 1, config: cfg, ownerIds: { qq: '10086' }, reply: raw })
+  const r = await h.router.handle(groupMsg({ kind: 'dm', conversationId: '10086', personId: 'u_10086', text: '29 到底按哪个？' }))
+  assert.equal(r.sent, true, JSON.stringify(r))
+  assert.equal(h.calls.length, 1, '这是她说的话，不是空壳，不用再问一次')
+  assert.equal(h.adapter.sent.length, 1)
+  assert.equal(h.adapter.sent[0].text, '那 29 我改口了，文件里已经改成「不要」。')
+  const { events } = await readEvents(h.root)
+  const said = events.filter((e) => e.type === 'utterance')
+  assert.equal(said.length, 1)
+  assert.equal(said[0].text, '那 29 我改口了，文件里已经改成「不要」。', '提示词复述不能写进她的事件流')
+  await fs.rm(h.root, { recursive: true, force: true })
+})
+
 test('router：主人 uid 是每条现读的，填完立刻生效（2026-11-02 实测踩到）', async () => {
   const cfg = { channels: { qq: { enabled: true, ownerId: '10001' } } }
   let owners = {}

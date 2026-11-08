@@ -15,6 +15,7 @@ import {
   sanitizeForeign,
   screenOutgoing,
   looksMojibake,
+  stripPromptEcho,
   stripScaffold,
 } from '../lib/guard.js'
 
@@ -215,4 +216,42 @@ test('stripScaffold：空输入不炸', () => {
   assert.equal(stripScaffold(''), '')
   assert.equal(stripScaffold(null), '')
   assert.equal(stripScaffold(undefined), '')
+})
+
+/* --------------- 6. 复述出来的提示词不是她的话（2026-11-08 真机） --------------- */
+
+test('stripPromptEcho：正文后面跟着整段提示词时，只留正文', () => {
+  const raw = [
+    '那 29 我改口了，文件里已经改成「不要」。',
+    '',
+    '（QQ 上，跟一个人单独说话。是他本人。）',
+    '（私下说话：你怎么看就怎么说。直接说，不用交代你怎么处理这件事。）',
+    '',
+    '（前面几句：',
+    '你：两份都看完了。',
+    '煎饼：这个我我跟项目讨论会话他问我答。',
+    '）',
+    '',
+    '（你知道的事——这些是事实，不是要求。）',
+    '</｜｜DSML｜｜ parameter>',
+  ].join('\n')
+  assert.equal(stripPromptEcho(raw), '那 29 我改口了，文件里已经改成「不要」。')
+})
+
+test('stripPromptEcho：整段都是复述时，返回空串', () => {
+  const raw = [
+    '（QQ 上，跟一个人单独说话。是他本人。）',
+    '（前面几句：',
+    '你：在吗',
+    '）',
+  ].join('\n')
+  assert.equal(stripPromptEcho(raw), '')
+})
+
+test('stripPromptEcho：只有一种标记、不像稿纸时不动', () => {
+  // 她自己提到「前面几句」是正常话，不能因为词一样就剪掉
+  assert.equal(stripPromptEcho('前面几句我没听清，你再说一遍。'), '前面几句我没听清，你再说一遍。')
+  assert.equal(stripPromptEcho('（前面几句：）'), '（前面几句：）')
+  assert.equal(stripPromptEcho(''), '')
+  assert.equal(stripPromptEcho(null), '')
 })

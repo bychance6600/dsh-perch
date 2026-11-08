@@ -4,9 +4,19 @@
 
 **0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过）。A 段 35 条与 B 段 19 条验收全部收口（A1 于 2026-11-07 16:12 真机通过）。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1275 条 / 1264 过 / 9 红**（另有 2 skip，2026-11-07 两份说好的文件后核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1279 条 / 1268 过 / 9 红**（另有 2 skip，2026-11-08 复述提示词修复后核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
+
+## 她复述了整段提示词（2026-11-08，m09172）——已修
+
+- 用户贴出 QQ 记录：她的回复正文后面跟着整段「（QQ 上，跟一个人单独说话…）」「（前面几句：…）」「（你知道的事…）」以及 `</｜｜DSML｜｜ parameter>` 之类的标记。她不是故意念稿，是把收到的稿纸一起说出来了。
+- 会话日志 `~/Downloads/dsh-session-session-6e4e9ce8-0005-4428-a3f7-8248a2828b0b/session.v4.jsonl`：turn 58 先调 `pair_file` 读、改，成功；step 3 的 assistant text 把正文 + 整段提示词 + DSML 关闭标记一起吐进 text，宿主当正文落库并发出。后面的轮次又把这段当「你：」历史拼回提示词，越滚越长。
+- 两个根因：① `lib/channels/router.js` 出站只把 `stripScaffold(screen.text)` 存进 `outgoing` 做检查，真正 `adapter.send`、journal、`recordSaid` 仍在用没剥的 `screen.text`，标记因此出门；② `stripScaffold` 只删 DSML 标记与界面状态行，不删复述出来的提示词正文。
+- 修法：`lib/guard.js` 新增 `PROMPT_ECHO_MARKERS` 与 `stripPromptEcho(text)`——只认 buildPrompt 写出的那几种行首标记（渠道独白 / 群、私下说话、这里不是只有你和他、前面几句、群里刚才还有人说话、你知道的事、在外面见过的做法、回不回、刚才那一步只输出了模型标记、醒一醒），同一段里出现两种以上才从最早一处截断；整段都是复述时返回空串。`lib/turns.js` 的 `assistantText` 与 `lib/channels/router.js` 的 `saidText` 都先过它；出站改为先 `cleaned = stripScaffold(stripPromptEcho(text))`，再过 `screenOutgoing`，`send` / journal / `recordSaid` / 返回值全部用 `outgoing`。
+- 旧事件也要能看：事件流只追加，那条脏事件改不了；`lib/derive.js`（判断、称呼、社会层）、`lib/recall.js`（her_recall）、`lib/observe.js`（今天页时间线）在读的时候也先 `stripPromptEcho`，所以旧账里只剩她真说的那一段。
+- 测试：`test/guard.test.mjs` 3 条（正文+整段提示词只留正文、整段复述返回空、只有一种标记时不动）；`test/channel-router.test.mjs` 1 条（正文+提示词+DSML 只发正文，事件流也干净）。定向 guard / channel-router / turns 79/79；全量 **1279 条 / 1268 过 / 9 红 / 2 skip**（/tmp/full-promptecho2.log），9 红与已知环境红同名。
+- 需要重启 DSH 才会重载 `router.js` / `turns.js` / `guard.js`；重启后让她再走一次「读文件 → 改文件 → 回话」，确认出门的只有她自己的话。
 
 ## 两份说好的文件（2026-11-07，m08813）
 
