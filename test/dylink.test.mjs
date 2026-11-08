@@ -17,6 +17,7 @@ import {
   normalizeAweme,
   resolveAwemeId,
 } from '../lib/dylink.js'
+import { detectFfmpeg } from '../lib/media.js'
 
 const DETAIL = {
   aweme_detail: {
@@ -161,7 +162,11 @@ test('抽帧拼图有上限：留最新的 20 张，残留视频顺手清掉', a
   assert.ok(all.includes('keep-me.txt'), '别人的文件一个字不许动')
 })
 
-test('下视频要带 Referer：抖音 CDN 不带就是 403', async () => {
+test('下视频要带 Referer：抖音 CDN 不带就是 403', async (t) => {
+  // CI 的 runner 不带 ffmpeg；framesOf 会先探 ffmpeg，探不到就轮不到发请求。
+  // 这条测的是请求头，没有 ffmpeg 时跳过，别把「机器上没装」误报成「代码坏了」。
+  const ff = detectFfmpeg()
+  if (!ff.ok) return t.skip(`本机没有 ffmpeg（${ff.why}），跳过`)
   const os = await import('node:os')
   const { framesOf } = await import('../lib/dylink.js')
   let seen = null
