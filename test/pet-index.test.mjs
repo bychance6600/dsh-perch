@@ -117,7 +117,8 @@ test('戳一下：隔够了就排一轮，回合进行中也不早退（2026-11-
   const src = await readFile(new URL('../lib/pet/index.js', import.meta.url), 'utf8')
   assert.doesNotMatch(src, /pokeKind\(base\.turnActive/)
   assert.doesNotMatch(src, /if \(base\.turnActive \|\| !base\.sessionId\) return/)
-  assert.match(src, /if \(!base\.sessionId\) return/)
+  assert.match(src, /await talkSessionId\(ctx, \{ root \}\)/)
+  assert.match(src, /if \(!sid\) return/)
   assert.match(src, /mode: 'queue'/)
 })
 
@@ -126,7 +127,7 @@ test('戳一下不写 seen、不进 heard；只记 meta 和一句固定的轻提
   assert.match(src, /text: `poke:\$\{iso\}`/)
   assert.match(src, /他伸手戳了你一下。回不回应、怎么回应，你自己定。/)
   assert.match(src, /void notePoke\(iso\)/)
-  assert.match(src, /void pokeTurn\(\)\.catch\(\(\) => \{\}\)/)
+  assert.match(src, /void pokeTurn\(\)\.catch\(/)
   assert.match(src, /poke 间隔不到/)
   assert.doesNotMatch(src, /poke[\s\S]{0,200}seen:/i)
 })
