@@ -198,60 +198,11 @@ node tools/setup-ffmpeg.mjs D:/downloads/ffmpeg-9.0.2-essentials_build.zip
 
 zip 不用解压；脚本用系统自带解压。二进制不进 git。
 
-## 八、给她一个身体：dsh-roost-pet（可选）
+## 八、身体（可选）
 
-她可以不只是一段文字。
+她可以不只是一段文字。身体是独立项目 **[dsh-roost-pet](https://github.com/bychance6600/dsh-roost-pet)**：透明置顶的小窗，只显示五档状态与动作，不生成台词，也不替她开口。
 
-**[dsh-roost-pet](https://github.com/bychance6600/dsh-roost-pet)** 是一个独立的小项目：一只透明、置顶、默认不吃点击的小窗。没有对话框、没有按钮、没有台词。`dsh-roost` 说什么，它就把那句话原样冒出来；`dsh-roost` 不说，它就安静待着。
-
-它能做的：
-
-- 五档姿态：思考 / 动手 / 等 / 出错 / 成了。
-- 动作由角色包的 `pet.json` 定义（点头、挥手、害羞、笑、伸懒腰…）；`sleep` / `wake` / `quiet` / `loud` 是协议控制名，不写进包也永远可用。
-- 单击只报一声 `poke`，反应由 `dsh-roost` 决定；睡着时被戳只轻轻晃，不叫醒。
-- 拖拽跟手、松手抛掷、边缘反弹、落地挤压。
-- 角色包可换，素材不进仓库。
-
-### 怎么装
-
-桌宠是独立仓库，仓库里**不放构建产物**，目前也没有预编译包。第一次要自己构建（Electron 约 100MB）：
-
-```bash
-git clone https://github.com/bychance6600/dsh-roost-pet
-cd dsh-roost-pet
-pnpm install        # 用 npm install 也行；会装 Electron 43.3.0
-node scripts/build-portable.js
-# 得到 dist/dsh-roost-pet-v<版本>-win32-x64.zip
-```
-
-然后用 `dsh-roost` 自带的安装脚本，把身体和角色包装进她的家：
-
-```bash
-node tools/install-pet.mjs \
-  --body D:/path/dsh-roost-pet-v0.1.0-win32-x64.zip \
-  --pack D:/path/your-pack.zip \
-  --id my-pet
-```
-
-不传 `--pack` 也能装：身体会画一个白团子占位。装完重启 DSH，在 **设置 → 她 → 插件** 里能看到路径和角色包。
-
-### 角色包
-
-一个角色 = `~/.dsh-roost/pets/<id>/` 一个文件夹：
-
-```
-my-pet/
-  pet.json
-  breathing-1.png
-  breathing-2.png
-  nod.webm
-```
-
-`pet.json` 的 `animations.actions` 决定它会哪些动作。加动作 = 放视频 + 加一行 + 重启；查不到的动作直接跳过，日志里说一句——`sleep` / `wake` / `quiet` / `loud` 这几个控制名不受影响。仓库里的 `pets/default/pet.json` 只是模板，不含素材。
-
-### 什么时候算睡着
-
-看「回合还在不在跑、离上一次动静多久」，不看钟点。回合进行中一律算醒；回合结束后超过 `idleSleepMin`（默认 5 分钟，设置页可改）才算睡。设置保存后当场生效，不用重启。
+装法、构建、角色包、睡醒判据都在那个仓库的 README 里，这边不重复。主包只留三个环境参数：`pet.enabled`、`pet.path`、`pet.pack`；不装不影响任何功能。
 
 ## 九、她手上的工具
 
@@ -307,7 +258,8 @@ douyin-profile/       抖音浏览器的登录态（开抖音时才有）
 - 看东西：B 站首页 / 排行 / 搜索 / 详情 / 评论 / 看画面（真视频取到帧）；抖音推荐流 / 搜索 / 详情 / 评论 / 看画面。
 - 社会层：四闸隔离测试屋（差一条闸零写入、四条齐只写一条、1000 条陌生人 `social` 不改 `beliefs`）。
 - 工程：备份 / 恢复演练、从 GitHub 干净 clone 能装能跑、CI 三档全绿。
-- 身体：五档、动作、点击归她、睡着只晃、拖拽抛掷、睡醒判据。
+
+身体（可选）的验收在 [dsh-roost-pet](https://github.com/bychance6600/dsh-roost-pet) 自己的仓库里，这边不重复。
 
 **设计上就留白的**
 
@@ -319,8 +271,6 @@ douyin-profile/       抖音浏览器的登录态（开抖音时才有）
 - 首轮第 1 个 step 还能看见宿主工具，兜底 `guard` 会挡。
 - 9 条环境红：ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去；都是跨文件隔离或偶发，单跑会绿。
 - 断线句里的秒数是墙钟时间，含桥自身的重连。
-
-**桌宠还没做**：别针与吸附、注意力、双击聊天框、右键菜单、设置窗、失败演练。
 
 ## 十三、开发与测试
 
