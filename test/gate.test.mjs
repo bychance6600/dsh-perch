@@ -19,7 +19,8 @@ import {
 } from '../lib/channels/gate.js'
 
 const cfg = { channels: { qq: { enabled: true, replyInGroup: true, groups: ['999'] } } }
-const NOW = Date.parse('2026-11-06T20:00:00+08:00')
+// 用本地时间构造：gate 按这台机器的本地小时判夜间/峰时，写死 +08:00 会在 UTC 的 CI 上错位。
+const NOW = new Date(2026, 10, 6, 20, 0, 0, 0).getTime()
 const base = { channel: 'qq', stage: 3, config: cfg, now: NOW }
 
 test('gate：主人私聊连说两句，第二句不压', () => {
@@ -116,7 +117,7 @@ test('gate：私聊不受 @ 规则影响', () => {
 
 test('gate：夜里 23:00–08:00，群里不点名就不叫醒她', () => {
   const quietCfg = { channels: { qq: { enabled: true, replyInGroup: true, groups: ['999'], mentionOnly: false } } }
-  const night = Date.parse('2026-11-06T23:30:00+08:00')
+  const night = new Date(2026, 10, 6, 23, 30, 0, 0).getTime()
   const r = canReply({ channel: 'qq', kind: 'group', conversationId: '999', isOwner: false, stage: 3, config: quietCfg, now: night })
   assert.equal(r.ok, false)
   assert.equal(r.why, 'quiet-hours')
@@ -126,11 +127,11 @@ test('gate：夜里 23:00–08:00，群里不点名就不叫醒她', () => {
 
 test('gate：工作日峰时 9–12 只接点名的；周末同一时刻照常', () => {
   const quietCfg = { channels: { qq: { enabled: true, replyInGroup: true, groups: ['999'], mentionOnly: false } } }
-  const peak = Date.parse('2026-11-06T10:30:00+08:00') // 周五上午
+  const peak = new Date(2026, 10, 6, 10, 30, 0, 0).getTime() // 周五上午（本地）
   const r = canReply({ channel: 'qq', kind: 'group', conversationId: '999', isOwner: false, stage: 3, config: quietCfg, now: peak })
   assert.equal(r.ok, false)
   assert.equal(r.why, 'peak-hours')
-  const weekend = Date.parse('2026-11-07T10:30:00+08:00') // 周六上午
+  const weekend = new Date(2026, 10, 7, 10, 30, 0, 0).getTime() // 周六上午（本地）
   const ok = canReply({ channel: 'qq', kind: 'group', conversationId: '999', isOwner: false, stage: 3, config: quietCfg, now: weekend })
   assert.equal(ok.ok, true)
   const mentioned = canReply({ ...base, config: quietCfg, kind: 'group', conversationId: '999', isOwner: false, mentioned: true, now: peak })

@@ -9,7 +9,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, mkdir, readFile, writeFile, stat, rm } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, writeFile, stat, rm, realpath } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -25,8 +25,10 @@ import {
 import { updateConfig } from '../lib/settings.js'
 
 async function withDirs(fn) {
-  const root = await mkdtemp(join(tmpdir(), 'dsh-roost-pair-root-'))
-  const work = await mkdtemp(join(tmpdir(), 'dsh-roost-pair-work-'))
+  // Windows 的 %TEMP% 可能是 8.3 短路径（RUNNER~1），realpath 会把它展开；
+  // 不先展开的话，下面「realpath 与配置路径相同」的防链接检查会把正常路径误判成链接。
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'dsh-roost-pair-root-')))
+  const work = await realpath(await mkdtemp(join(tmpdir(), 'dsh-roost-pair-work-')))
   try {
     await fn(root, work)
   } finally {
