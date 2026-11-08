@@ -16,6 +16,7 @@
 - 测试：`pet-state` 新增动静判据（回合中、4:59 / 5:00、1 分钟档、坏值回落）与睡迹旧的记账用例；`pet-index` 改源码断言（必须用 `awakeByActivity`、记 `turnActive` / `lastActivityAt` / `idleSleepMin`，不许再出现 `asleepFromEvents`）；`settings` 新增 `idleSleepMin` 默认 5 与 1–60 夹取。定向 pet + settings 37/37；全量 **1325 条 / 1314 过 / 9 红 / 2 skip**（/tmp/full-pet-why.log），9 红与已知环境红同名。
 - 状态文字（16:41 协调板）：`why` 从判语改成「说哪一段、从哪儿来」——`等：回合已结束，等下一次动静`、`思考：回合进行中`、`思考：工具已返回`、`动手：在翻 B 站`、`成了：这一轮结束了`、`出错：回合失败`；施工单的表格、验收 #5 与 body 侧样例同步改。
 - 热更（16:53 协调板）：`idleSleepMin` 原来只在启动时读一次，设置页改完不重启不生效。现在 `/config` 保存后调 `petApplyConfig(next)` 写进运行中的 `base.idleSleepMin`，并立刻 `checkAwake()` 重判；`test/pet-index.test.mjs` 有源码守门。
+- 角色包（17:31 协调板）：配置键从 `pet.petId` 改成 `pet.pack`（老配置自动迁过来，不丢已选角色），设置页「插件」卡加「角色包」输入；spawn 仍传 `--pet=<id>`，由 body 按 `~/.dsh-roost/pets/<id>` 找素材。仓库只留模板，素材不进 git。
 - 重启后又发现一层：`parameters` 是手写标准形态，宿主报 `tool "pet_act" parameters must be lossless JSON before schema projection`，并连带整批工具不可用。协调侧已改成 `toJsonSchema({ action, why })`（提交 `6ae9d20`），输出是 `{type:'object',properties,required:['action'],additionalProperties:false}`；`test/pet-tool.test.mjs` 补了一条钉住这个形状。
 - 真机确认（2026-11-08 15:22）：`工具面收窄：她这条会话只留 15 个工具，另有兜底守卫`；日志里不再出现 `工具注册失败` / `lossless JSON` / `工具面收窄延后`。15:27 她调 `pet_act` 点头，屏幕出现 done 绿圈；姿态也不再按时段判睡。`origin/main` 已到 `6ae9d20`。
 

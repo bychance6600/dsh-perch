@@ -30,7 +30,7 @@ test('默认参数：协议 v1、大小 1、穿透开、宠物包 default，位�
 
 test('自定义大小、位置、穿透、宠物包，额外参数接在后面', () => {
   assert.deepEqual(
-    bodyArgs({ size: 1.25, position: 'bottom-right', clickThrough: false, petId: 'cat-2', args: ['--foo', 'bar'] }),
+    bodyArgs({ size: 1.25, position: 'bottom-right', clickThrough: false, pack: 'cat-2', args: ['--foo', 'bar'] }),
     ['--protocol=1', '--size=1.25', '--position=bottom-right', '--click-through=0', '--pet=cat-2', '--foo', 'bar'],
   )
 })
@@ -49,10 +49,11 @@ test('位置只认白名单；空串和乱写的都不传', () => {
 
 test('宠物包 id 只收短标识；空的、带空格的都回 default', () => {
   assert.equal(petIdOf({}), 'default')
-  assert.equal(petIdOf({ petId: '  ' }), 'default')
-  assert.equal(petIdOf({ petId: '../x' }), 'default')
-  assert.equal(petIdOf({ petId: 'shiba_2' }), 'shiba_2')
-  assert.equal(bodyArgs({ petId: 'bad id' }).at(-1), '--pet=default')
+  assert.equal(petIdOf({ pack: '  ' }), 'default')
+  assert.equal(petIdOf({ pack: '../x' }), 'default')
+  assert.equal(petIdOf({ pack: 'shiba_2' }), 'shiba_2')
+  assert.equal(petIdOf({ petId: 'legacy-2' }), 'legacy-2')
+  assert.equal(bodyArgs({ pack: 'bad id' }).at(-1), '--pet=default')
 })
 
 test('打包产物：直接起，cwd 是可执行文件所在目录', () => {

@@ -41,11 +41,13 @@ pet: {
   size: 1.0,             // 0.5–2.0
   position: '',          // '' = body 记住上次位置；或 'bottom-right'
   clickThrough: true,
-  petId: 'default',      // 宠物包 id；--pet=<id>
+  pack: 'default',       // 角色包文件夹名（~/.dsh-roost/pets/<id>）；--pet=<id>
 },
 ```
 
 `AGENTS.md` 补一句：`pet` 是环境参数，不是人格参数。
+
+角色素材不放仓库：一个角色 = `~/.dsh-roost/pets/<id>/` 一个文件夹（`pet.json` + 视频文件），文件夹名就是 `pet.pack`。仓库里只留不含素材的模板。
 
 ---
 
@@ -64,7 +66,7 @@ test/pet-bridge.test.mjs  test/pet-state.test.mjs  test/pet-mirror.test.mjs
 
 - 读 `deps.config.pet`；`enabled` 假 → 直接返回 `() => {}`（不 spawn、不注册工具、不挂事件）。
 - `const spec = entrySpec(pet); spawn(spec.path, spec.args, { stdio: ['pipe','pipe','pipe'], cwd: spec.cwd, windowsHide: true })`。两种入口由 `lib/pet/entry.js` 的 `entrySpec()` 统一解析：打包产物直接起、`cwd` 是 exe 所在目录；开发态 `pet.path` 指 `node_modules/electron/dist/electron.exe`，`pet.repo` 填 body 仓库根（缺省只从标准布局反推，推不出就报错，不猜别的路径），参数前面加仓库根、`cwd` 也是仓库根。`pet.args` 原样接在最后。
-- 参数由 `lib/pet/entry.js` 生成：`--protocol=1 --size=… [--position=…] --click-through=0|1 --pet=<id>`，再接 `pet.args`。spawn 前从 env 删掉 `ELECTRON_RUN_AS_NODE`。
+- 参数由 `lib/pet/entry.js` 生成：`--protocol=1 --size=… [--position=…] --click-through=0|1 --pet=<id>`，再接 `pet.args`。`<id>` 取 `config.pet.pack`（老配置的 `petId` 自动迁过来）。spawn 前从 env 删掉 `ELECTRON_RUN_AS_NODE`。
   入口约定正文在 body 仓库的 `docs/launch.md`；不要在这里另写一份。
 - 子进程 stdout 按行读；stderr 收进 roost 日志（前缀 `[pet]`）。
 - 握手：10 秒内收 `hello`；没收到 → kill，按 1 秒 / 5 秒退避重试；总共 3 次（第一次 + 两次重试），第三次置 `dead`，只写日志。
