@@ -44,6 +44,12 @@ test('开着但没填路径：记一句原因，也不 spawn', async () => {
   await rm(root, { recursive: true, force: true })
 })
 
+test('状态只给中文档位，不出现 need / 内部英文名', () => {
+  const s = petStatus()
+  assert.ok(['思考', '动手', '等', '出错', '成了'].includes(s.state), s.state)
+  assert.doesNotMatch(`${s.state} ${s.why}`, /need|thinking|acting|waiting|error|done/i)
+})
+
 test('petEnabled 只认 true + 非空路径', () => {
   assert.equal(petEnabled({ pet: { enabled: true, path: 'D:/pet.exe' } }), true)
   assert.equal(petEnabled({ pet: { enabled: 'true', path: 'D:/pet.exe' } }), false)
