@@ -4,7 +4,7 @@
 
 **0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过）。A 段 35 条与 B 段 19 条验收全部收口（A1 于 2026-11-07 16:12 真机通过）。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1337 条 / 1326 过 / 9 红**（另有 2 skip，2026-11-08 桌宠睡醒改按回合与动静判后核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1341 条 / 1330 过 / 9 红**（另有 2 skip，2026-11-08 社会层测试屋后核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
 
@@ -24,7 +24,16 @@
 - 干净安装：GitHub `bychance6600/dsh-roost` HEAD `ae37201` 重新 clone；`dependencies` / `devDependencies` / `peerDependencies` 都是 `{}`；干净克隆 `node --test` **1337 条 / 1333 过 / 0 红 / 4 skip**；空 profile 用自带 pnpm `add github:...` 装出 `dsh-roost 0.1.0`。
 - 恢复演练：把快照 `home\` 复制到临时目录，用干净安装出来的 `lib/index.js` 启动假宿主（关 QQ / B 站 / 抖音 / 桌宠 / 上网 / 主动唤醒）。读回 2,026 条事件 + 1 条跳过（第 763 行是已知无 id 的旧测试行），第 6 天 / 阶段 1，31 人且主人印象非空，复用 `home.json` 里的会话（没新建、没叫醒），注册 12 个自带工具、46 条观测台路由；启动前后 `events.jsonl` 字节前缀一致。
 - 真身没动：只做复制与临时副本启动，没有替换 `~/.dsh-roost`，也没有连 QQ。
-- 剩发布前：README / 版本 / tag 收尾、social_open 真机测试屋。
+
+## 社会层隔离测试屋（2026-11-08，m12281）——已做
+
+- 目的：在不动她真实数据、不启第二个 DSH、不连 QQ 的前提下，把「差闸不写 / 四条齐只写一条 / social 永不进 beliefs / 社会页没有替她开的按钮」四条代码路径串起来跑一遍。
+- 新增 `test/social-house.test.mjs`（4 条）。测试屋用 `tmpRoot()` 造临时家、`fakeCtx()` 假宿主、`stanceModel()` 桩（7 条立场、阶段 4）；`evaluateSocialGate`、`registerSocialOpen`、事件流、`deriveSelf` 都是真的。
+- 断言：差一条闸时 `social_open` 返回 `ok:false`、事件数一条不增；四条齐后写入 1 条 `social-open:` 且 `deriveSelf(events).influence.socialOpen === true`，再调不写第二条；开闸后写 1000 条 `influence:'social'` 的陌生人 utterance，`beliefs` 与基准 `deepEqual`，只落在 `influence.social.count`；设置页社会页区间含「只读」且没有 `h('button'`。
+- 定向 `node --test --test-isolation=none test/social-house.test.mjs test/social.test.mjs test/channel-router.test.mjs test/derive.test.mjs test/client.test.mjs` = 120/120。
+- 全量 `node --test --test-isolation=none` = **1341 条 / 1330 过 / 9 红 / 2 skip**（/tmp/full-social-house.log），9 红与已知环境红同名。
+- 基线文档同步到 1341/1330：AGENTS、CHANGELOG、README、交接、施工单、PROGRESS、docs/约定清单 B7；B11 加了这四条测试的证据。历史段落里的 1337/1326 是当时的记录，保留。
+- 剩发布前：README / 版本 / tag 收尾。
 
 ## 桌宠 pet_act 注册、睡迹判据、窗口文案（2026-11-08，m10609）——已改
 
