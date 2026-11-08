@@ -18,6 +18,14 @@
 - 验证：`TZ=UTC node --test test/gate.test.mjs` 16/16；gate + install-pet 18/18；pairfile 7/7；全量 `node --test` **1337 条 / 1335 过 / 0 红 / 2 skip**。
 - 提交 `47b7714` 推送后，run `42474410235` 三个 job 全部 success。
 
+## 备份、干净安装与恢复演练（2026-11-08，m12057）——已做
+
+- 快照：`%USERPROFILE%\Desktop\bak\roost\2026-11-08-1920`。`home\` 5,336 文件 / 1,564,361,992 字节，排除 `instance.json`（218 B，运行锁）。源目录（排除 instance）逐文件 sha256 全等：0 缺失、0 多出、0 不同；`events.jsonl` 2,027 行、sha256 `9e092a80b622aae261b2d28483ea088c04ab466d7e70e26cea659809290d7263`；`config.json` `130efe1a...`、`home.json` `48df469f...`、`people.json` `043ce701...`。根目录有 `MANIFEST.md` 与 `SHA256SUMS.txt`（5,336 行，709,378 B，`sha256sum -c` 全 OK）。
+- 干净安装：GitHub `bychance6600/dsh-roost` HEAD `ae37201` 重新 clone；`dependencies` / `devDependencies` / `peerDependencies` 都是 `{}`；干净克隆 `node --test` **1337 条 / 1333 过 / 0 红 / 4 skip**；空 profile 用自带 pnpm `add github:...` 装出 `dsh-roost 0.1.0`。
+- 恢复演练：把快照 `home\` 复制到临时目录，用干净安装出来的 `lib/index.js` 启动假宿主（关 QQ / B 站 / 抖音 / 桌宠 / 上网 / 主动唤醒）。读回 2,026 条事件 + 1 条跳过（第 763 行是已知无 id 的旧测试行），第 6 天 / 阶段 1，31 人且主人印象非空，复用 `home.json` 里的会话（没新建、没叫醒），注册 12 个自带工具、46 条观测台路由；启动前后 `events.jsonl` 字节前缀一致。
+- 真身没动：只做复制与临时副本启动，没有替换 `~/.dsh-roost`，也没有连 QQ。
+- 剩发布前：README / 版本 / tag 收尾、social_open 真机测试屋。
+
 ## 桌宠 pet_act 注册、睡迹判据、窗口文案（2026-11-08，m10609）——已改
 
 - P0：真机上 `pet_act` 注册失败，宿主报 `tool "pet_act" must declare output { schema, render, presentationMeta? }`，日志同时出现「工具面收窄延后（unknown global tool "pet_act"）」。`lib/pet/tool.js` 照 `lib/capture.js:113-136` 补了 `output.schema`（`{ ok:boolean, note:string }`）与 `output.render`（返回 ContentBlock 数组：成功 `[动了]`，失败 `[没动：…]`）；`test/pet-tool.test.mjs` 新增一条断言注册出的工具带 `output.render` 且返回数组。
@@ -192,13 +200,13 @@
 
 ## 手上这一步（下一个会话从这里接）
 
-**A 段与 B 段全部收口。** A 段 35/35 ✅（A1 于 2026-11-07 真机通过）；B 段 19/19 ✅（判据表在 docs/约定清单.md 的 B 节）。抖音推荐流与搜索已在真机取到条目（2026-11-07 16:40）。下一步按发布前清单复核 README、包版本、备份与回滚路径；真机再补一条 B 站看画面（代码与合成片源已过）。
+**A 段与 B 段全部收口。** A 段 35/35 ✅（A1 于 2026-11-07 真机通过）；B 段 19/19 ✅（判据表在 docs/约定清单.md 的 B 节）。抖音推荐流与搜索已在真机取到条目（2026-11-07 16:40），B 站看画面也已于 2026-11-07 真机通过。备份 / 恢复演练与干净安装已完成（见上）；剩 README / 版本 / tag 收尾与 social_open 真机测试屋。
 
 ## 之后（按顺序）
 
 1. A 段 35 条 ✅（A1 真机 2026-11-07 通过）。
 2. B 段 19 条验收 2026-11-07 全 ✅，判据表在 docs/约定清单.md 的 B 节。
-3. 发布前复核：README 的「还没做完」、包版本、备份与回滚路径；真机补 B 站看画面。抖音推荐流与搜索已真机取到（2026-11-07 16:40）。
+3. 发布前复核：README 的「还没做完」、包版本、tag；备份 / 恢复演练与干净安装已完成（2026-11-08）。剩 social_open 真机测试屋。抖音推荐流与搜索、B 站看画面都已真机通过（2026-11-07）。
 
 ## 交接（2026-11-06 23:50，A 段进行中）
 
