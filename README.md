@@ -5,6 +5,7 @@
 ![deps](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![node](https://img.shields.io/badge/node-%E2%89%A522-339933)
 ![dsh](https://img.shields.io/badge/DSH-plugin-6a5acd)
+![tests](https://img.shields.io/badge/tests-1341%20passing-brightgreen)
 
 **她住的地方，不是一个助手。**
 
@@ -38,6 +39,23 @@
 | 记忆 | 全量塞进上下文 | 有重量：反复提起、被验证过的固化，其余折叠、变模糊 |
 | 成长 | 挂机涨数值、按天数解锁 | 按天推进，但三道瓶颈要她自己过：写下判断、拒绝过、改过口 |
 | 在哪说话 | 一个聊天框 | DSH 会话 + QQ；B 站、抖音是**看东西**的地方，不是聊天室 |
+
+## 看一眼
+
+设置里只有「她的一天」这十一个页签，没有性格滑条，也没有好感度数字。
+
+<img src="docs/screenshots/today1.png" alt="今天页（上）" width="720">
+<img src="docs/screenshots/today2.png" alt="今天页（下）" width="720">
+
+<sub>今天页：一行现状、今天的时间线、今天变了什么、手边有什么。只读，不能从这里改她。</sub>
+
+<img src="docs/screenshots/grow.png" alt="成长页" width="720">
+
+<sub>成长页：四个阶段与三道瓶颈，按事件算，不按分数涨。</sub>
+
+<img src="docs/screenshots/state.png" alt="状态页" width="720">
+
+<sub>状态页：三道瓶颈各差多少、判断漂移、渠道最近一次收发。</sub>
 
 <img src="media/principle-loop.svg" alt="认知是怎么长出来的" width="760">
 
