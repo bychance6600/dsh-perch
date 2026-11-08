@@ -49,13 +49,9 @@
 
 <sub>今天页：一行现状、今天的时间线、今天变了什么、手边有什么。只读，不能从这里改她。</sub>
 
-<img src="docs/screenshots/grow.png" alt="成长页" width="720">
+<img src="docs/screenshots/grow-top.png" alt="成长页" width="720">
 
 <sub>成长页：四个阶段与三道瓶颈，按事件算，不按分数涨。</sub>
-
-<img src="docs/screenshots/state.png" alt="状态页" width="720">
-
-<sub>状态页：三道瓶颈各差多少、判断漂移、渠道最近一次收发。</sub>
 
 <img src="media/principle-loop.svg" alt="认知是怎么长出来的" width="760">
 
