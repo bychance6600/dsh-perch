@@ -4,9 +4,18 @@
 
 **0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过）。A 段 35 条与 B 段 19 条验收全部收口（A1 于 2026-11-07 16:12 真机通过）。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1320 条 / 1309 过 / 9 红**（另有 2 skip，2026-11-08 桌宠入口按 launch.md 改完后核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1323 条 / 1312 过 / 9 红**（另有 2 skip，2026-11-08 桌宠 pet_act 注册与睡迹判据改完后核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
+
+## 桌宠 pet_act 注册、睡迹判据、窗口文案（2026-11-08，m10609）——已改
+
+- P0：真机上 `pet_act` 注册失败，宿主报 `tool "pet_act" must declare output { schema, render, presentationMeta? }`，日志同时出现「工具面收窄延后（unknown global tool "pet_act"）」。`lib/pet/tool.js` 照 `lib/capture.js:113-136` 补了 `output.schema`（`{ ok:boolean, note:string }`）与 `output.render`（返回 ContentBlock 数组：成功 `[动了]`，失败 `[没动：…]`）；`test/pet-tool.test.mjs` 新增一条断言注册出的工具带 `output.render` 且返回数组。
+- 睡醒判据：`lib/pet/index.js` 的 `checkAwake` 不再用 `deriveStatus().awake` 按时段推，改看账本：最后一条 `meta sleep:<当天>` 之后没有事件就是睡，之后有事件就不是；没有当天标记也按不睡。`lib/pet/state.js` 新增 `localDayKey()` 与 `asleepFromEvents()`；不读 `window`、不读「今天醒过吗」的计数。
+- **已知缺口（待定）**：`meta sleep:<当天>` 现在不是每天都有——`lib/scheduler.js:833` 只在 `askedSleep`（`memory.sleepEveryDays`，默认 7 天）且当天没写过时才追加。按这套判据，大多数日子没有 sleep 标记，桌宠会一直判「不睡」。要不要让调度器每天收工都写一条 sleep 标记，等主人定。
+- 窗口：`lib/client.js` 的兜底与设置页初始值从 `20:00` 改成 `08:00`；`lib/settings.js` 的 `DEFAULTS.window` 也改成 `08:00–23:00`。设置页这一段改叫「每天几点可以被叫醒」，提示写明「定时叫醒只落在这个时段里；不是在这段时间里一直醒着」；`lib/persona.js:466`、`lib/settings.js` 注释、`lib/selfcheck.js`、`lib/proactive.js` 的「醒着时段 / 醒来」同步改成「叫醒时段」。
+- 测试：`pet-state` 新增睡迹六种情形、`pet-tool` 新增 output.render、`pet-index` 新增源码断言（必须用 `asleepFromEvents`，不许出现 `deriveStatus` / `wokeToday`）；定向 pet 16/16。全量 **1323 条 / 1312 过 / 9 红 / 2 skip**（/tmp/full-pet4.log），9 红与已知环境红同名。
+- 还需重启 DSH 才会重新注册 `pet_act`；重启后确认日志不再出现「工具注册失败」与「工具面收窄延后（unknown global tool "pet_act"）」。
 
 ## 桌宠入口按 launch.md（2026-11-08，m10008）——已改
 
@@ -409,7 +418,7 @@
 - 问题：首启 / 建屋只有 `D:\fish\建屋方案-草.md` 一份按 river 757 行 `home.js` 写的草稿，名字、标题、会话组合、`carry` 都是旧口径；仓库里没有能照着建屋的定稿。
 - 定稿写在 `docs/建屋方案.md`，十三节：四件事与明确不做、启动九步的实际顺序、数据目录树（会话 cwd 是 `home/`，不是账本根）、工作区幂等、会话复用/归档/宽限/组合变了另建/两把锁/EPERM 重试、`home.json` 字段与 carry、seed、叫醒只叫一次、空状态、换数据目录、全部默认值、失败降级表、九条验收与现有测试对应、不变量。
 - 核对时改准了三处口径：seed 只认「没有 seed 事件」不是「目录为空」；两个实例共用一个 root 时，后开的那个不建会话、只读 `home.json`，工具写入由 `guardWrite()` 挡（启动链路的 seed / 换家 meta 并不按 tenant 结果拦写，文档不写成「不写盘」）；数据目录里 `notes.json` / `inbox.md` / `diary/` / `out/` 在 root 下，`home/` 里只有她的身份文件。
-- 文档不含真实用户名、路径、QQ / 群号；默认值表直接对应 `lib/settings.js` 的 `DEFAULTS`（`stageSpanDays` 30、`wakesPerDay` 2、`window` 20:00–23:00、`tools.preset` standard、`memory.beliefsShown` 2 等）。
+- 文档不含真实用户名、路径、QQ / 群号；默认值表直接对应 `lib/settings.js` 的 `DEFAULTS`（`stageSpanDays` 30、`wakesPerDay` 2、`window` 08:00–23:00、`tools.preset` standard、`memory.beliefsShown` 2 等）。
 - `docs/约定清单.md` 的 §0 与 A31 行已改成「已定稿」并写清验收。
 - 全量 1241 条 / 1230 过 / 9 红 / 2 skip（/tmp/full-A31.log）；9 红与已知环境红逐条同名。
 

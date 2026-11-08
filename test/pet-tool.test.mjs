@@ -33,6 +33,22 @@ test('动作只认十种，成功时只回一句动作，不回状态数字', as
   assert.equal(sent.length, 1)
 })
 
+test('注册出来的工具带 output.render，render 返回 ContentBlock 数组', async () => {
+  const ctx = fakeCtx()
+  registerPetAct(ctx, { enabled: () => true, sendAct: () => true })
+  const tool = ctx.list[0]
+  assert.equal(tool.output?.schema?.type, 'object')
+  assert.deepEqual(tool.output?.schema?.required, ['ok', 'note'])
+  assert.equal(typeof tool.output?.render, 'function')
+  const blocks = tool.output.render({ action: 'nod' }, { ok: true, note: '点了点头' })
+  assert.ok(Array.isArray(blocks))
+  assert.equal(blocks[0].type, 'text')
+  assert.match(blocks[0].text, /动了/)
+  const bad = tool.output.render({ action: 'nod' }, { ok: false, note: '桌宠没开。' })
+  assert.ok(Array.isArray(bad))
+  assert.match(bad[0].text, /没动/)
+})
+
 test('关着 / 没连上都不抛，只说一句', async () => {
   const off = fakeCtx()
   registerPetAct(off, { enabled: () => false })

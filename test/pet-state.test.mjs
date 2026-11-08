@@ -13,6 +13,7 @@ import assert from 'node:assert/strict'
 import {
   PET_STATES,
   STATE_LABELS,
+  asleepFromEvents,
   awakeChange,
   holdLeft,
   initialState,
@@ -74,6 +75,17 @@ test('回合完了停 2 秒「成了」，失败停 5 秒「出错」，到点�
 
   const failed = reducePetState(initialState(0), { type: 'prompt-failed' }, { now: 0 })
   assert.equal(failed.state, 'error')
+})
+
+test('睡不睡看账本最后一条 sleep 之后有没有事，不看时段', () => {
+  const now = new Date(2026, 10, 8, 15, 0)
+  const sleep = { type: 'meta', text: 'sleep:2026-11-08' }
+  assert.equal(asleepFromEvents([], now), false)
+  assert.equal(asleepFromEvents([{ type: 'utterance', text: '还在' }], now), false)
+  assert.equal(asleepFromEvents([{ type: 'utterance' }, sleep], now), true)
+  assert.equal(asleepFromEvents([sleep, { type: 'meta', text: 'wake:2026-11-08 ?' }], now), false)
+  assert.equal(asleepFromEvents([{ type: 'meta', text: 'sleep:2026-11-07' }, sleep], now), true)
+  assert.equal(asleepFromEvents([sleep, { type: 'meta', text: 'sleep:2026-11-07' }], now), false)
 })
 
 test('睡和醒只在真的翻面时各发一次动作', () => {

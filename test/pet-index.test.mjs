@@ -58,6 +58,13 @@ test('启动参数、握手超时、退出码都走入口约定，不各写一�
   assert.match(src, /classifyExit\(code, signal/)
 })
 
+test('睡不睡只看她自己的睡迹，不拿时段和 wokeToday 推', async () => {
+  const src = await readFile(new URL('../lib/pet/index.js', import.meta.url), 'utf8')
+  assert.match(src, /asleepFromEvents\(events/)
+  assert.doesNotMatch(src, /deriveStatus/)
+  assert.doesNotMatch(src, /wokeToday/)
+})
+
 test('petEnabled 只认 true + 非空路径', () => {
   assert.equal(petEnabled({ pet: { enabled: true, path: 'D:/pet.exe' } }), true)
   assert.equal(petEnabled({ pet: { enabled: 'true', path: 'D:/pet.exe' } }), false)

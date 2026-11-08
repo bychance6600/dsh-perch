@@ -149,7 +149,7 @@ ctx.on('session/event', (session, event) => {
 - `test/pet-mirror.test.mjs`：分句、200 字、去重、短句过滤、final。
 - `test/pet-bridge.test.mjs`：用一个假 body（`test/fixtures/fake-body.mjs`，Node 脚本说协议）跑：握手、say 排队、ack 超时、脏行、EOF、重试三次后 dead。
 - 测试不碰真实数据目录；用 `tmp` root。
-- 全量基线：`node --test --test-isolation=none`，本次完成后为 1320 条 / 1309 过 / 9 条已知红 / 2 skip；加了测试要更新 `AGENTS.md` 的基线数字。
+- 全量基线：`node --test --test-isolation=none`，本次完成后为 1323 条 / 1312 过 / 9 条已知红 / 2 skip；加了测试要更新 `AGENTS.md` 的基线数字。
 
 ---
 

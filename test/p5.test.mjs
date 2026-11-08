@@ -30,7 +30,7 @@ const OBSERVE = join(HERE, '..', 'lib', 'observe.js')
 test('默认配置里上网时段是独立的一项', () => {
   const cfg = normalizeConfig({})
   assert.deepEqual(cfg.browse.window, ['08:00', '23:00'])
-  assert.deepEqual(cfg.window, ['20:00', '23:00'])
+  assert.deepEqual(cfg.window, ['08:00', '23:00'])
 })
 
 test('坏时段只回退自己那一项，不牵连别的时段', () => {
