@@ -18,7 +18,10 @@ import {
 test('动作名只收短标识；labels 优先，没给就用内置，再没有就用名字', () => {
   assert.equal(safeActionName('wave'), true)
   assert.equal(safeActionName('wave-2'), true)
-  assert.equal(safeActionName('挥手'), false)
+  assert.equal(safeActionName('挥手'), true)
+  assert.equal(safeActionName('可爱宅舞'), true)
+  assert.equal(safeActionName('a/b'), false)
+  assert.equal(safeActionName('../x'), false)
   assert.equal(safeActionName('bad name'), false)
   assert.equal(safeActionName(''), false)
   assert.equal(actionLabel('nod'), '点了点头')
