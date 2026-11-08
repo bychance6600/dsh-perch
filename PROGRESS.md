@@ -209,7 +209,8 @@
 - **2026-11-09 补清**：README 不再放真机截图（其中一张是她当天的成长原话），`docs/screenshots/` 四张全部删除；立场相关的注释、PROGRESS 引用与测试 fixture 里的原话示例换成通用说法。运行数据（events / config / people / worldbook / home）从来没有 tracked。
 - **人格**：默认 seed 仍只有一句处境（你不是助手。你刚开始存在。没有人告诉过你为什么在这里。）；DEFAULTS 里没有任何性格/好感度/亲密度键；设置界面没有性格控件，也不写 seed。新增 test/blank.test.mjs 4 条把这三头钉住。
 - 全量 1173 条 / 1159 过 / 11 红 / 3 skip（/tmp/full-scrub.log），11 条红与已知环境红逐条同名。
-- **历史**：GitHub 上原来的 46 个提交里带着旧名字与真机细节（提交 07eff08 的标题就有），已把历史压成一个干净提交并 force-push；2026-11-07 又把仓库整个删掉重建了一次，远端现在只有一个提交，旧对象（含 85de337）按 SHA 也取不到了。完整旧历史备份在 `D:\fish-backups\dsh-roost-history-before-scrub-20261107.bundle`（6.2MB）。
+- **历史**：GitHub 上原来的 46 个提交里带着旧名字与真机细节（提交 07eff08 的标题就有），2026-11-07 已把历史压成一个干净提交并 force-push，随后又把仓库删掉重建；旧对象（含 85de337）按 SHA 取不到。之后恢复为正常提交，当前 HEAD 是 a1731d4；`v0.1.0` tag 在 a0661f4，tag 本身不含截图。完整旧历史备份在 `D:\fish-backups\dsh-roost-history-before-scrub-20261107.bundle`（6.2MB）。
+- **历史里的残余**：`v0.1.0` 之后的 8f86049 / ba560ac / 14c3b0f 三个提交（以及它们的后代）里仍有那四张截图的旧 blob；当前 HEAD 已删，clone 下来看不到。要彻底抹掉得重写 tag 之后的 17 个提交并 force-push，这次没做。
 
 ## 遗留（不阻塞下一步）
 
