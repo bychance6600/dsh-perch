@@ -4,17 +4,17 @@
 
 **0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过）。A 段 35 条与 B 段 19 条验收全部收口（A1 于 2026-11-07 16:12 真机通过）。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1324 条 / 1313 过 / 9 红**（另有 2 skip，2026-11-08 桌宠 pet_act 的 parameters 也过 toJsonSchema 后核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1325 条 / 1314 过 / 9 红**（另有 2 skip，2026-11-08 桌宠睡醒改按回合与动静判后核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
 
 ## 桌宠 pet_act 注册、睡迹判据、窗口文案（2026-11-08，m10609）——已改
 
 - P0：真机上 `pet_act` 注册失败，宿主报 `tool "pet_act" must declare output { schema, render, presentationMeta? }`，日志同时出现「工具面收窄延后（unknown global tool "pet_act"）」。`lib/pet/tool.js` 照 `lib/capture.js:113-136` 补了 `output.schema`（`{ ok:boolean, note:string }`）与 `output.render`（返回 ContentBlock 数组：成功 `[动了]`，失败 `[没动：…]`）；`test/pet-tool.test.mjs` 新增一条断言注册出的工具带 `output.render` 且返回数组。
-- 睡醒判据：`lib/pet/index.js` 的 `checkAwake` 不再用 `deriveStatus().awake` 按时段推，改看账本：最后一条 `meta sleep:<当天>` 之后没有事件就是睡，之后有事件就不是；没有当天标记也按不睡。`lib/pet/state.js` 新增 `localDayKey()` 与 `asleepFromEvents()`；不读 `window`、不读「今天醒过吗」的计数。
-- **已知缺口（待定）**：`meta sleep:<当天>` 现在不是每天都有——`lib/scheduler.js:833` 只在 `askedSleep`（`memory.sleepEveryDays`，默认 7 天）且当天没写过时才追加。按这套判据，大多数日子没有 sleep 标记，桌宠会一直判「不睡」。要不要让调度器每天收工都写一条 sleep 标记，等主人定。
+- 睡醒判据（2026-11-08 16:00 协调板重定）：`lib/pet/index.js` 的 `checkAwake` 改成 `awake = 回合进行中 || 距最后一次动静 < idleSleepMin`；`lib/pet/state.js` 新增纯函数 `awakeByActivity()`。回合进行中一律算醒，五分钟只在 `turn/end` 之后起算；`turn/start`、`tool/call`、`assistant/message` 算她的动静，余额 / 通知 / 日历 / 到点本身不算。`idleSleepMin` 默认 5、范围 1–60，进 `config.pet` 与设置页「插件」页。旧的 `asleepFromEvents()` 保留给 scheduler 的「想一想」记账，桌宠不再读它。
 - 窗口：`lib/client.js` 的兜底与设置页初始值从 `20:00` 改成 `08:00`；`lib/settings.js` 的 `DEFAULTS.window` 也改成 `08:00–23:00`。设置页这一段改叫「每天几点可以被叫醒」，提示写明「定时叫醒只落在这个时段里；不是在这段时间里一直醒着」；`lib/persona.js:466`、`lib/settings.js` 注释、`lib/selfcheck.js`、`lib/proactive.js` 的「醒着时段 / 醒来」同步改成「叫醒时段」。
-- 测试：`pet-state` 新增睡迹六种情形、`pet-tool` 新增 output.render、`pet-index` 新增源码断言（必须用 `asleepFromEvents`，不许出现 `deriveStatus` / `wokeToday`）；定向 pet 16/16。全量 **1323 条 / 1312 过 / 9 红 / 2 skip**（/tmp/full-pet4.log），9 红与已知环境红同名。
+- 测试：`pet-state` 新增动静判据（回合中、4:59 / 5:00、1 分钟档、坏值回落）与睡迹旧的记账用例；`pet-index` 改源码断言（必须用 `awakeByActivity`、记 `turnActive` / `lastActivityAt` / `idleSleepMin`，不许再出现 `asleepFromEvents`）；`settings` 新增 `idleSleepMin` 默认 5 与 1–60 夹取。定向 pet + settings 37/37；全量 **1325 条 / 1314 过 / 9 红 / 2 skip**（/tmp/full-pet-why.log），9 红与已知环境红同名。
+- 状态文字（16:41 协调板）：`why` 从判语改成「说哪一段、从哪儿来」——`等：回合已结束，等下一次动静`、`思考：回合进行中`、`思考：工具已返回`、`动手：在翻 B 站`、`成了：这一轮结束了`、`出错：回合失败`；施工单的表格、验收 #5 与 body 侧样例同步改。
 - 重启后又发现一层：`parameters` 是手写标准形态，宿主报 `tool "pet_act" parameters must be lossless JSON before schema projection`，并连带整批工具不可用。协调侧已改成 `toJsonSchema({ action, why })`（提交 `6ae9d20`），输出是 `{type:'object',properties,required:['action'],additionalProperties:false}`；`test/pet-tool.test.mjs` 补了一条钉住这个形状。
 - 真机确认（2026-11-08 15:22）：`工具面收窄：她这条会话只留 15 个工具，另有兜底守卫`；日志里不再出现 `工具注册失败` / `lossless JSON` / `工具面收窄延后`。15:27 她调 `pet_act` 点头，屏幕出现 done 绿圈；姿态也不再按时段判睡。`origin/main` 已到 `6ae9d20`。
 

@@ -58,9 +58,13 @@ test('启动参数、握手超时、退出码都走入口约定，不各写一�
   assert.match(src, /classifyExit\(code, signal/)
 })
 
-test('睡不睡只看她自己的睡迹，不拿时段和 wokeToday 推', async () => {
+test('睡不睡按回合与最后一次动静算，不读睡迹、时段和 wokeToday（2026-11-08 16:00）', async () => {
   const src = await readFile(new URL('../lib/pet/index.js', import.meta.url), 'utf8')
-  assert.match(src, /asleepFromEvents\(events/)
+  assert.match(src, /awakeByActivity\(base\.turnActive, base\.lastActivityAt/)
+  assert.match(src, /base\.turnActive = true/)
+  assert.match(src, /base\.lastActivityAt = now/)
+  assert.match(src, /idleSleepMin: idleMinutes\(cfg\?\.pet\?\.idleSleepMin\)/)
+  assert.doesNotMatch(src, /asleepFromEvents/)
   assert.doesNotMatch(src, /deriveStatus/)
   assert.doesNotMatch(src, /wokeToday/)
 })

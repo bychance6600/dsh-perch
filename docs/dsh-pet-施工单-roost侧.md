@@ -89,15 +89,17 @@ ctx.on('session/event', (session, event) => {
 
 | 事件 | 档 | 停留 |
 | --- | --- | --- |
-| `turn/start` 或 human 的 `user/message` | `thinking` | — |
+| `turn/start` 或 human 的 `user/message` | `thinking`；`turnActive=true`，刷新 `lastActivityAt` | — |
 | 工具在跑（见 §1）或 `phase` 为 `browsing/writing` | `acting` | — |
-| `assistant/message` 有 text | 保持 `thinking`（或 `acting`），同时推 `say` | — |
-| `turn/end` 成功 | `done` | 2 秒 → `waiting` |
-| `turn/end` 失败 / `prompt-failed` | `error` | 5 秒 → `waiting` |
-| `deriveStatus().awake === false` 且无回合 | `act:sleep` | 60 秒宽限 |
-| 新回合开始或 `awake === true` | `act:wake` | — |
+| `assistant/message` 有 text | 保持 `thinking`（或 `acting`），同时推 `say`；刷新 `lastActivityAt` | — |
+| `turn/end` 成功 | `done`；`turnActive=false`，刷新 `lastActivityAt` | 2 秒 → `waiting` |
+| `turn/end` 失败 / `prompt-failed` | `error`；`turnActive=false`，刷新 `lastActivityAt` | 5 秒 → `waiting` |
+| `turnActive===false` 且距 `lastActivityAt` ≥ `idleSleepMin` | `act:sleep` | 下一次她自己的动静前一直睡 |
+| `turnActive===true` 或距 `lastActivityAt` < `idleSleepMin` | `act:wake` | — |
 
-`why` 只用事实：`思考：模型回合中`、`动手：在翻 B 站`、`等：她醒着，没在做事`、`出错：回合失败`、`成了：这一轮完了`。不写评价。
+`idleSleepMin` 默认 5、范围 1–60（`config.pet.idleSleepMin`，设置页「插件」页）。判据只看回合与动静：回合进行中一律算醒，五分钟只在回合结束后起算；余额 / 通知 / 日历 / 到点本身不算动静。
+
+`why` 只用事实：`思考：回合进行中`、`思考：工具已返回`、`动手：在翻 B 站`、`等：回合已结束，等下一次动静`、`出错：回合失败`、`成了：这一轮结束了`。说哪一段、从哪儿来，不写评价。
 
 ### 3.4 镜像（`lib/pet/mirror.js`）
 
@@ -145,11 +147,11 @@ ctx.on('session/event', (session, event) => {
 
 ## 5. 测试
 
-- `test/pet-state.test.mjs`：给定事件序列 → 期望的 `state` 序列（含 done/error 停留、睡醒宽限）。
+- `test/pet-state.test.mjs`：给定事件序列 → 期望的 `state` 序列（含 done/error 停留、按回合与动静判睡）。
 - `test/pet-mirror.test.mjs`：分句、200 字、去重、短句过滤、final。
 - `test/pet-bridge.test.mjs`：用一个假 body（`test/fixtures/fake-body.mjs`，Node 脚本说协议）跑：握手、say 排队、ack 超时、脏行、EOF、重试三次后 dead。
 - 测试不碰真实数据目录；用 `tmp` root。
-- 全量基线：`node --test --test-isolation=none`，本次完成后为 1324 条 / 1313 过 / 9 条已知红 / 2 skip；加了测试要更新 `AGENTS.md` 的基线数字。
+- 全量基线：`node --test --test-isolation=none`，本次完成后为 1325 条 / 1314 过 / 9 条已知红 / 2 skip；加了测试要更新 `AGENTS.md` 的基线数字。
 
 ---
 
@@ -161,7 +163,7 @@ ctx.on('session/event', (session, event) => {
 | 2 | 开启后，她在侧栏说一句 → body 收到逐字 `say`；标点不改 |
 | 3 | 她说一句、同时调 `pet_act` → 两者都到 |
 | 4 | 五档跟事件走；无工具事件时按 §1 降级 |
-| 5 | 她睡了/不在 → `act:sleep`；她回来 → `act:wake` |
+| 5 | 回合结束超过 `idleSleepMin`（默认 5 分钟）→ `act:sleep`；`turn/start`、`tool/call`、`assistant/message` 任一 → `act:wake`；回合进行中停十分钟也不睡 |
 | 6 | 聊天框输入原文到达 `sayToHer`；guard 命中时零输出 |
 | 7 | body 没装/路径错/崩溃 → 只记日志，她的话与工具不受影响 |
 | 8 | 退出 roost → body 2 秒内退出，无残留 |

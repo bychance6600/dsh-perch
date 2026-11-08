@@ -14,6 +14,7 @@ import {
   PET_STATES,
   STATE_LABELS,
   asleepFromEvents,
+  awakeByActivity,
   awakeChange,
   holdLeft,
   initialState,
@@ -26,7 +27,7 @@ import {
 test('初始档是「等」，五档的界面字都是中文', () => {
   const s = initialState(1000)
   assert.equal(s.state, 'waiting')
-  assert.equal(s.why, '等：她醒着，没在做事')
+  assert.equal(s.why, '等：回合已结束，等下一次动静')
   assert.equal(s.until, 0)
   assert.deepEqual([...PET_STATES], ['thinking', 'acting', 'waiting', 'error', 'done'])
   assert.equal(labelOf('thinking'), '思考')
@@ -52,7 +53,7 @@ test('动手：tool/call 按工具名说一句事实，tool/result 回思考', (
 
   const b = reducePetState(a, { type: 'tool/result', data: {} }, { now: 20 })
   assert.equal(b.state, 'thinking')
-  assert.equal(b.why, '思考：刚动完手')
+  assert.equal(b.why, '思考：工具已返回')
 
   // assistant/message 只影响气泡，不改档。
   assert.equal(reducePetState(b, { type: 'assistant/message' }, { now: 30 }).state, 'thinking')
@@ -61,11 +62,11 @@ test('动手：tool/call 按工具名说一句事实，tool/result 回思考', (
 test('回合完了停 2 秒「成了」，失败停 5 秒「出错」，到点回「等」', () => {
   const done = reducePetState(initialState(0), { type: 'turn/end', data: { reason: { kind: 'completed' } } }, { now: 100 })
   assert.equal(done.state, 'done')
-  assert.equal(done.why, '成了：这一轮完了')
+  assert.equal(done.why, '成了：这一轮结束了')
   assert.equal(holdLeft(done, 100), 2000)
   assert.equal(stateAt(done, 2099).state, 'done')
   assert.equal(stateAt(done, 2100).state, 'waiting')
-  assert.equal(stateAt(done, 2100).why, '等：她醒着，没在做事')
+  assert.equal(stateAt(done, 2100).why, '等：回合已结束，等下一次动静')
 
   const bad = reducePetState(initialState(0), { type: 'turn/end', data: { reason: { kind: 'error' } } }, { now: 100 })
   assert.equal(bad.state, 'error')
@@ -86,6 +87,19 @@ test('睡不睡看账本最后一条 sleep 之后有没有事，不看时段', (
   assert.equal(asleepFromEvents([sleep, { type: 'meta', text: 'wake:2026-11-08 ?' }], now), false)
   assert.equal(asleepFromEvents([{ type: 'meta', text: 'sleep:2026-11-07' }, sleep], now), true)
   assert.equal(asleepFromEvents([sleep, { type: 'meta', text: 'sleep:2026-11-07' }], now), false)
+})
+
+test('醒着 = 回合进行中，或距最后一次动静不到 idleSleepMin（2026-11-08 16:00）', () => {
+  const now = 10 * 60_000
+  assert.equal(awakeByActivity(true, 0, now, 5), true)
+  assert.equal(awakeByActivity(false, now - 5 * 60_000 + 1, now, 5), true)
+  assert.equal(awakeByActivity(false, now - 5 * 60_000, now, 5), false)
+  assert.equal(awakeByActivity(false, now - 59_000, now, 1), true)
+  assert.equal(awakeByActivity(false, now - 60_000, now, 1), false)
+  // 没有记录过动静 = 不醒；坏值落回默认 5 分钟，不变成 0。
+  assert.equal(awakeByActivity(false, 0, now, 5), false)
+  assert.equal(awakeByActivity(false, now - 30_000, now, 'abc'), true)
+  assert.equal(awakeByActivity(false, now - 5 * 60_000, now, 'abc'), false)
 })
 
 test('睡和醒只在真的翻面时各发一次动作', () => {

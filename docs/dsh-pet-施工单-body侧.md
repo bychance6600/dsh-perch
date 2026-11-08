@@ -289,9 +289,9 @@ UI 与窗口手测，列一张清单（见第 12 节）。
 
 // roost → 你
 {"t":"hello","v":1,"roost":"0.1.0"}
-{"t":"state","state":"thinking","why":"思考：模型回合中"}
+{"t":"state","state":"thinking","why":"思考：回合进行中"}
 {"t":"say","id":"s1","seq":0,"text":"在翻今天推来的几条。","final":true}
 {"t":"act","action":"nod","why":"她点头"}
-{"t":"state","state":"waiting","why":"等：她醒着，没在做事"}
+{"t":"state","state":"waiting","why":"等：回合已结束，等下一次动静"}
 {"t":"act","action":"sleep","why":"她不在"}
 ```
