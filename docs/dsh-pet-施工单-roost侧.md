@@ -4,6 +4,7 @@
 - 你改的是 `D:\fish\dsh-roost`。body 侧另一个窗口在写 `D:\fish\dsh-roost-pet`，并**已拿到** `docs/dsh-pet-施工单-body侧.md`。
 - 需求准绳：`docs/dsh-pet-给roost设计.md`（29 条）。本单只写 roost 这半边。
 - 约束照旧：零依赖、`events.jsonl` 只追加、新输入口过 `lib/guard.js`、不加人格设置界面、不改成长口径。
+- **协调板（2026-11-08 起）**：`D:\fish\dsh-pet-协调.md`，append-only、不进 git。每轮开始先读最后几节「当前下一步 / 给 ROOST / 给 BODY」；做完在末尾追加一条 `## [ROOST] 2026-11-08 HH:MM`，写「做完：…，提交 …」或「卡住：…」。不改上面的内容，不提交这个文件。roost 当前这一轮先跑完，下一轮再按此执行。
 
 ---
 
@@ -34,11 +35,13 @@ roost 是脑子，pet 是身体。roost 负责：开关、起进程、订阅她�
 ```js
 pet: {
   enabled: false,        // 默认关；改完要重启才生效（boot 时读）
-  path: '',              // body 的可执行文件，或 electron 入口脚本
+  path: '',              // 打包后的 body 可执行文件；开发态可填 electron.exe
+  repo: '',              // 仅开发态：body 仓库根（electron.exe <repo>）；打包产物不用
   args: [],              // 额外参数
   size: 1.0,             // 0.5–2.0
   position: '',          // '' = body 记住上次位置；或 'bottom-right'
   clickThrough: true,
+  petId: 'default',      // 宠物包 id；--pet=<id>
 },
 ```
 
@@ -60,10 +63,14 @@ test/pet-bridge.test.mjs  test/pet-state.test.mjs  test/pet-mirror.test.mjs
 ### 3.1 `startPet(ctx, deps)`
 
 - 读 `deps.config.pet`；`enabled` 假 → 直接返回 `() => {}`（不 spawn、不注册工具、不挂事件）。
-- `spawn(pet.path, [...pet.args], { stdio: ['pipe','pipe','pipe'], cwd: dirname(pet.path) })`（cwd 是宠物包所在目录，不是她的数据目录）。
+- `const spec = entrySpec(pet); spawn(spec.path, spec.args, { stdio: ['pipe','pipe','pipe'], cwd: spec.cwd, windowsHide: true })`。两种入口由 `lib/pet/entry.js` 的 `entrySpec()` 统一解析：打包产物直接起、`cwd` 是 exe 所在目录；开发态 `pet.path` 指 `node_modules/electron/dist/electron.exe`，`pet.repo` 填 body 仓库根（缺省只从标准布局反推，推不出就报错，不猜别的路径），参数前面加仓库根、`cwd` 也是仓库根。`pet.args` 原样接在最后。
+- 参数由 `lib/pet/entry.js` 生成：`--protocol=1 --size=… [--position=…] --click-through=0|1 --pet=<id>`，再接 `pet.args`。spawn 前从 env 删掉 `ELECTRON_RUN_AS_NODE`。
+  入口约定正文在 body 仓库的 `docs/launch.md`；不要在这里另写一份。
 - 子进程 stdout 按行读；stderr 收进 roost 日志（前缀 `[pet]`）。
-- 握手：3 秒内收 `hello`；10 秒没完成 → kill + 退避 1/5/15 秒重试，连续 3 次置 `dead`，只写日志。
-- 返回的 `off()` 要：停订阅、发 `bye`、等 2 秒、`kill`、清定时器。
+- 握手：10 秒内收 `hello`；没收到 → kill，按 1 秒 / 5 秒退避重试；总共 3 次（第一次 + 两次重试），第三次置 `dead`，只写日志。
+- 退出码：`0` 正常关掉，不重拉；`3`（已经有一只）/ `4`（参数错）直接 `dead`；
+  `2` / `1` / 信号 / 其他按退避重试。body 先发 `bye` 再退，不管退出码都按正常退出。
+- 返回的 `off()` 要：停订阅、发 `bye`、等 2 秒、`kill`、清定时器（含重试与 `bye` 的定时器）。
 
 ### 3.2 订阅
 
@@ -142,7 +149,7 @@ ctx.on('session/event', (session, event) => {
 - `test/pet-mirror.test.mjs`：分句、200 字、去重、短句过滤、final。
 - `test/pet-bridge.test.mjs`：用一个假 body（`test/fixtures/fake-body.mjs`，Node 脚本说协议）跑：握手、say 排队、ack 超时、脏行、EOF、重试三次后 dead。
 - 测试不碰真实数据目录；用 `tmp` root。
-- 全量基线：`node --test --test-isolation=none`，本次完成后为 1304 条 / 1293 过 / 9 条已知红 / 2 skip；加了测试要更新 `AGENTS.md` 的基线数字。
+- 全量基线：`node --test --test-isolation=none`，本次完成后为 1320 条 / 1309 过 / 9 条已知红 / 2 skip；加了测试要更新 `AGENTS.md` 的基线数字。
 
 ---
 

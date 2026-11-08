@@ -198,3 +198,25 @@ test('B 站与抖音共用一个 0–6 的每日上限（B15）', () => {
   assert.equal(z.browse.perDay, 0)
   assert.equal(z.browse.douyin.perDay, 0)
 })
+
+test('桌宠入口参数：大小夹住、位置只认白名单、穿透默认开（m09850）', () => {
+  const d = normalizeConfig({})
+  assert.equal(d.pet.size, 1.0)
+  assert.equal(d.pet.position, '')
+  assert.equal(d.pet.clickThrough, true)
+
+  const c = normalizeConfig({ pet: { enabled: true, path: ' D:/pet.exe ', repo: ' D:/body ', size: 9, position: '../x', clickThrough: false, petId: 'cat-2' } })
+  assert.equal(c.pet.enabled, true)
+  assert.equal(c.pet.path, 'D:/pet.exe')
+  assert.equal(c.pet.repo, 'D:/body')
+  assert.equal(c.pet.size, 2)
+  assert.equal(c.pet.position, '')
+  assert.equal(c.pet.clickThrough, false)
+  assert.equal(c.pet.petId, 'cat-2')
+
+  assert.equal(normalizeConfig({ pet: { size: 0.1 } }).pet.size, 0.5)
+  assert.equal(normalizeConfig({ pet: { size: 'abc' } }).pet.size, 1.0)
+  assert.equal(normalizeConfig({ pet: { position: 'top-left' } }).pet.position, 'top-left')
+  assert.equal(normalizeConfig({}).pet.petId, 'default')
+  assert.equal(normalizeConfig({ pet: { petId: '../x' } }).pet.petId, 'default')
+})

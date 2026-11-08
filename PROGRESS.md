@@ -4,9 +4,23 @@
 
 **0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过）。A 段 35 条与 B 段 19 条验收全部收口（A1 于 2026-11-07 16:12 真机通过）。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1304 条 / 1293 过 / 9 红**（另有 2 skip，2026-11-08 桌宠 roost 侧接入后核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1320 条 / 1309 过 / 9 红**（另有 2 skip，2026-11-08 桌宠入口按 launch.md 改完后核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
+
+## 桌宠入口按 launch.md（2026-11-08，m10008）——已改
+
+- body 侧的启动约定已定稿在 `D:/fish/dsh-roost-pet/docs/launch.md`：`pet.path` 指向打包后的 `dsh-roost-pet.exe`（mac 是 .app 里的可执行文件）；开发态才用 `<repo>/node_modules/electron/dist/electron.exe <repo>`。stdio 三个 pipe、不 detached、不经 shell；`cwd` 是打包产物所在目录，开发态是 body 仓库根；spawn 前从 env 删掉 `ELECTRON_RUN_AS_NODE`。参数顺序 `--protocol=1 --size=… [--position=…] --click-through=0|1 --pet=<id>`，再接 `config.pet.args`；`--pet` 缺省 `default`。
+
+- 退出码以 `launch.md` §3 与 `dsh-roost-pet/lib/exit.js` 为准：0 正常 / 1 未分类崩溃 / 2 握手或协议失败 / 3 已有实例 / 4 参数或配置错；`PROGRESS` 只在这里记一次，用户口述里的「3 握手失败 / 4 已有实例」与文件对调，已按文件实现并回报。0 与「自己 bye」不重拉；3/4 置 dead；1/2/信号按 1 秒、5 秒退避，最多 3 次。
+
+- 代码：`lib/pet/entry.js` 重写（`petIdOf` / `bodyArgs` / `isElectronPath` / `entrySpec` / `childEnv` / `classifyExit`）；`lib/pet/index.js` 的 `spawnOnce` 改用 `entrySpec(cfg.pet)` 与 `childEnv(process.env)`，stdio 固定三 pipe、`windowsHide`；`lib/settings.js` 的 `pet` 默认值加 `repo:''`、`petId:'default'`，并做长度与白名单夹取；设置页宠物包路径提示写明打包产物与开发态两种填法，没有新增输入框。
+
+- 开发态不猜路径：`pet.path` 是 electron.exe 时，`repo` 取 `pet.repo`；没填才从标准布局反推，且要求 `package.json` 的 name 是 `dsh-roost-pet`，推不出就报「请填 pet.repo」。
+
+- 测试：`test/pet-entry.test.mjs` 14 条（默认/自定义 petId、大小与位置、非法 petId、打包产物 cwd、开发态反推与显式 repo、isElectronPath、childEnv 不改入参、退出码三组、常量）；`test/pet-index.test.mjs` 与 `test/settings.test.mjs` 同步改断言。定向 38/38；全量 **1320 条 / 1309 过 / 9 红 / 2 skip**（/tmp/full-pet-launch.log），9 红与已知环境红同名。
+
+- 真 spawn 尚未跑，顺序等 body 侧给；协议与入口测试都用假身体锁死。
 
 ## 她复述了整段提示词（2026-11-08，m09172）——已修
 
@@ -24,7 +38,7 @@
 - 代码：新增 `lib/pet/state.js`（事件→五档，`thinking/acting/waiting/error/done`，中文档位，done 停 2 秒 / error 停 5 秒回 waiting）、`lib/pet/mirror.js`（`assistantText` → 按句切、单条 ≤200、同 `id:seq` 去重、8 秒没 ack 丢弃、队列上限 20）、`lib/pet/bridge.js`（注入 `{readable,writable}`，16KB 行上限，3 秒 hello 超时，坏 JSON 不崩）、`lib/pet/tool.js`、`lib/pet/index.js`（spawn 三次失败置 dead 只记一次，退避可被 `off()` 取消）。
 - 五点口径已落：① `pet_act` 不进 `FISH_TOOLS`，只在 `petEnabled` 时由 `registerToolRestrict` 的 `extra` 追加，`selfcheck` 的 `expected` 跟 `petOn` 走；② 测试用 `test/fixtures/fake-body.mjs` 的 `PassThrough`，不真 spawn；③ `pet.enabled` / `pet.path` 进设置页「插件」、`buildConfig()` 与 `/config` 白名单；④ `/pet/status` 只回中文档位与事实，不出现 need 模型英文名；⑤ `talkSessionId` 拿不到就不挂、不刷日志。
 - 接线：`lib/index.js` 在 `registerObserve` 前 `startPet`，关闭时 push `off`；`petSendAct` 传给工具侧。默认 `pet.enabled=false`，零副作用（不 spawn、不订阅、无网络）。
-- 测试：`pet-state` 5 条、`pet-mirror` 5 条、`pet-bridge` 7 条、`pet-tool` 3 条、`pet-index` 4 条；定向 p5/naming/client/blank/selfcheck/boot/restrict/settings 141/141。全量 **1304 条 / 1293 过 / 9 红 / 2 skip**（/tmp/full-pet-final.log），9 红与已知环境红同名。
+- 测试：`pet-state` 5 条、`pet-mirror` 5 条、`pet-bridge` 7 条、`pet-tool` 3 条、`pet-index` 4 条；定向 p5/naming/client/blank/selfcheck/boot/restrict/settings 141/141。当时全量 **1304 条 / 1293 过 / 9 红 / 2 skip**（/tmp/full-pet-final.log），9 红与已知环境红同名。
 - T0 探针结论已写进 `docs/dsh-pet-施工单-roost侧.md` 附录 A：走路径 1，`acting` 精确到 `tool/call` → `tool/result`，不降级到 phase。
 - `git grep` 的个人记号已清零（`test/channel-router.test.mjs:245` 与 `test/guard.test.mjs:232` 的 fixture 名字改成「小满」）。
 ## 两份说好的文件（2026-11-07，m08813）

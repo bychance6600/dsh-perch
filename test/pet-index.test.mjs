@@ -3,7 +3,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -48,6 +48,14 @@ test('状态只给中文档位，不出现 need / 内部英文名', () => {
   const s = petStatus()
   assert.ok(['思考', '动手', '等', '出错', '成了'].includes(s.state), s.state)
   assert.doesNotMatch(`${s.state} ${s.why}`, /need|thinking|acting|waiting|error|done/i)
+})
+
+test('启动参数、握手超时、退出码都走入口约定，不各写一份', async () => {
+  const src = await readFile(new URL('../lib/pet/index.js', import.meta.url), 'utf8')
+  assert.match(src, /entrySpec\(cfg\.pet/)
+  assert.match(src, /env: childEnv\(process\.env\)/)
+  assert.match(src, /helloTimeoutMs: HELLO_TIMEOUT_MS/)
+  assert.match(src, /classifyExit\(code, signal/)
 })
 
 test('petEnabled 只认 true + 非空路径', () => {
