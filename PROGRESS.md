@@ -4,7 +4,7 @@
 
 **0.1.0 重建中。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过）。A 段 35 条与 B 段 19 条验收全部收口（A1 于 2026-11-07 16:12 真机通过）。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1279 条 / 1268 过 / 9 红**（另有 2 skip，2026-11-08 复述提示词修复后核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1303 条 / 1292 过 / 9 红**（另有 2 skip，2026-11-08 桌宠 roost 侧接入后核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
 
@@ -18,6 +18,15 @@
 - 测试：`test/guard.test.mjs` 3 条（正文+整段提示词只留正文、整段复述返回空、只有一种标记时不动）；`test/channel-router.test.mjs` 1 条（正文+提示词+DSML 只发正文，事件流也干净）。定向 guard / channel-router / turns 79/79；全量 **1279 条 / 1268 过 / 9 红 / 2 skip**（/tmp/full-promptecho2.log），9 红与已知环境红同名。
 - 需要重启 DSH 才会重载 `router.js` / `turns.js` / `guard.js`；重启后让她再走一次「读文件 → 改文件 → 回话」，确认出门的只有她自己的话。
 
+## 桌宠 roost 侧（2026-11-08，m09369）——已接进主包
+
+- 需求：dsh-pet 只是身体，roost 是脑子。协议唯一来源是 `https://github.com/bychance6600/dsh-roost-pet/blob/main/docs/protocol.md`（v1，一行一 JSON，stdio）；身体不生成台词、不自动打招呼，聊天框原文只走 `sayToHer`。
+- 代码：新增 `lib/pet/state.js`（事件→五档，`thinking/acting/waiting/error/done`，中文档位，done 停 2 秒 / error 停 5 秒回 waiting）、`lib/pet/mirror.js`（`assistantText` → 按句切、单条 ≤200、同 `id:seq` 去重、8 秒没 ack 丢弃、队列上限 20）、`lib/pet/bridge.js`（注入 `{readable,writable}`，16KB 行上限，3 秒 hello 超时，坏 JSON 不崩）、`lib/pet/tool.js`、`lib/pet/index.js`（spawn 三次失败置 dead 只记一次，退避可被 `off()` 取消）。
+- 五点口径已落：① `pet_act` 不进 `FISH_TOOLS`，只在 `petEnabled` 时由 `registerToolRestrict` 的 `extra` 追加，`selfcheck` 的 `expected` 跟 `petOn` 走；② 测试用 `test/fixtures/fake-body.mjs` 的 `PassThrough`，不真 spawn；③ `pet.enabled` / `pet.path` 进设置页「插件」、`buildConfig()` 与 `/config` 白名单；④ `/pet/status` 只回中文档位与事实，不出现 need 模型英文名；⑤ `talkSessionId` 拿不到就不挂、不刷日志。
+- 接线：`lib/index.js` 在 `registerObserve` 前 `startPet`，关闭时 push `off`；`petSendAct` 传给工具侧。默认 `pet.enabled=false`，零副作用（不 spawn、不订阅、无网络）。
+- 测试：`pet-state` 5 条、`pet-mirror` 5 条、`pet-bridge` 7 条、`pet-tool` 3 条、`pet-index` 3 条；定向 p5/naming/client/blank/selfcheck/boot/restrict/settings 141/141。全量 **1303 条 / 1292 过 / 9 红 / 2 skip**（/tmp/full-pet2.log），9 红与已知环境红同名。
+- T0 探针结论已写进 `docs/dsh-pet-施工单-roost侧.md` 附录 A：走路径 1，`acting` 精确到 `tool/call` → `tool/result`，不降级到 phase。
+- `git grep` 的个人记号已清零（`test/channel-router.test.mjs:245` 与 `test/guard.test.mjs:232` 的 fixture 名字改成「小满」）。
 ## 两份说好的文件（2026-11-07，m08813）
 
 - 需求：她想跟另一个项目的需求窗口对接，只要能读写两份文件。用户选定 `docs/dsh-pet-功能清单.md` 与 `docs/dsh-pet-需求与验收.md`，并说（m09086）：新项目具体怎么实现还没定，能读写这两份就行。
