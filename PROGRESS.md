@@ -4,7 +4,7 @@
 
 **0.1.0 已发布（2026-11-08，tag `v0.1.0`）。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过）。A 段 35 条与 B 段 19 条验收全部收口（A1 于 2026-11-07 16:12 真机通过）。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1349 条 / 1338 过 / 9 红**（另有 2 skip，2026-11-09 空回复兜底后核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1350 条 / 1339 过 / 9 红**（另有 2 skip，2026-11-09 `d91e911` 后核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
 
@@ -16,7 +16,7 @@
 - 修法：`lib/derive.js` 的 `mentions` 改成先用 `Int32Array` 累加交集、用 stamp 去重，再算一次比值；在 herTexts 里预存 `gramTotal = norm.length - 1`，避免重复遍历 Map。判定仍是 `2*交集/(|A|+|B|) >= 0.6`，输出逐字节等价。
 - 实测：同一份真实事件流，`deriveSelf` 559 → 159 ms，`stability`（24 抽样）13471 → 4250 ms，`writeSelfDoc` 14082 → 4416 ms。真机重启（2026-11-09 16:20:57.536 进程创建 → 16:21:07.456 locale-cache）**启动到可用 9.92 秒**，之前同口径约 26 秒。
 - 测试与提交：普通 `node --test` 1349 条 / 1347 过 / 0 失败 / 2 skip；`--test-isolation=none` 1349 条 / 1338 过 / 9 红 / 2 skip（9 条已知环境红）。提交 `39fbf68`「perf(derive): mentions 不再逐条重算 dice，启动期少约 12 秒」，已推 origin/main。
-- 还剩：第二次 `stability()` 仍约 4.2 秒（`observe.js:281` 与 `socialgate.js:139` 缓存键不同）；`--type=gpu-process` 长期吃满约 99% 单核是另一件事。
+- 第二次 `stability()` 已由 `d91e911` 的共享 trial 缓存降到约 0.0ms（同一份事件流第一次约 3.5 秒）；还没在重启后复测整段启动。`--type=gpu-process` 长期吃满约 99% 单核是另一件事。
 
 
 ## 她这一轮只吐模型标记时再问一次（2026-11-09，m13843）——已改
