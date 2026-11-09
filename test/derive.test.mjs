@@ -314,3 +314,17 @@ test('stability 对同一批事件只算一次（issue #3 缓存）', () => {
   assert.deepEqual(a, b)
   assert.ok(a.sample > 0, '有判断时应该真的抽过样')
 })
+
+test('stability：换了渲染参数也复用同一批 trial 模型（2026-11-09 启动慢）', () => {
+  clearStabilityCache()
+  const events = synthetic(200)
+  const a = stability(events, { stageSpanDays: 30 }, { shown: 2, budget: 1800 })
+  const t0 = performance.now()
+  const b = stability(events, { stageSpanDays: 30 }, { shown: 3, budget: 1200 })
+  const ms = performance.now() - t0
+  assert.equal(a.sample, b.sample)
+  assert.equal(a.k, b.k)
+  assert.equal(a.beliefs, b.beliefs)
+  assert.notEqual(a.score, b.score, 'shown/budget 变了要重新渲染，不能直接命中外层缓存')
+  assert.ok(ms < 100, `第二次换了渲染参数只该渲染，实际又算了 ${ms.toFixed(0)}ms`)
+})
