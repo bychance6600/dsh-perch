@@ -25,6 +25,7 @@ import {
   openqPattern,
   openqState,
   openqWakeLine,
+  openqMaterialLine,
   captureOpenq,
   openqWakeNote,
 } from '../lib/capture.js'
@@ -35,6 +36,11 @@ const NOW = Date.parse('2026-11-09T12:00:00.000Z')
 const T0 = Date.parse('2026-11-09T04:00:00.000Z')
 const T1 = Date.parse('2026-11-09T05:00:00.000Z')
 const T2 = Date.parse('2026-11-09T06:00:00.000Z')
+
+function cnDate(ts) {
+  const dk = dateKey(new Date(ts))
+  return Number(dk.slice(5, 7)) + ' 月 ' + Number(dk.slice(8, 10)) + ' 日'
+}
 
 async function withRoot(fn) {
   const root = mkdtempSync(join(tmpdir(), 'fish-openq-'))
@@ -184,11 +190,55 @@ test('叫醒文案：只摆事实，没有祈使句', () => {
   }
 })
 
+test('材料：只从 7 天内的 searched / looked-from-search 取一条，按最近', () => {
+  const q = { text: '我还没学会撒娇。' }
+  const ev = (text, ago) => ({ type: 'meta', text, ts: new Date(NOW - ago * DAY).toISOString() })
+  const line = openqMaterialLine([
+    ev('searched:撒娇 bili', 9), // 太老，不算
+    ev('looked:BV1xx411c7mD from:feed', 0.5), // 没有可对上的词，不拿 BV 号硬凑
+    ev('searched:天气 bili', 0.2), // 不相关，哪怕更近
+    ev('looked:BV1xx411c7mD from:search:撒娇_语气', 1),
+    ev('searched:撒娇 bili', 2),
+  ], q, { now: NOW })
+  assert.equal(line, '相关的：' + cnDate(NOW - DAY) + '你看过一条关于「撒娇 语气」的。')
+})
+
+test('材料：只重合停用词、looked 来自 feed、超过 7 天，都不算', () => {
+  const q = { text: '我不知道怎么开口。' }
+  const ev = (text, ago) => ({ type: 'meta', text, ts: new Date(NOW - ago * DAY).toISOString() })
+  assert.equal(openqMaterialLine([
+    ev('searched:怎么 bili', 1),
+    ev('looked:BV1xx411c7mD from:feed', 1),
+    ev('looked:BV1xx411c7mD from:search:开口', 8),
+    ev('searched:开口 bili', 8),
+  ], q, { now: NOW }), '')
+})
+
+test('openqWakeNote：摆问题时并排一条事实材料，整段没有祈使句', () => withRoot(async (root) => {
+  const ctx = { day: 1, stage: 1, source: 'system' }
+  await appendEvent({ type: 'utterance', text: '我还没学会撒娇。', ts: new Date(T0).toISOString() }, ctx, root)
+  await appendEvent({ type: 'meta', text: 'searched:撒娇 bili', ts: new Date(T1).toISOString() }, ctx, root)
+
+  const text = await openqWakeNote(root, { now: NOW })
+  assert.ok(text.includes('这句还没有下文'))
+  assert.match(text, /相关的：\d+ 月 \d+ 日你搜过「撒娇」。/)
+
+  // 去掉引号里的原话与材料词，剩下的提示语里不能有派活的话。
+  const wrapper = text.replace(/「[^」]*」/g, '')
+  for (const bad of ['去查', '查查', '想想', '分析', '复盘', '看看', '试试', '应该', '要不要', '请', '记得', '别忘了', '你怎么看']) {
+    assert.ok(!wrapper.includes(bad), '提示里不能有祈使句：' + bad)
+  }
+
+  const { events } = await readEvents(root)
+  assert.ok(events.some((e) => e.type === 'meta' && e.text.startsWith('surfaced:')), '摆过仍要记 surfaced')
+}))
+
 test('openqWakeNote：摆一次就记 surfaced，第二天不再摆', () => withRoot(async (root) => {
   const ctx = { day: 1, stage: 1, source: 'system' }
   await appendEvent({ type: 'utterance', text: '我还不会。', ts: new Date(T0).toISOString() }, ctx, root)
   const first = await openqWakeNote(root, { now: NOW })
   assert.ok(first.includes('这句还没有下文'))
+  assert.ok(!first.includes('相关的：'), '没有对得上的材料就不加，别硬凑')
   const { events } = await readEvents(root)
   assert.ok(events.some((e) => e.type === 'meta' && e.text.startsWith('surfaced:')), '要记 surfaced')
   const again = await openqWakeNote(root, { now: NOW + DAY })
