@@ -5,7 +5,7 @@
 ![deps](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![node](https://img.shields.io/badge/node-%E2%89%A522-339933)
 ![dsh](https://img.shields.io/badge/DSH-plugin-6a5acd)
-![tests](https://img.shields.io/badge/tests-1345%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-1347%20passing-brightgreen)
 
 **她住的地方，不是一个助手。**
 
@@ -198,7 +198,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 - **能不能上网**是材料层总闸：关掉之后 B 站、抖音一起停，连她手里的浏览工具也不再放行；醒来、说话、写日记照旧。
 - **时段**只拦「逛」（首页、排行、推荐流），不拦你递进来的链接和她主动点开的那一条。
 - **每天刷几次**：B 站与抖音共用一个上限 0–6；实际次数还受醒来次数限制。
-- **抖音**是可选的：主包只负责调子包。子包 `packages/dsh-roost-douyin/` 要一个真的 Edge / Chrome，第一次会打开窗口让你扫码；登录态留在 `<数据目录>/douyin-profile`。没装子包时，刷抖音静默跳过，不报错、不建目录。
+- **抖音**是可选的：主包只负责调子包。子包 `packages/dsh-roost-douyin/` 要一个真的 Edge / Chrome，第一次会打开窗口让你扫码；登录态留在 `<数据目录>/douyin-profile`。浏览器不会在 DSH 启动时打开，等她第一次真去看时才开，闲置 3 分钟自己关。没装子包时，刷抖音静默跳过，不报错、不建目录。
 - **看画面（她主动看时）**：只有她自己点开某一条视频时才抽帧拼图；报纸与推荐流不抽。需要 ffmpeg。
 - **黑名单**：关键词、太短不看、不看某些 UP 主。抖音共用关键词与时长，UP 主过滤只对 B 站。
 
@@ -294,7 +294,7 @@ node --test --test-isolation=none  # 沙箱 / 受限环境（跨文件会有假�
 node --test test/<file>.test.mjs   # 单文件
 ```
 
-当前基线：**1345 条 / 1334 过 / 9 红 / 2 skip**。9 条都是已知环境项（跨文件隔离互相干扰；`withFileLock` 偶发），单跑对应文件会绿。**不许新增红。**
+当前基线：**1347 条 / 1336 过 / 9 红 / 2 skip**。9 条都是已知环境项（跨文件隔离互相干扰；`withFileLock` 偶发），单跑对应文件会绿。**不许新增红。**
 
 零依赖是铁律：`dependencies` / `peerDependencies` / `devDependencies` 三个永远 `{}`，测试只用 `node:test`。
 

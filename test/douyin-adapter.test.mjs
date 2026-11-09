@@ -21,7 +21,7 @@ function fakeTransport(record = {}) {
       record.awaitPromise = opts?.awaitPromise
       return { ok: true, value: record.payload ?? '{"status_code":0}' }
     },
-    async close() { record.closed = true },
+    async close() { record.closed = true; record.closes = (record.closes ?? 0) + 1 },
   }
 }
 
@@ -44,7 +44,8 @@ test('抖音材料层：配置翻成传输层要的形状，profile 落在数据
   assert.equal(started.ok, true)
   assert.equal(record.opts.browserPath, 'C:/Edge/msedge.exe')
   assert.match(record.opts.profileDir, /douyin-profile$/)
-  assert.equal(record.launched, 1)
+  assert.equal(record.launched ?? 0, 0, 'start 只登记材料层，不许拉浏览器')
+  assert.equal(a.status().launched, false)
 })
 
 test('抖音材料层：浏览器路径也可以从「刷抖音」那边读', async () => {
@@ -66,11 +67,14 @@ test('抖音材料层：首页地址去掉空格再打开；没填就停在抖�
     transport: factory(record),
   })
   await a.start()
+  assert.equal(record.navigated, undefined, 'start 不该打开页面')
+  await a.api('/aweme/v1/web/aweme/detail/?aweme_id=1')
   assert.equal(record.navigated, 'https://www.douyin.com/?recommend=1')
 
   const record2 = {}
   const b = create({ root: 'C:/data', config: {}, transport: factory(record2) })
   await b.start()
+  await b.api('/aweme/v1/web/aweme/detail/?aweme_id=1')
   assert.match(record2.navigated, /^https:\/\/www\.douyin\.com\//)
 })
 
@@ -82,12 +86,41 @@ test('抖音材料层：只有一块浏览器，不接消息、不发消息（�
   assert.equal(a.onMessage, undefined, '材料层不该订阅入站消息：私信已删')
 })
 
-test('抖音材料层：重复 start 不重复拉浏览器', async () => {
+test('抖音材料层：重复 start 也不拉浏览器', async () => {
   const record = {}
   const a = create({ root: 'C:/data', config: {}, transport: factory(record) })
   await a.start()
   await a.start()
-  assert.equal(record.launched, 1)
+  assert.equal(record.launched ?? 0, 0)
+})
+
+test('抖音材料层：第一次读接口才拉浏览器，之后复用同一台', async () => {
+  const record = {}
+  const a = create({ root: 'C:/data', config: {}, transport: factory(record) })
+  await a.start()
+  assert.equal(record.launched ?? 0, 0)
+  const one = await a.api('/aweme/v1/web/aweme/detail/?aweme_id=1')
+  const two = await a.api('/aweme/v1/web/aweme/detail/?aweme_id=2')
+  assert.equal(one.ok, true)
+  assert.equal(two.ok, true)
+  assert.equal(record.launched, 1, '同一段使用里只开一次')
+  assert.equal(a.status().connected, true)
+  assert.equal(a.status().launched, true)
+})
+
+test('抖音材料层：闲置到点自己关浏览器，下次再开', async () => {
+  const record = {}
+  const a = create({ root: 'C:/data', config: {}, transport: factory(record), idleMs: 10 })
+  await a.start()
+  const one = await a.api('/aweme/v1/web/aweme/detail/?aweme_id=1')
+  assert.equal(one.ok, true)
+  await new Promise((r) => setTimeout(r, 40))
+  assert.equal(record.closed, true, '闲置后要关掉')
+  assert.equal(a.status().connected, false)
+  assert.equal(a.status().launched, false)
+  const two = await a.api('/aweme/v1/web/aweme/detail/?aweme_id=2')
+  assert.equal(two.ok, true)
+  assert.equal(record.launched, 2, '下一次用要重新开')
 })
 
 test('抖音材料层：没装子包时安静地失败，不抛异常', async () => {
@@ -99,21 +132,26 @@ test('抖音材料层：没装子包时安静地失败，不抛异常', async ()
 
 test('抖音材料层：浏览器没拉起来就如实说，下次还能再试', async () => {
   let n = 0
+  let closes = 0
   const a = create({
     root: 'C:/data',
     config: {},
     transport: async () => ({
       async launch() { n += 1; return { ok: false, why: '没找到 Edge 或 Chrome' } },
-      async close() {},
+      async close() { closes += 1 },
     }),
   })
-  const first = await a.start()
+  const started = await a.start()
+  assert.equal(started.ok, true, 'start 只登记，不在这里判断浏览器')
+  const first = await a.api('/aweme/v1/web/aweme/detail/?aweme_id=1')
   assert.equal(first.ok, false)
   assert.match(first.why, /Edge/)
   assert.equal(a.status().connected, false)
   assert.equal(a.status().lastError, first.why)
-  await a.start()
+  assert.equal(closes, 1, '拉不起来时要把半截进程收掉')
+  await a.api('/aweme/v1/web/aweme/detail/?aweme_id=2')
   assert.equal(n, 2, '失败之后 transport 要丢掉，下一次重新试')
+  assert.equal(closes, 2)
 })
 
 test('抖音材料层：读只读接口要等 Promise，不然拿回的是 "{}"', async () => {
@@ -172,8 +210,11 @@ test('抖音材料层：stop 关掉浏览器，状态回到未连接', async () 
   const record = {}
   const a = create({ root: 'C:/data', config: {}, transport: factory(record) })
   await a.start()
+  assert.equal(a.status().connected, false, '还没用，浏览器不该开')
+  await a.api('/aweme/v1/web/aweme/detail/?aweme_id=1')
   assert.equal(a.status().connected, true)
   await a.stop()
   assert.equal(record.closed, true)
+  assert.equal(record.closes, 1)
   assert.equal(a.status().connected, false)
 })

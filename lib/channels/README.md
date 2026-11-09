@@ -31,7 +31,7 @@ const off = adapter.onMessage(fn)  // → 注销函数
 `start / stop / status / api() / feed()`，没有 `send`、没有 `onMessage`——
 抖音私信已删。`router` 允许 `adapters` 里存在这种只读适配器：链接解析
 （`lib/dylink.js`）与刷抖音借它的 `api()` / `feed()`，但永远不会有消息从它进来。
-它的 `enabled` 只表示「这台浏览器能读报纸」。
+它的 `enabled` 只表示「这台浏览器能读报纸」。`start()` 只登记材料层、不拉浏览器；第一次 `api()/feed()` 才开，闲置 3 分钟自己关。
 
 ## 进来的一条消息（规范化后）
 

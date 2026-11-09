@@ -4,9 +4,18 @@
 
 **0.1.0 已发布（2026-11-08，tag `v0.1.0`）。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过）。A 段 35 条与 B 段 19 条验收全部收口（A1 于 2026-11-07 16:12 真机通过）。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1345 条 / 1334 过 / 9 红**（另有 2 skip，2026-11-09 立场第三类后核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1347 条 / 1336 过 / 9 红**（另有 2 skip，2026-11-09 抖音懒启动后核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
+
+## 抖音材料层不再在启动时拉浏览器（2026-11-09，m13498）——已改
+
+- 现象：只要开了「刷抖音」（`browse.douyin.enabled` 或 `channels.douyin.enabled` 任一为真），DSH 一启动就多一个 Edge/Chrome 进程，很占资源。
+- 原因：`lib/channels/host.js` 的 `boot()` 会把抖音材料层 `loadOne('douyin')` 起来，`startReaders()` 调适配器的 `start()`；`lib/channels/douyin.js` 的 `start()` 原来直接 `launch()` + `navigate(homeUrl)`。
+- 修法：适配器 `start()` 只 `makeTransport()` 登记材料层、置 `ready`，不 `launch`、不 `navigate`；`api()` 先看 `ready`（没登记就回「抖音没开」），再 `ensureLaunched()`，第一次真读接口时才开浏览器并导航，之后复用。`feed()` 走 `api()`，所以定时刷抖音也自动懒启。用 `busy` 计数 + `idleTimer`（`IDLE_CLOSE_MS = 3 * 60 * 1000`，`unref()`）在最后一次读完后闲置 3 分钟自动关；`stop()` 清定时器并关。`status()` 补 `enabled` / `launched` / `idleCloseMs`，旧字段 `connected/since/lastError/queued/sent/received` 保持原样。
+- 顺带修掉 `lib/douyinlook.js` 的 `what=comments` 分支：原来直接 `return`，浏览器留在后台；现在整段 `try/finally` 关掉，没给 id 的早退也关。适配器里 `launch` 返回失败或抛错时，也先 `close` 半截进程再丢掉。
+- 测试：`test/douyin-adapter.test.mjs` 新增「重复 start 也不拉浏览器」「第一次读接口才拉、之后复用」「闲置到点自己关，下次再开」；`test/douyin-look.test.mjs` 的 comments 两条补 `closed` 断言。定向 douyin-adapter + douyin-look + douyin-browse + channels-host 62/62；全量 `node --test --test-isolation=none` **1347 条 / 1336 过 / 9 红 / 2 skip**（/tmp/full-dy-lazy.log），9 红与已知环境红同名。
+- 需重启 DSH 才生效；之后启动日志应只有「douyin 材料层就绪：浏览器等第一次用再开」，没有浏览器进程。
 
 ## 立场第三类与同题归组（2026-11-09，m13079）——已改
 
@@ -185,7 +194,7 @@
 - 设置页：第一个页签「今天」（只读四段）、状态页拆「三道瓶颈 + 流水」、判断漂移折叠回一行、加渠道健康行（账本口径）、出门/梦的旧界面清掉。
 - 文档：`README.md` 写成 0.1.0 的项目文档（这是什么、与 river 的差别、装法、今天页、11 页导读、接 QQ、上网与 ffmpeg、工具面、世界书、数据、还没做完、测试）；`交接.md` 给新会话（机器事实、做完的提交、真机步骤、后面的顺序、踩过的坑）；`AGENTS.md` 按 0.1.0 重写；`CHANGELOG.md` 从 0.1.0 起；`install.ps1` 重写成 roost 版（可找 profile、装包、写 bundles、可选 ffmpeg）。
 - 清 river 时代的尾巴（2026-11-06）：七个环境变量 `DSH_FISH_*` → `DSH_ROOST_*`（含测试与文档）；`install.ps1` 整份重写（找 profile、`pnpm add`、写 `bundles`、可选 ffmpeg；profile 里挂着 river 时会停下提醒）；`NOTICE.md` 头像路径、`tools/check-install.mjs` 包名与提示、`tools/migrate-ledger.mjs`（必须显式给 `ROOST_SRC`，不猜旧目录）、`lib/upgrade.js`/`selfdoc.js`/`move.js`/`settings.js` 的旧注释；删掉被 git 跟踪的 `tmp-fix4.mjs`。子包 `packages/dsh-roost-douyin/` 的私信整机（`create`、`parseDmFrame`、`splitText`、DOM 点击/打字、`onEvent/enableNetwork`）与 `test/douyin-channel.test.mjs`、`test/douyin-frame.test.mjs` 一并删除；`lib/channels/sub.js` 去掉 `createSubAdapter`，只留 `loadSubModule()`。
-- 抖音适配器拆分：`lib/channels/douyin.js` 只剩浏览器 transport + `api()` / `feed()` / `status()`，私信整机（send、WS 帧入站、会话簿记、去重）删除；`host.js` 里 `channels.douyin.enabled` 改成「报纸能读」（与 `browse.douyin.enabled` 任一为真就起浏览器），只开材料时不建 people/journal/router；`douyinFeedOf()` 照旧给调度器的推荐流用；`sub.js` 加 `loadSubModule()`（先包名、再仓库里那份）；router 对没有 `send()` 的材料适配器回 `read-only-channel`。
+- 抖音适配器拆分：`lib/channels/douyin.js` 只剩浏览器 transport + `api()` / `feed()` / `status()`，私信整机（send、WS 帧入站、会话簿记、去重）删除；`host.js` 里 `channels.douyin.enabled` 改成「报纸能读」（与 `browse.douyin.enabled` 任一为真就登记材料层；2026-11-09 起浏览器等第一次读时才拉），只开材料时不建 people/journal/router；`douyinFeedOf()` 照旧给调度器的推荐流用；`sub.js` 加 `loadSubModule()`（先包名、再仓库里那份）；router 对没有 `send()` 的材料适配器回 `read-only-channel`。
 - QQ 重写（2026-11-06，照 `新项目-设计讨论.md` 渠道节，设计参考 `dsh-lanxi-qq`，不抄代码）：
   - `lib/channels/qq.js`：OneBot 11 标准子集；退避 2/5/10/30/60s；30s 心跳（`get_status`）；`replyToSelf`（她发过的 message_id 命中 reply 段）；`attachment{type,size}`；notice/request 不递；气泡按句切、单句 >4000 硬切、一次回复 >3 条每两条停 900ms；`sentIds` 只记她发出的 id；token 仍不进 status/日志。
   - `lib/channels/gate.js`：群冷却 120s（@ / 回复她 / 管理员豁免）、全局每分钟 30 条、每群每天 20 条、夜间 23:00–08:00 与工作日 9–12 / 14–18 群里只接点名；`explain` 补了新 reason。

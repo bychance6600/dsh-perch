@@ -394,18 +394,22 @@ test('what=comments：点名打开那条，读回几条别人的话，记 from:p
   assert.equal(r.ok, true)
   assert.match(t.state.navigated, /\/video\/7703602183127797026/)
   assert.match(r.text, /这个我也想去/)
+  assert.equal(t.state.closed, true, '评论读完要关浏览器（2026-11-09 修）')
   const lines = fs.readFileSync(path.join(root, 'events.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l))
   assert.ok(lines.some((e) => String(e.text) === 'looked:dy_7703602183127797026 from:pick'))
 })
 
 test('what=comments：没给号就说要哪一条；给的是链接也认', async () => {
-  const none = await lookFeedOnce({ root: tmpRoot(), cfg: cfgOn, transport: fakeTransport('[]'), what: 'comments', waitMs: 0 })
+  const noneT = fakeTransport('[]')
+  const none = await lookFeedOnce({ root: tmpRoot(), cfg: cfgOn, transport: noneT, what: 'comments', waitMs: 0 })
   assert.equal(none.ok, false)
   assert.match(none.note, /哪条/)
+  assert.equal(noneT.state.closed, true, '没给号也要把刚开的浏览器关掉')
   const t = fakeTransport(JSON.stringify(COMMENTS))
   const r = await lookFeedOnce({ root: tmpRoot(), cfg: cfgOn, transport: t, what: 'comments', id: 'https://www.douyin.com/video/7703602183127797026', waitMs: 0 })
   assert.equal(r.ok, true)
   assert.match(t.state.navigated, /7703602183127797026/)
+  assert.equal(t.state.closed, true)
 })
 
 

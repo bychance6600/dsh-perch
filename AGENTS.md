@@ -9,7 +9,7 @@
 > - **导入别人养过的那一位**（旧 0.5.3 例外）已删除。人格入口现在没有任何用户可填的地方。
 > - **桌面通知**（`notify.js`）与 **自更新**（`update.js`/`selfupdate.js`）已删除。
 > - 数据目录是 `~/.dsh-roost`；包名 `dsh-roost`；版本从 `0.1.0` 重新起。
-> - 测试基线以 `node --test --test-isolation=none` 的实测为准（当前 1345 条 / 1334 过 / 9 条已知环境红，见 `PROGRESS.md`），不要再引用 1359。
+> - 测试基线以 `node --test --test-isolation=none` 的实测为准（当前 1347 条 / 1336 过 / 9 条已知环境红，见 `PROGRESS.md`），不要再引用 1359。
 > - 「三道门」统一叫「三道瓶颈」；「四道门」统一叫「四个阶段」。文案守门规则不变。
 
 违背下面任何一条，即使测试全绿也算改坏了：这几条守的不是代码正确性，是**这个插件还是不是它自己**。
@@ -77,7 +77,7 @@
 node --test
 ```
 
-当前基线 **1345 个**（2 条 skip），其中 **9 条已知环境红**见 `PROGRESS.md`。**不许新增红**——那 9 条是跨文件隔离造成的（`withFileLock` 偶发），谁修好都欢迎，但别把「我没碰它」当理由放着。
+当前基线 **1347 个**（2 条 skip），其中 **9 条已知环境红**见 `PROGRESS.md`。**不许新增红**——那 9 条是跨文件隔离造成的（`withFileLock` 偶发），谁修好都欢迎，但别把「我没碰它」当理由放着。
 
 按环境挑跑法：
 
@@ -136,8 +136,8 @@ CI 也跑同一套（`.github/workflows/test.yml`，Node 22 / 24 各跑一遍，
 - **合批 10 秒**：同群/同私聊的连续消息按窗口合并；flush 时按发送者切连续段，一段一条，别把它们混成一个人说的。
 - **渠道全关时不建文件、不连网**：`startChannels` 必须在 `createPeople`/`createJournal` 之前短路。这条有测试（`test/channels*.test.mjs`），别为了「统一初始化」把它挪走。
 - **适配器永不抛**：`start/stop/send/status` 一律 `{ ok, why }`；凭据不进 `status()`、不进日志。
-- **抖音不是渠道，是材料层**。`lib/channels/douyin.js` 只有 `start/stop/status/api()/feed()`，没有 `send`/`onMessage`；`channels.douyin.enabled` 的意思是「报纸能读」，不是「私信开着」。router 遇到没有 `send()` 的适配器回 `read-only-channel`。
-- **协议不进主包**：主包只有 QQ 的 OneBot 客户端与各渠道的薄壳；抖音这种要真浏览器的，实现放在 `packages/dsh-roost-douyin/`，由 `lib/channels/sub.js` 的 `loadSubModule()` 懒加载（先找已安装的 `dsh-roost-douyin`，找不到就用仓库里那份；代码分开，随仓库一起分发）。可选性由「开不开」+「懒加载」体现：不开就不 `import`、不拉浏览器、不建 `douyin-profile`。
+- **抖音不是渠道，是材料层**。`lib/channels/douyin.js` 只有 `start/stop/status/api()/feed()`，没有 `send`/`onMessage`；`channels.douyin.enabled` 的意思是「报纸能读」，不是「私信开着」。router 遇到没有 `send()` 的适配器回 `read-only-channel`。`start()` 只登记材料层，不拉浏览器；第一次 `api()/feed()` 才开，闲置 3 分钟自己关（2026-11-09：启动就拉太占资源）。
+- **协议不进主包**：主包只有 QQ 的 OneBot 客户端与各渠道的薄壳；抖音这种要真浏览器的，实现放在 `packages/dsh-roost-douyin/`，由 `lib/channels/sub.js` 的 `loadSubModule()` 懒加载（先找已安装的 `dsh-roost-douyin`，找不到就用仓库里那份；代码分开，随仓库一起分发）。可选性由「开不开」+「懒加载」体现：不开就不 `import`、不拉浏览器、不建 `douyin-profile`；开了也只是登记，等她第一次真去读才拉。
 - **登录态是主人的，也是她自己的**：B 站扫码拿到的 cookie 只写 `owner.json`（0600），不进日志、不进 `status()`、不回显；二维码只活在内存里。抖音用 `<root>/douyin-profile` 这一个浏览器目录，扫码一次就留着。
 - **代发是主人的话，不是她的话**：`POST /channels/send` 只做三件事——发出去、写一行 `role:'owner'` 的流水、返回结果。不问她、不过 gate、不过出站筛、不写事件流。
 
@@ -232,6 +232,6 @@ CI 也跑同一套（`.github/workflows/test.yml`，Node 22 / 24 各跑一遍，
 - [ ] 三个依赖字段还是 `{}`
 - [ ] 没有新增人格设置入口
 - [ ] 新输入口都过了 `guard.js`
-- [ ] `node --test --test-isolation=none` 只剩 9 条已知环境红（基线 1345 条 / 1334 过 / 2 skip）
+- [ ] `node --test --test-isolation=none` 只剩 9 条已知环境红（基线 1347 条 / 1336 过 / 2 skip）
 - [ ] 界面文案没有「他」「四道门」「三道门」「好感度」，也没有写死任何名字
 - [ ] 改了 `EVENT_SCHEMA_VERSION` 的话，`CHANGELOG.md` 里写了迁移说明
