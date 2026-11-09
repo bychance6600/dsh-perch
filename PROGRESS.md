@@ -17,6 +17,7 @@
 - 测试：`test/client.test.mjs` + `test/boot.test.mjs` 65/65；全量 `node --test --test-isolation=none` 1361 条 / 1350 过 / 9 红 / 2 skip（`D:\fish\_archive\full-test2.log`），9 条红与已知环境红同名，无新增。
 - 侧栏入口（2026-11-09 追加）：`lib/client.js` 用 `ctx.slots.inject` + `ctx.slots.register` 注册 `sidebar.panellist`（id `roost-memory`，order 2，图标 + 文字「记忆图谱」）与 `main` keyed slot（iframe 装 `/dsh-roost/memory`）；「成长」页那行链接保留作兜底。未改宿主、未动 `@deepseek-ai` 包；全量 1361 条 / 1350 过 / 9 红 / 2 skip。
 - 「成长」页入口（2026-11-09 追加）：点击改走宿主 `layout.selectPanel('roost-memory')`，与左栏行同一套；拿不到 layout 服务才退回顶层 `window.open`，不再用 `target="_blank"`。定向 41/41。
+- 图谱 v2（2026-11-09 追加，m01865）：`/dsh-roost/api/memory` 每个节点补 `status`（active/refined/refuted）与 `mentions`；旧句从 revise 事件的 refs/verdict 补回（deriveSelf 的 beliefs 只含 active），被推翻边 `kind='refuted'`，对不上边 `kind='tension'`，不再发 `hard`；顶部计数改「判断/被推翻/改口/相近」。页面改 `String.raw` 整页，状态色蓝/琥珀/红，半径按 mentions 3→8px，按软边连通分量聚成 31 组（组心 + 虚线环 + 55ms 漂移），悬停显示原话/状态/引用次数/日期。真实家副本：662 节点 / 1 条 refuted 边 / 7 个改口节点 / 48 对相近 / 2,483 事件；1400×900 截图 `D:\fish\_archive\memory-v2-real.png`、`memory-v2-hover.png`。定向 boot 27/27；全量 1366 条 / 1355 过 / 9 红 / 2 skip（9 红同名）。
 - 没动 `lib/derive.js`、`lib/schema.js`、`lib/channels/*`；三件与回执一起提交，未打 tag。
 
 

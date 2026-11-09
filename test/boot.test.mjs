@@ -218,6 +218,50 @@ test('记忆图谱：页面认 text/html，数据同源只读，不带 Accept �
   })
 })
 
+test('图谱 v2：旧句带 status/mentions，被推翻单独成边，计数一致', async () => {
+  await withRoot(async (root) => {
+    const { ctx, routes } = fakeCtx()
+    const h = apply(ctx, { root })
+    await new Promise((r) => setTimeout(r, 120))
+
+    const oldEv = await appendEvent({
+      type: 'utterance', source: 'tool', text: '我喜欢热闹，屋里多一点声音。',
+    }, {}, root)
+    const newEv = await appendEvent({
+      type: 'revise', source: 'tool', text: '其实我更喜欢安静。',
+      refs: [oldEv.id], verdict: 'refuted', confidence: 0.8,
+    }, {}, root)
+
+    const apiRoute = await waitFor(() => routes.find((r) => r.path === '/dsh-roost/api/memory'))
+    const api = fakeRes()
+    await apiRoute.handler({ url: '/dsh-roost/api/memory', method: 'GET' }, api)
+    assert.equal(api.code, 200)
+    assert.equal(api.json.ok, true)
+    assert.equal(api.json.stats.refuted, 1)
+    assert.equal(api.json.stats.refined, 0)
+
+    const oldNode = api.json.nodes.find((n) => n.id === oldEv.id)
+    assert.ok(oldNode, '被推翻的旧句也要在图里，不能只留还在生效的')
+    assert.equal(oldNode.status, 'refuted')
+    assert.equal(oldNode.mentions, 0)
+
+    const newNode = api.json.nodes.find((n) => n.id === newEv.id)
+    assert.ok(newNode, '改口后的新句要还在')
+    assert.equal(newNode.status, 'active')
+    assert.ok(newNode.mentions >= 1)
+
+    const refuted = api.json.edges.filter((e) => e.kind === 'refuted')
+    assert.equal(refuted.length, 1, '被推翻要单独一类边，不能再混进 hard')
+    assert.equal(refuted[0].s, oldEv.id)
+    assert.equal(refuted[0].t, newEv.id)
+    assert.ok(!api.json.edges.some((e) => e.kind === 'hard'), '旧 hard 边已经退役')
+    assert.ok(api.json.nodes.every((n) => ['active', 'refined', 'refuted'].includes(n.status)))
+    assert.ok(api.json.nodes.every((n) => Number.isInteger(n.mentions) && n.mentions >= 0))
+
+    h.dispose?.()
+  })
+})
+
 test('config POST 白名单挡住指向她本人的键', async () => {
   await withRoot(async (root) => {
     const { ctx, routes } = fakeCtx()
