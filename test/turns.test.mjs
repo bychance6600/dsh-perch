@@ -602,3 +602,65 @@ test('注销之后就不再记了', async () => {
     await rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 })
   }
 })
+
+
+test('这一轮只吐了 DSML 标记 → 不当沉默，再问一次（2026-11-09 真机）', async () => {
+  const root = await tmpRoot()
+  try {
+    const { ctx, prompted } = fakeCtx()
+    const off = registerTurns(ctx, { root, log: () => {} })
+    try {
+      ctx.emit('session/event', session(), humanMsg('这条你怎么看'))
+      await new Promise((r) => setTimeout(r, 10))
+      ctx.emit('session/event', session(), {
+        type: 'assistant/message',
+        data: {
+          message: {
+            id: 'm-scaffold',
+            content: [{ type: 'text', text: '</｜｜DSML｜｜ invoke>\n</｜｜DSML｜｜ calls>' }],
+          },
+        },
+      })
+      ctx.emit('session/event', session(), TURN_END)
+
+      const asked = await waitFor(async () => (prompted.length ? prompted[0] : null))
+      assert.ok(asked, '只吐了标记时要再问一次')
+      assert.equal(asked.sessionId, HER_SESSION)
+      assert.equal(asked.mode, 'queue')
+      assert.match(String(asked.requestId), /^scaffold-/)
+      assert.match(String(asked.content?.[0]?.text ?? ''), /模型标记/)
+
+      // 标记不能被当成她说的话搬进下一段
+      const list = await recentExchanges(root)
+      assert.equal(list.at(-1)?.her, '')
+      assert.ok(!JSON.stringify(list).includes('DSML'))
+    } finally {
+      off()
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 })
+  }
+})
+
+test('只是界面状态行（已完成）不算脚手架失败，不再问一次', async () => {
+  const root = await tmpRoot()
+  try {
+    const { ctx, prompted } = fakeCtx()
+    const off = registerTurns(ctx, { root, log: () => {} })
+    try {
+      ctx.emit('session/event', session(), humanMsg('好了吗'))
+      await new Promise((r) => setTimeout(r, 10))
+      ctx.emit('session/event', session(), {
+        type: 'assistant/message',
+        data: { message: { id: 'm-status', content: [{ type: 'text', text: '已完成' }] } },
+      })
+      ctx.emit('session/event', session(), TURN_END)
+      await settled()
+      assert.equal(prompted.length, 0)
+    } finally {
+      off()
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 })
+  }
+})

@@ -4,9 +4,18 @@
 
 **0.1.0 已发布（2026-11-08，tag `v0.1.0`）。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过）。A 段 35 条与 B 段 19 条验收全部收口（A1 于 2026-11-07 16:12 真机通过）。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1347 条 / 1336 过 / 9 红**（另有 2 skip，2026-11-09 抖音懒启动后核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1349 条 / 1338 过 / 9 红**（另有 2 skip，2026-11-09 空回复兜底后核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
+
+
+## 她这一轮只吐模型标记时再问一次（2026-11-09，m13843）——已改
+
+- 现象：`~/.dsh` 的会话里，她记完 `her_note` 后第二步只输出 `</｜｜DSML｜｜ invoke>` / `</｜｜DSML｜｜ calls>`，没有正文；`turns.js` 把空正文当「这一轮没话说」，`turn/end` 正常结账，侧栏里就静默了。
+- 修法：`lib/turns.js` 新增 `assistantSaid()`，把「真的一句话没说」与「只剩脚手架」分开；`assistantText()` 继续只返回剥过的正文。`assistant/message` 遇到后者只标 `pending.scaffoldOnly`，不 push 空话；`takeTurnEnd()` 在 `settle()` 之后调 `nudgeScaffold()`，用 `sc.prompt({ requestId: 'scaffold-…', mode: 'queue', content: [SCAFFOLD_RETRY_TEXT] })` 再问一次。只问一次；会话已换、回合已停、又有新 pending 时都不问。重问出来的话走 `recordWakeSay()` 落成 utterance，不重复结账。
+- 测试：`test/turns.test.mjs` 新增两条（只吐 DSML → 重问一次且 talkmem 不含 DSML；「已完成」不算脚手架），19/19；定向 turns+guard+channel-router+derive+mem+pet-index+wake 154/154；全量 `node --test --test-isolation=none` **1349 条 / 1338 过 / 9 红 / 2 skip**（/tmp/full-scaffold.log），9 红与已知环境红同名。
+- 已核旧污染：`events.jsonl` 2272 行里只有 2 条旧 DSML utterance（11-03、11-05），`talk-recent.json` 与身份文档没有；读侧 `derive`/`recall`/`observe` 都先剥，今天页也不显示。事件流只追加，没有删旧行。
+- 需重启 DSH 才生效。
 
 ## 抖音材料层不再在启动时拉浏览器（2026-11-09，m13498）——已改
 

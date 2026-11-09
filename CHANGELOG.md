@@ -38,6 +38,7 @@
 
 - **复述提示词不再发出去**：2026-11-08 真机上，她改完 `pair_file` 后把正文、整段提示词和 `</｜｜DSML｜｜ parameter>` 一起吐了出来；出站检查只看剥过的那份，实际发送与落库仍用原文，标记因此出门。现在 `lib/guard.js` 新增 `stripPromptEcho()`（只认 buildPrompt 的行首标记，两种以上才从最早处截断，整段复述返回空），`turns.js` / `channel-router.js` 在存与发之前都先用它；`derive.js`、`recall.js`、`observe.js` 读旧事件时也先剥，今天页与 `her_recall` 不再端出稿纸。
 - **只吐模型标记时再问一次**：2026-11-07 真机上，她记完 `her_note` 之后第二步只吐了 `</｜｜DSML｜｜ invoke>` 与 `</｜｜DSML｜｜ calls>`，没有一个字，渠道层把它当成「她选择不说话」，那一轮就静默了。现在 `saidText()` 会区分「真的空」与「只剩脚手架」；只有后者再问一次，第二次还是空才按沉默收。真的一句话不说的轮次不重问（`test/channel-router.test.mjs` 两处都钉住）。
+- **她屋里那一轮只吐模型标记时再问一次**：`lib/turns.js` 补了同一套兜底。`assistantSaid()` 区分「真的空」与「只剩脚手架」，后者不落空话；`turn/end` 后用 `nudgeScaffold()` 再问一次（`mode:'queue'`，只问一次）。重问出来的话按叫醒轮落成 utterance，不重复结账。旧事件流里两条 11-03 / 11-05 的 DSML 由读侧剥掉，没有删行。
 
 ### 0.9.1 六条
 
@@ -160,4 +161,4 @@
 ### 兼容
 
 - `dsh >=0.2.0-rc.1 <0.3.0-0`，Node ≥ 22；`dependencies` / `peerDependencies` / `devDependencies` 仍为空。
-- 测试基线：`node --test --test-isolation=none` → 1347 条 / 1336 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。
+- 测试基线：`node --test --test-isolation=none` → 1349 条 / 1338 过 / 9 条已知环境红 / 2 skip（本机装了运行时 ffmpeg；没装时多一条 Referer）。`withFileLock` 在 `--test-isolation=none` 下偶发一条，单跑是绿的。见 `PROGRESS.md`。
