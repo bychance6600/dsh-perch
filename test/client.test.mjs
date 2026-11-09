@@ -118,17 +118,17 @@ test('client.js 能被 ModuleLoader 装载，且导出了 apply / inject', async
   assert.equal(typeof exports.FishSection, 'function')
 })
 
-test('apply 注册到 settings.section，id 与 label 都对', async () => {
+test('apply 注册设置节、侧栏「记忆图谱」行与 main 页面', async () => {
   const react = fakeReact()
   const { exports } = await loadClient({ react })
 
+  const injected = []
   const registered = []
   const ctx = {
     effect: (fn) => { fn(); return () => {} },
     slots: {
       inject(name, fn, label) {
-        assert.equal(name, 'settings.section')
-        assert.equal(label, 'dsh-roost: settings section')
+        injected.push({ name, label })
         fn()
         return () => {}
       },
@@ -140,11 +140,42 @@ test('apply 注册到 settings.section，id 与 label 都对', async () => {
   }
   exports.apply(ctx)
 
-  assert.equal(registered.length, 1)
-  assert.equal(registered[0].meta.name, 'settings.section')
-  assert.equal(registered[0].meta.id, 'fish')
-  assert.equal(typeof registered[0].meta.label, 'function')
-  assert.equal(registered[0].meta.label(), '她')
+  assert.deepEqual(injected.map((x) => x.name), ['settings.section', 'sidebar.panellist', 'main'])
+  assert.equal(injected[1].label, 'dsh-roost: memory sidebar entry')
+  assert.equal(injected[2].label, 'dsh-roost: memory panel')
+  assert.equal(registered.length, 3)
+
+  const settings = registered.find((x) => x.meta.name === 'settings.section')
+  assert.equal(settings.meta.id, 'fish')
+  assert.equal(typeof settings.meta.label, 'function')
+  assert.equal(settings.meta.label(), '她')
+
+  // 侧栏行：id 必须与 main 的 key 相同，宿主点行才会选中这个页面。
+  const row = registered.find((x) => x.meta.name === 'sidebar.panellist')
+  assert.equal(row.meta.id, 'roost-memory')
+  assert.equal(row.meta.order, 2)
+  assert.equal(row.meta.label, '记忆图谱')
+  const icon = row.Component({ size: 16 })
+  assert.equal(icon.type, 'svg')
+  assert.equal(icon.props.width, 16)
+
+  // 页面：一个 main keyed slot，里面是装独立整页的 iframe。
+  const panel = registered.find((x) => x.meta.name === 'main')
+  assert.equal(panel.meta.key, 'roost-memory')
+  const found = []
+  const walk = (node) => {
+    if (!node || typeof node !== 'object') return
+    if (Array.isArray(node)) { node.forEach(walk); return }
+    if (node.type === 'iframe') found.push(node)
+    for (const child of node.children || []) walk(child)
+  }
+  walk(panel.Component())
+  assert.equal(found.length, 1)
+  assert.equal(found[0].props.src, '/dsh-roost/memory')
+  assert.equal(found[0].props.title, '记忆图谱')
+  assert.equal(found[0].props.style.width, '100%')
+  assert.equal(found[0].props.style.height, '100%')
+  assert.equal(found[0].props.style.border, 0)
 })
 
 test('组件在"还没有数据"时也能渲染，不抛错', async () => {

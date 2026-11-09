@@ -15,6 +15,7 @@
 - 记忆页：新增 `lib/memory-page.js`（独立深色 HTML，内联 CSS/JS、SVG 力导向，约 18 KB）；`lib/observe.js` 里 `/memory` 在 `Accept: text/html` 时直接回整页，新增 `/dsh-roost/api/memory`（只读，deriveSelf → nodes/edges，不加 CORS 头；`/memory` 的 JSON 仍走信任栅栏）。页内：时间滑杆按 `at` 过滤、硬边红 / 软边灰（bigram dice ≥ 0.34）、点节点看详情与邻近、`#n=` 深链、请求 8 秒超时，失败或空数据给「读不到记忆 + 原因 + 再试一次」。设置页「成长」加了「打开记忆图谱 →」。
 - 实测：真实家目录副本 `/dsh-roost/api/memory` 200 / 171 ms / 165,609 字符（280,026 字节），654 节点 / 0 硬边 / 49 软边 / 2,483 事件；断网与 HTTP 500 都显示空态，不白屏。截图 `D:\fish\_archive\memory-data.png`、`memory-offline.png`、`memory-real.png`。
 - 测试：`test/client.test.mjs` + `test/boot.test.mjs` 65/65；全量 `node --test --test-isolation=none` 1361 条 / 1350 过 / 9 红 / 2 skip（`D:\fish\_archive\full-test2.log`），9 条红与已知环境红同名，无新增。
+- 侧栏入口（2026-11-09 追加）：`lib/client.js` 用 `ctx.slots.inject` + `ctx.slots.register` 注册 `sidebar.panellist`（id `roost-memory`，order 2，图标 + 文字「记忆图谱」）与 `main` keyed slot（iframe 装 `/dsh-roost/memory`）；「成长」页那行链接保留作兜底。未改宿主、未动 `@deepseek-ai` 包；全量 1361 条 / 1350 过 / 9 红 / 2 skip。
 - 没动 `lib/derive.js`、`lib/schema.js`、`lib/channels/*`；三件与回执一起提交，未打 tag。
 
 
