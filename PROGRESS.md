@@ -16,6 +16,7 @@
 - 实测：真实家目录副本 `/dsh-roost/api/memory` 200 / 171 ms / 165,609 字符（280,026 字节），654 节点 / 0 硬边 / 49 软边 / 2,483 事件；断网与 HTTP 500 都显示空态，不白屏。截图 `D:\fish\_archive\memory-data.png`、`memory-offline.png`、`memory-real.png`。
 - 测试：`test/client.test.mjs` + `test/boot.test.mjs` 65/65；全量 `node --test --test-isolation=none` 1361 条 / 1350 过 / 9 红 / 2 skip（`D:\fish\_archive\full-test2.log`），9 条红与已知环境红同名，无新增。
 - 侧栏入口（2026-11-09 追加）：`lib/client.js` 用 `ctx.slots.inject` + `ctx.slots.register` 注册 `sidebar.panellist`（id `roost-memory`，order 2，图标 + 文字「记忆图谱」）与 `main` keyed slot（iframe 装 `/dsh-roost/memory`）；「成长」页那行链接保留作兜底。未改宿主、未动 `@deepseek-ai` 包；全量 1361 条 / 1350 过 / 9 红 / 2 skip。
+- 「成长」页入口（2026-11-09 追加）：点击改走宿主 `layout.selectPanel('roost-memory')`，与左栏行同一套；拿不到 layout 服务才退回顶层 `window.open`，不再用 `target="_blank"`。定向 41/41。
 - 没动 `lib/derive.js`、`lib/schema.js`、`lib/channels/*`；三件与回执一起提交，未打 tag。
 
 
