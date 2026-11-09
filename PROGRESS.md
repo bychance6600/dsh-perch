@@ -9,6 +9,15 @@
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
 
 
+## 设置页首屏拆慢 + 记忆图谱独立页（2026-11-09，m00002）——已改
+
+- 设置页：`lib/client.js` 的 `load()` 拆成 `load()`（`/state` `/today` `/status` 三条）与 `loadRest()`（其余 25 条），新增 `restLoaded` / `ensureRest()`；首屏后按页签切换或空闲时补。真实家目录副本三次：改前首屏 10 条核心 5,766 / 644 / 633 ms，随后 17 条 640 / 649 / 664 ms，整屏等完约 1.3 s；改后首屏 3 条 5,379（首跑 JIT）/ 434 / 440 ms，补的 25 条 856 / 830 / 843 ms，首屏字节 43,464（原 282,404）。插件 apply 启动 216 / 187 / 195 ms（改前同口径 212 / 205 / 201）。bundle：217,157 → 219,921 字节，gzip 71,633 → 72,413，brotli 56,952 → 57,624（其中「记忆图谱」入口约 +425 原始字节）。
+- 记忆页：新增 `lib/memory-page.js`（独立深色 HTML，内联 CSS/JS、SVG 力导向，约 18 KB）；`lib/observe.js` 里 `/memory` 在 `Accept: text/html` 时直接回整页，新增 `/dsh-roost/api/memory`（只读，deriveSelf → nodes/edges，不加 CORS 头；`/memory` 的 JSON 仍走信任栅栏）。页内：时间滑杆按 `at` 过滤、硬边红 / 软边灰（bigram dice ≥ 0.34）、点节点看详情与邻近、`#n=` 深链、请求 8 秒超时，失败或空数据给「读不到记忆 + 原因 + 再试一次」。设置页「成长」加了「打开记忆图谱 →」。
+- 实测：真实家目录副本 `/dsh-roost/api/memory` 200 / 171 ms / 165,609 字符（280,026 字节），654 节点 / 0 硬边 / 49 软边 / 2,483 事件；断网与 HTTP 500 都显示空态，不白屏。截图 `D:\fish\_archive\memory-data.png`、`memory-offline.png`、`memory-real.png`。
+- 测试：`test/client.test.mjs` + `test/boot.test.mjs` 65/65；全量 `node --test --test-isolation=none` 1361 条 / 1350 过 / 9 红 / 2 skip（`D:\fish\_archive\full-test2.log`），9 条红与已知环境红同名，无新增。
+- 没动 `lib/derive.js`、`lib/schema.js`、`lib/channels/*`；三件与回执一起提交，未打 tag。
+
+
 ## 启动慢：derive 的 dice 重算（2026-11-09，m14029）——已改
 
 - 现象：桌面版从双击到窗口出来约 23–26 秒；宿主主进程被 dsh-roost 的 `apply` 占满约 20 秒。

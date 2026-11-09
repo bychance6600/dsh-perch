@@ -186,6 +186,38 @@ test('/state 与 /memory 把「对不上」和「记得很牢」报出来（2026
   })
 })
 
+test('记忆图谱：页面认 text/html，数据同源只读，不带 Accept 仍走栅栏', async () => {
+  await withRoot(async (root) => {
+    // allow=false 模拟没登录的浏览器：除了明确放行的，所有 /dsh-roost/* 都该 403。
+    const { ctx, routes } = fakeCtx({ allow: false })
+    const h = apply(ctx, { root })
+    await new Promise((r) => setTimeout(r, 120))
+
+    const pageRoute = await waitFor(() => routes.find((r) => r.path === '/dsh-roost/memory'))
+    const page = fakeRes()
+    await pageRoute.handler({ url: '/dsh-roost/memory', method: 'GET', headers: { accept: 'text/html,application/xhtml+xml' } }, page)
+    assert.equal(page.code, 200, '地址栏直接打开要给整页，不能 403')
+    assert.match(page.body, /记忆图谱/)
+    assert.match(page.body, /\/dsh-roost\/api\/memory/, '页面要自己取数据')
+    assert.match(page.body, /读不到记忆/, '断网/空数据要有空态，不能白屏')
+    assert.ok(!/(?:src|href)\s*=\s*["']https?:/i.test(page.body), '页面不引外部脚本/样式，断网也要能开')
+
+    const json = fakeRes()
+    await pageRoute.handler({ url: '/dsh-roost/memory', method: 'GET' }, json)
+    assert.equal(json.code, 403, '页面里的 JSON 老路径仍要过信任栅栏')
+
+    const apiRoute = await waitFor(() => routes.find((r) => r.path === '/dsh-roost/api/memory'))
+    const api = fakeRes()
+    await apiRoute.handler({ url: '/dsh-roost/api/memory', method: 'GET' }, api)
+    assert.equal(api.code, 200, '同源只读数据不设栅栏')
+    assert.equal(api.json.ok, true)
+    assert.ok(Array.isArray(api.json.nodes))
+    assert.ok(Array.isArray(api.json.edges))
+
+    h.dispose?.()
+  })
+})
+
 test('config POST 白名单挡住指向她本人的键', async () => {
   await withRoot(async (root) => {
     const { ctx, routes } = fakeCtx()
