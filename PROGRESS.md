@@ -9,6 +9,16 @@
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
 
 
+## 启动慢：derive 的 dice 重算（2026-11-09，m14029）——已改
+
+- 现象：桌面版从双击到窗口出来约 23–26 秒；宿主主进程被 dsh-roost 的 `apply` 占满约 20 秒。
+- 根因：启动时跑了 2 次 `stability()`（每次 24 次全量 `deriveSelf()`）。真实事件流 2332 条、600 条判断，CPU profile 里 `dice @ lib/derive.js:297` 占 28.1%（15.0 秒）；`mentions` 对每个候选都重算一遍完整 `dice()`，成本 = 判断数 × 候选数 × 二元组数。
+- 修法：`lib/derive.js` 的 `mentions` 改成先用 `Int32Array` 累加交集、用 stamp 去重，再算一次比值；在 herTexts 里预存 `gramTotal = norm.length - 1`，避免重复遍历 Map。判定仍是 `2*交集/(|A|+|B|) >= 0.6`，输出逐字节等价。
+- 实测：同一份真实事件流，`deriveSelf` 559 → 159 ms，`stability`（24 抽样）13471 → 4250 ms，`writeSelfDoc` 14082 → 4416 ms。真机重启（2026-11-09 16:20:57.536 进程创建 → 16:21:07.456 locale-cache）**启动到可用 9.92 秒**，之前同口径约 26 秒。
+- 测试与提交：普通 `node --test` 1349 条 / 1347 过 / 0 失败 / 2 skip；`--test-isolation=none` 1349 条 / 1338 过 / 9 红 / 2 skip（9 条已知环境红）。提交 `39fbf68`「perf(derive): mentions 不再逐条重算 dice，启动期少约 12 秒」，已推 origin/main。
+- 还剩：第二次 `stability()` 仍约 4.2 秒（`observe.js:281` 与 `socialgate.js:139` 缓存键不同）；`--type=gpu-process` 长期吃满约 99% 单核是另一件事。
+
+
 ## 她这一轮只吐模型标记时再问一次（2026-11-09，m13843）——已改
 
 - 现象：`~/.dsh` 的会话里，她记完 `her_note` 后第二步只输出 `</｜｜DSML｜｜ invoke>` / `</｜｜DSML｜｜ calls>`，没有正文；`turns.js` 把空正文当「这一轮没话说」，`turn/end` 正常结账，侧栏里就静默了。
