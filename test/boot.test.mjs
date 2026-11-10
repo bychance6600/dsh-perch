@@ -72,7 +72,7 @@ async function waitFor(fn, ms = 5000) {
 }
 
 test('插件元信息：名字与 inject', () => {
-  assert.equal(name, 'dsh-roost')
+  assert.equal(name, 'dsh-roost-core')
   assert.ok(Array.isArray(inject), 'inject 必须是数组（写成对象会让 sessionController 静默丢失）')
   for (const k of ['sessionController', 'tools', 'webServer', 'connection']) assert.ok(inject.includes(k), `缺 ${k}`)
   // 2026-10-30（m02961）：可选服务不能写进 inject。cordis 的规则是「少一个就整个插件不启动」，

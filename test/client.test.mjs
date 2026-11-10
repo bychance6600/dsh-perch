@@ -105,7 +105,7 @@ async function loadClient({ react }) {
 
   assert.equal(loaded.length, 1, '必须调用一次 window.__ModuleLoader__.load')
   const spec = loaded[0]
-  assert.equal(spec.id, 'dsh-roost', 'loader id 必须等于包名，否则客户端模块挂不上')
+  assert.equal(spec.id, 'dsh-roost-core', 'loader id 必须等于包名，否则客户端模块挂不上')
   const exports = spec.factory((id) => {
     if (id === 'react') return react
     throw new Error(`unexpected require: ${id}`)
