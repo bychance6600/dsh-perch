@@ -2,9 +2,20 @@
 
 ## 现在在哪
 
-**0.1.0 已发布（2026-11-08，tag `v0.1.0`）。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-perch`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过）。A 段 35 条与 B 段 19 条验收全部收口（A1 于 2026-11-07 16:12 真机通过）。
+**0.1.7 已发布（2026-11-10，tag `v0.1.7`）。** 0.1.0 是重建版；代码从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-perch`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过）。A 段 35 条与 B 段 19 条验收全部收口（A1 于 2026-11-07 16:12 真机通过）。
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1350 条 / 1339 过 / 9 红**（另有 2 skip，2026-11-09 `d91e911` 后核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
+### 发布记录（0.1.2–0.1.7）
+
+| 版本 | 日期 | 一句话 | 提交号 |
+| --- | --- | --- | --- |
+| 0.1.2 | 2026-11-10 | openq 两步（识别与叫醒）+ 发布说明 | `bd87b87` |
+| 0.1.3 | 2026-11-10 | 导入旧对话与 `--merge` | `b1149ec` / `a51bf18` |
+| 0.1.4 | 2026-11-10 | 称呼被破折号污染 | `ad9ec33` |
+| 0.1.5 | 2026-11-10 | 出口闸误拦私聊 | `8980690` |
+| 0.1.6 | 2026-11-10 | 「你以后就叫 X」的语序 | `845ca26` |
+| 0.1.7 | 2026-11-10 | 桥把 @ 展开成正文时漏判点名 | `577e4f0` |
+
+- 基线：`node --test --test-isolation=none` → 最近一次全量 **1375 条 / 1364 过 / 9 红**（另有 2 skip，2026-11-10 核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
 
