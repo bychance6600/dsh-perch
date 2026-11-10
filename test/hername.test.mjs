@@ -35,6 +35,9 @@ test('pickHerName 认得「你的名字是…」「给你起名…」「以后�
   assert.equal(pickHerName('小满就是你的名字'), '小满')
   assert.equal(pickHerName('我给你起了名字：小满'), '小满')
   assert.equal(pickHerName('以后你就叫阿岸'), '阿岸')
+  // 2026-11-10：TZ 那边说的是这个语序，之前认不出——「你就叫」被「以后」隔开了
+  assert.equal(pickHerName('你以后就叫鱼欣'), '鱼欣')
+  assert.equal(pickHerName('从今天起你就叫鱼欣吧'), '鱼欣')
   assert.equal(pickHerName('我有名字了：小满。'), '小满')
 })
 
