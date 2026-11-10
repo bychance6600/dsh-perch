@@ -190,7 +190,7 @@ test('观测台 /ask：GET 带列表与配额，POST 能补答', async () => wit
   registerObserve(ctx, { root })
 
   async function call(method, body = {}) {
-    const handler = routes.get('/dsh-roost/ask')
+    const handler = routes.get('/dsh-perch/ask')
     assert.ok(handler, '/ask 路由要注册上')
     const req = method === 'POST'
       ? Object.assign(Readable.from([Buffer.from(JSON.stringify(body), 'utf8')]), { method, headers: {} })

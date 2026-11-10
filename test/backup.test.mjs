@@ -5,7 +5,7 @@
  *   ①「换台机器还能接着养」是用户明确的诉求。备份如果只是复制几个 json，
  *     日记、她的房间、头像都会丢——那些才是她这几年长出来的东西。
  *   ② 恢复是危险动作。所以它必须是「先封存再放回」：现在的档整体改名搬到
- *     `dsh-roost-backups/pre-restore-<时间>/`，一个字节都不删，恢复错了还能换回来。
+ *     `dsh-perch-backups/pre-restore-<时间>/`，一个字节都不删，恢复错了还能换回来。
  *   ③ 事件格式加版本号，是为了让「读到了哪个年代的档」变成可判断的事；
  *     没有 `v` 的老事件必须按 v1 读，并计数（legacy），不能崩、也不能装作一样。
  */
@@ -40,7 +40,7 @@ async function makeRoot() {
   await writeFile(join(root, 'avatar.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
   // 不该进备份的两类
   await mkdir(join(root, 'logs'), { recursive: true })
-  await writeFile(join(root, 'logs', 'dsh-roost.log'), '现场日志\n')
+  await writeFile(join(root, 'logs', 'dsh-perch.log'), '现场日志\n')
   await mkdir(join(root, 'backups'), { recursive: true })
   await writeFile(join(root, 'backups', 'old.json'), '{}')
   return root
@@ -78,7 +78,7 @@ test('校验：格式不对、空包、路径穿越、比程序新，全都要�
   assert.equal(checkBundle(ok).ok, true)
 
   assert.equal(checkBundle(null).ok, false)
-  assert.equal(checkBundle({ ...ok, format: 'dsh-roost-backup/99' }).ok, false)
+  assert.equal(checkBundle({ ...ok, format: 'dsh-perch-backup/99' }).ok, false)
   assert.match(checkBundle({ ...ok, format: 'x' }).why, /只认/)
   assert.equal(checkBundle({ ...ok, files: [] }).ok, false)
   assert.equal(checkBundle({ ...ok, files: [{ path: '', enc: 'utf8', data: '' }] }).ok, false)
@@ -121,7 +121,7 @@ test('恢复：先封存旧档，再放回备份；旧档一个字节都不删',
     const parent = dirname(oldRoot)
     const { readdir } = await import('node:fs/promises')
     for (const n of await readdir(parent)) {
-      if (n.startsWith('dsh-roost-backups')) await rm(join(parent, n), { recursive: true, force: true })
+      if (n.startsWith('dsh-perch-backups')) await rm(join(parent, n), { recursive: true, force: true })
     }
   }
 })
@@ -154,7 +154,7 @@ test('封存目录名带 pre-restore 前缀，同一秒两次不撞名', async (
     const parent = dirname(root)
     const { readdir } = await import('node:fs/promises')
     for (const n of await readdir(parent)) {
-      if (n.startsWith('dsh-roost-backups')) await rm(join(parent, n), { recursive: true, force: true })
+      if (n.startsWith('dsh-perch-backups')) await rm(join(parent, n), { recursive: true, force: true })
     }
   }
 })
@@ -204,7 +204,7 @@ test('备份进包后能原样读回（含二进制）', async () => {
     const parent = dirname(dest)
     const { readdir } = await import('node:fs/promises')
     for (const n of await readdir(parent)) {
-      if (n.startsWith('dsh-roost-backups')) await rm(join(parent, n), { recursive: true, force: true })
+      if (n.startsWith('dsh-perch-backups')) await rm(join(parent, n), { recursive: true, force: true })
     }
   }
 })

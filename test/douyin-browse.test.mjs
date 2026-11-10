@@ -81,7 +81,7 @@ test('gatherDouyin：平台不给 / 拉取失败，都不打扰她', async () =>
 })
 
 test('browseFeed：不传 sleeper 也自己等，不报 sleep is not defined（2026-11-07 真机）', async () => {
-  const mod = await import('../packages/dsh-roost-douyin/index.js')
+  const mod = await import('../packages/dsh-perch-douyin/index.js')
   const calls = []
   const transport = {
     async navigate(url) { calls.push(['navigate', url]) },

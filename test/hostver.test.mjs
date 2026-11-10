@@ -29,7 +29,7 @@ test('readHostVersion：从插件位置往上找到宿主的 package.json', () =
   const dir = tempTree({
     'node_modules/@deepseek-ai/dsh/package.json': { name: '@deepseek-ai/dsh', version: '0.2.1-rc.3' },
   })
-  const start = join(dir, 'node_modules', 'dsh-roost', 'lib')
+  const start = join(dir, 'node_modules', 'dsh-perch', 'lib')
   const got = readHostVersion({ start })
   assert.ok(got)
   assert.equal(got.version, '0.2.1-rc.3')
@@ -40,7 +40,7 @@ test('readHostVersion：桌面版包名也认', () => {
   const dir = tempTree({
     'node_modules/@deepseek-ai/dsh-desktop-runtime/package.json': { version: '0.2.1-rc.5' },
   })
-  const got = readHostVersion({ start: join(dir, 'node_modules', 'dsh-roost') })
+  const got = readHostVersion({ start: join(dir, 'node_modules', 'dsh-perch') })
   assert.equal(got?.version, '0.2.1-rc.5')
 })
 

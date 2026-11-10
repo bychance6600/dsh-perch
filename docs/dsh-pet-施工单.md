@@ -6,7 +6,7 @@
 
 | 文档 | 给谁 | 内容 |
 | --- | --- | --- |
-| `dsh-pet-施工单-roost侧.md` | 改 `D:\fish\dsh-roost` 的会话 | 探针、配置、`lib/pet/`、五档、镜像、聊天门、`pet_act`、只读状态、测试 |
+| `dsh-pet-施工单-roost侧.md` | 改 `D:\fish\dsh-perch` 的会话 | 探针、配置、`lib/pet/`、五档、镜像、聊天门、`pet_act`、只读状态、测试 |
 | `dsh-pet-施工单-body侧.md` | 新开一个会话写 `D:\fish\dsh-roost-pet` | 协议全文、窗口、渲染、物理、交互、宠物包、测试、手测清单 |
 | 本文件 | 两边都看一眼就行 | 只做索引与白话，不写施工细节 |
 

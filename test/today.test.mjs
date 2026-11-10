@@ -46,7 +46,7 @@ function fakeCtx(routes) {
 async function getToday(root, dk) {
   const routes = new Map()
   registerObserve(fakeCtx(routes), { root })
-  const handler = routes.get('/dsh-roost/today')
+  const handler = routes.get('/dsh-perch/today')
   assert.ok(handler, '/today 路由要注册上')
   const req = Object.assign(Readable.from([]), { method: 'GET', headers: {} })
   let status = 0

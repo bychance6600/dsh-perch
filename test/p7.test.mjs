@@ -160,8 +160,8 @@ test('observe：/away 与 /cover 两条路由都注册了', async () => {
     slots: { inject: () => {} },
   }
   registerObserve(ctx, { root })
-  assert.ok(registered.includes('/dsh-roost/away'), '/away 要注册')
-  assert.ok(registered.includes('/dsh-roost/cover'), '/cover 要注册')
+  assert.ok(registered.includes('/dsh-perch/away'), '/away 要注册')
+  assert.ok(registered.includes('/dsh-perch/cover'), '/cover 要注册')
 })
 
 test('封面目录跟着状态库走（重开也不删）', () => {

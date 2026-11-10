@@ -1,4 +1,4 @@
-# dsh-roost
+# dsh-perch
 
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![version](https://img.shields.io/badge/version-0.1.0-green)
@@ -27,7 +27,7 @@
 - **不是角色扮演**：没有角色卡，没有「扮演一个…」，也没有一条让你直接改她性格的路。
 - **不是助手**：不会替你写周报、不接任务、不排队等你派活。
 - **不是聊天机器人**：她可以一天不说话；可以在群里只回一句；可以拒绝你。
-- **不是云服务**：零依赖，数据只在本地 `~/.dsh-roost`，一条事件流加几个派生文件。
+- **不是云服务**：零依赖，数据只在本地 `~/.dsh-perch`，一条事件流加几个派生文件。
 
 ## 和别的「养成伴侣」差在哪
 
@@ -142,7 +142,7 @@
 pnpm add github:bychance6600/roost
 
 # 或装本机这份源码（开发时）
-pnpm add link:D:/path/to/dsh-roost
+pnpm add link:D:/path/to/dsh-perch
 ```
 
 然后把包名写进这个 profile 的 `package.json`：
@@ -151,7 +151,7 @@ pnpm add link:D:/path/to/dsh-roost
 {
   "dsh": {
     "profile": {
-      "bundles": ["dsh-roost"]
+      "bundles": ["dsh-perch"]
     }
   }
 }
@@ -161,16 +161,16 @@ pnpm add link:D:/path/to/dsh-roost
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\install.ps1
-# 装本机源码：-LocalPath D:\path\to\dsh-roost
+# 装本机源码：-LocalPath D:\path\to\dsh-perch
 # 只看它打算做什么：-DryRun
 ```
 
-它会找 profile、`pnpm add`、把 `dsh-roost` 写进 `bundles`，还可以用 `-FfmpegZip` 顺带装 ffmpeg。如果那个 profile 里已经挂着 river（另一个她），脚本会停下提醒你换一个 profile——两个「她」别抢同一条 QQ 桥。
+它会找 profile、`pnpm add`、把 `dsh-perch` 写进 `bundles`，还可以用 `-FfmpegZip` 顺带装 ffmpeg。如果那个 profile 里已经挂着 river（另一个她），脚本会停下提醒你换一个 profile——两个「她」别抢同一条 QQ 桥。
 
 ### 装完
 
 1. 重启 DSH（运行中的包文件不会热替换）。
-2. 打开 **设置 → 她**。日志在 `~/.dsh-roost/logs/dsh-roost.log`，看到以 `0.1.0 · ` 开头的一行就是挂上了。
+2. 打开 **设置 → 她**。日志在 `~/.dsh-perch/logs/dsh-perch.log`，看到以 `0.1.0 · ` 开头的一行就是挂上了。
 3. 第一次启动会自动建屋（工作区和一条会话），并在会话还空着时叫醒她一次。如果那一次没醒，状态卡右上角的 **「现在叫醒她」** 可以手动补一次；她开过口之后，侧栏里才会出现「跟她说话」（认出名字后是「跟 X 说话」）。
 
 ## 六、接 QQ
@@ -198,7 +198,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 - **能不能上网**是材料层总闸：关掉之后 B 站、抖音一起停，连她手里的浏览工具也不再放行；醒来、说话、写日记照旧。
 - **时段**只拦「逛」（首页、排行、推荐流），不拦你递进来的链接和她主动点开的那一条。
 - **每天刷几次**：B 站与抖音共用一个上限 0–6；实际次数还受醒来次数限制。
-- **抖音**是可选的：主包只负责调子包。子包 `packages/dsh-roost-douyin/` 要一个真的 Edge / Chrome，第一次会打开窗口让你扫码；登录态留在 `<数据目录>/douyin-profile`。浏览器不会在 DSH 启动时打开，等她第一次真去看时才开，闲置 3 分钟自己关。没装子包时，刷抖音静默跳过，不报错、不建目录。
+- **抖音**是可选的：主包只负责调子包。子包 `packages/dsh-perch-douyin/` 要一个真的 Edge / Chrome，第一次会打开窗口让你扫码；登录态留在 `<数据目录>/douyin-profile`。浏览器不会在 DSH 启动时打开，等她第一次真去看时才开，闲置 3 分钟自己关。没装子包时，刷抖音静默跳过，不报错、不建目录。
 - **看画面（她主动看时）**：只有她自己点开某一条视频时才抽帧拼图；报纸与推荐流不抽。需要 ffmpeg。
 - **黑名单**：关键词、太短不看、不看某些 UP 主。抖音共用关键词与时长，UP 主过滤只对 B 站。
 
@@ -238,7 +238,7 @@ zip 不用解压；脚本用系统自带解压。二进制不进 git。
 
 ## 十一、数据在哪
 
-默认 `~/.dsh-roost`（Windows：`C:\Users\<你>\.dsh-roost`）：
+默认 `~/.dsh-perch`（Windows：`C:\Users\<你>\.dsh-perch`）：
 
 ```
 events.jsonl          唯一可信源，只追加
@@ -260,7 +260,7 @@ worldbook.json        世界书（事实）
 douyin-profile/       抖音浏览器的登录态（开抖音时才有）
 ```
 
-- **备份 / 恢复 / 搬家 / 从头开始**都在「数据」页。恢复前会把旧档挪去 `dsh-roost-backups/pre-restore-*`；重置是改名前缀封存，不删。
+- **备份 / 恢复 / 搬家 / 从头开始**都在「数据」页。恢复前会把旧档挪去 `dsh-perch-backups/pre-restore-*`；重置是改名前缀封存，不删。
 - 想让她忘，不是删行，是降低召回：事件原文永远还在，她也能自己用 `her_recall` 翻回去。
 
 ## 十二、0.1.0 的边界

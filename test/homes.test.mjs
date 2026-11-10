@@ -85,7 +85,7 @@ test('homesFile 默认在数据目录之外（可被 env 覆盖）', () => {
   const old = process.env.DSH_ROOST_HOMES
   try {
     delete process.env.DSH_ROOST_HOMES
-    assert.ok(!homesFile().includes('.dsh-roost' + sep), '不能落在数据目录里')
+    assert.ok(!homesFile().includes('.dsh-perch' + sep), '不能落在数据目录里')
     process.env.DSH_ROOST_HOMES = join(tmpdir(), 'x.json')
     assert.equal(homesFile(), join(tmpdir(), 'x.json'))
   } finally {

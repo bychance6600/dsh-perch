@@ -27,8 +27,8 @@ import { registerObserve } from '../lib/observe.js'
 test('隐私红线：本机路径与状态库文件名一律拦下', () => {
   for (const s of [
     '我把东西放在 D:\\work\\my-project 里',
-    'C:/Users/someone/.dsh-roost/home',
-    '你看 ~/.dsh-roost/events.jsonl',
+    'C:/Users/someone/.dsh-perch/home',
+    '你看 ~/.dsh-perch/events.jsonl',
     '我住在 /Users/someone/Desktop',
     '我的 AGENTS.md 里写了',
     'config.json 里有',
@@ -179,7 +179,7 @@ function fakeCtx() {
 }
 
 function callRoute(routes, path, method, body) {
-  const full = '/dsh-roost' + path
+  const full = '/dsh-perch' + path
   const def = routes.find((d) => d.path === full)
     ?? routes.filter((d) => full.startsWith(d.path + '/')).sort((a, b) => b.path.length - a.path.length)[0]
   if (!def) throw new Error(`没注册这条路由：${path}`)
@@ -187,7 +187,7 @@ function callRoute(routes, path, method, body) {
   // readBody 走 EventEmitter（req.on('data'/'end')），所以用 Readable 当请求体
   const req = Readable.from(chunks)
   req.method = method
-  req.url = '/dsh-roost' + path
+  req.url = '/dsh-perch' + path
   req.headers = { 'content-type': 'application/json' }
   let out = null
   const res = {

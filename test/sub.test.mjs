@@ -11,6 +11,6 @@ test('抖音子包：仓库里那一份能被直接加载（不要求 npm 装过
 })
 
 test('抖音子包：先找已安装的包，再退回仓库路径', () => {
-  assert.equal(SUB_CANDIDATES[0], 'dsh-roost-douyin')
-  assert.ok(SUB_CANDIDATES[1].includes('packages/dsh-roost-douyin/index.js'))
+  assert.equal(SUB_CANDIDATES[0], 'dsh-perch-douyin')
+  assert.ok(SUB_CANDIDATES[1].includes('packages/dsh-perch-douyin/index.js'))
 })

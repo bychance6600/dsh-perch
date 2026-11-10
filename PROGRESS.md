@@ -2,7 +2,7 @@
 
 ## 现在在哪
 
-**0.1.0 已发布（2026-11-08，tag `v0.1.0`）。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-roost`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过）。A 段 35 条与 B 段 19 条验收全部收口（A1 于 2026-11-07 16:12 真机通过）。
+**0.1.0 已发布（2026-11-08，tag `v0.1.0`）。** 代码已从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-perch`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过）。A 段 35 条与 B 段 19 条验收全部收口（A1 于 2026-11-07 16:12 真机通过）。
 
 - 基线：`node --test --test-isolation=none` → 最近一次全量 **1350 条 / 1339 过 / 9 红**（另有 2 skip，2026-11-09 `d91e911` 后核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
 - 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
@@ -16,12 +16,12 @@
 ## 设置页首屏拆慢 + 记忆图谱独立页（2026-11-09，m00002）——已改
 
 - 设置页：`lib/client.js` 的 `load()` 拆成 `load()`（`/state` `/today` `/status` 三条）与 `loadRest()`（其余 25 条），新增 `restLoaded` / `ensureRest()`；首屏后按页签切换或空闲时补。真实家目录副本三次：改前首屏 10 条核心 5,766 / 644 / 633 ms，随后 17 条 640 / 649 / 664 ms，整屏等完约 1.3 s；改后首屏 3 条 5,379（首跑 JIT）/ 434 / 440 ms，补的 25 条 856 / 830 / 843 ms，首屏字节 43,464（原 282,404）。插件 apply 启动 216 / 187 / 195 ms（改前同口径 212 / 205 / 201）。bundle：217,157 → 219,921 字节，gzip 71,633 → 72,413，brotli 56,952 → 57,624（其中「记忆图谱」入口约 +425 原始字节）。
-- 记忆页：新增 `lib/memory-page.js`（独立深色 HTML，内联 CSS/JS、SVG 力导向，约 18 KB）；`lib/observe.js` 里 `/memory` 在 `Accept: text/html` 时直接回整页，新增 `/dsh-roost/api/memory`（只读，deriveSelf → nodes/edges，不加 CORS 头；`/memory` 的 JSON 仍走信任栅栏）。页内：时间滑杆按 `at` 过滤、硬边红 / 软边灰（bigram dice ≥ 0.34）、点节点看详情与邻近、`#n=` 深链、请求 8 秒超时，失败或空数据给「读不到记忆 + 原因 + 再试一次」。设置页「成长」加了「打开记忆图谱 →」。
-- 实测：真实家目录副本 `/dsh-roost/api/memory` 200 / 171 ms / 165,609 字符（280,026 字节），654 节点 / 0 硬边 / 49 软边 / 2,483 事件；断网与 HTTP 500 都显示空态，不白屏。截图 `D:\fish\_archive\memory-data.png`、`memory-offline.png`、`memory-real.png`。
+- 记忆页：新增 `lib/memory-page.js`（独立深色 HTML，内联 CSS/JS、SVG 力导向，约 18 KB）；`lib/observe.js` 里 `/memory` 在 `Accept: text/html` 时直接回整页，新增 `/dsh-perch/api/memory`（只读，deriveSelf → nodes/edges，不加 CORS 头；`/memory` 的 JSON 仍走信任栅栏）。页内：时间滑杆按 `at` 过滤、硬边红 / 软边灰（bigram dice ≥ 0.34）、点节点看详情与邻近、`#n=` 深链、请求 8 秒超时，失败或空数据给「读不到记忆 + 原因 + 再试一次」。设置页「成长」加了「打开记忆图谱 →」。
+- 实测：真实家目录副本 `/dsh-perch/api/memory` 200 / 171 ms / 165,609 字符（280,026 字节），654 节点 / 0 硬边 / 49 软边 / 2,483 事件；断网与 HTTP 500 都显示空态，不白屏。截图 `D:\fish\_archive\memory-data.png`、`memory-offline.png`、`memory-real.png`。
 - 测试：`test/client.test.mjs` + `test/boot.test.mjs` 65/65；全量 `node --test --test-isolation=none` 1361 条 / 1350 过 / 9 红 / 2 skip（`D:\fish\_archive\full-test2.log`），9 条红与已知环境红同名，无新增。
-- 侧栏入口（2026-11-09 追加）：`lib/client.js` 用 `ctx.slots.inject` + `ctx.slots.register` 注册 `sidebar.panellist`（id `roost-memory`，order 2，图标 + 文字「记忆图谱」）与 `main` keyed slot（iframe 装 `/dsh-roost/memory`）；「成长」页那行链接保留作兜底。未改宿主、未动 `@deepseek-ai` 包；全量 1361 条 / 1350 过 / 9 红 / 2 skip。
+- 侧栏入口（2026-11-09 追加）：`lib/client.js` 用 `ctx.slots.inject` + `ctx.slots.register` 注册 `sidebar.panellist`（id `roost-memory`，order 2，图标 + 文字「记忆图谱」）与 `main` keyed slot（iframe 装 `/dsh-perch/memory`）；「成长」页那行链接保留作兜底。未改宿主、未动 `@deepseek-ai` 包；全量 1361 条 / 1350 过 / 9 红 / 2 skip。
 - 「成长」页入口（2026-11-09 追加）：点击改走宿主 `layout.selectPanel('roost-memory')`，与左栏行同一套；拿不到 layout 服务才退回顶层 `window.open`，不再用 `target="_blank"`。定向 41/41。
-- 图谱 v2（2026-11-09 追加，m01865）：`/dsh-roost/api/memory` 每个节点补 `status`（active/refined/refuted）与 `mentions`；旧句从 revise 事件的 refs/verdict 补回（deriveSelf 的 beliefs 只含 active），被推翻边 `kind='refuted'`，对不上边 `kind='tension'`，不再发 `hard`；顶部计数改「判断/被推翻/改口/相近」。页面改 `String.raw` 整页，状态色蓝/琥珀/红，半径按 mentions 3→8px，按软边连通分量聚成 31 组（组心 + 虚线环 + 55ms 漂移），悬停显示原话/状态/引用次数/日期。真实家副本：662 节点 / 1 条 refuted 边 / 7 个改口节点 / 48 对相近 / 2,483 事件；1400×900 截图 `D:\fish\_archive\memory-v2-real.png`、`memory-v2-hover.png`。定向 boot 27/27；全量 1366 条 / 1355 过 / 9 红 / 2 skip（9 红同名）。
+- 图谱 v2（2026-11-09 追加，m01865）：`/dsh-perch/api/memory` 每个节点补 `status`（active/refined/refuted）与 `mentions`；旧句从 revise 事件的 refs/verdict 补回（deriveSelf 的 beliefs 只含 active），被推翻边 `kind='refuted'`，对不上边 `kind='tension'`，不再发 `hard`；顶部计数改「判断/被推翻/改口/相近」。页面改 `String.raw` 整页，状态色蓝/琥珀/红，半径按 mentions 3→8px，按软边连通分量聚成 31 组（组心 + 虚线环 + 55ms 漂移），悬停显示原话/状态/引用次数/日期。真实家副本：662 节点 / 1 条 refuted 边 / 7 个改口节点 / 48 对相近 / 2,483 事件；1400×900 截图 `D:\fish\_archive\memory-v2-real.png`、`memory-v2-hover.png`。定向 boot 27/27；全量 1366 条 / 1355 过 / 9 红 / 2 skip（9 红同名）。
 - 图谱 v3（伪 3D，2026-11-09 追加，m02221）：只改 `lib/memory-page.js`（约 28 KB），canvas 2D 透视（f=900，z 决定半径与透明度，远先画近后画）；31 组组心按大小铺在 Fibonacci 球内，孤立点铺球壳；整张绕 y 轴 0.02 rad/s 自转，指针拖动改 yaw/pitch，`prefers-reduced-motion` 不自转；refuted 红边双端光晕，悬停按屏幕距离 8px 找最近点。修掉投影把相机 z 写回世界 z 的反馈 bug（改用 `wx/wy/wz`）。真实数据 662 节点 / 31 组 / 1 条 refuted 边 / 146 个点落在左侧 x<400；1400×900 截图 `D:\fish\_archive\memory-v3-data.png`、`memory-v3-drag.png`、`memory-v3-hover.png`。定向 boot 27/27；全量 1366 条 / 1355 过 / 9 红 / 2 skip（9 红同名）。
 - 图谱 v4（交互与筛选，2026-11-09 追加，m02394）：仍只改 `lib/memory-page.js`。构图铺到画布的 73.4%×74.0%（1400×900 下 stage 1100×800，节点包围盒 x 145.7–953.4 / y 197.1–789.2，重心下移 22px）；组心比成员亮 1.2 倍，远点按深度压到 0.45 左右。滚轮 0.5×–3×（以光标为中心，reduced-motion 下锚点漂移 0.6px）、双指捏合 1→2.27×、右下角＋/－/归位、双击归位。顶部「状态/分组/时间」三模式：状态蓝/琥珀/红，分组 31 组色相环，时间青→暖白。筛选只压暗不重排：图例「改口」7/662、最大组标签 11/662（再点都恢复 662）、只看被引用 22/662、最近 7 天 653/662、搜索「不」529/662；顶部显示「筛完 / 全部」。截图 `D:\fish\_archive\memory-v4-data.png`、`memory-v4-group.png`、`memory-v4-time.png`、`memory-v4-filter-group.png`。定向 boot 27/27；全量 1366 条 / 1355 过 / 9 红 / 2 skip（`D:\fish\_archive\full-v4.log`），9 红同名。
 - 图谱 v5（立体感与回到全部，2026-11-09 追加，m02629）：仍只改 `lib/memory-page.js`。透视 f=900→700，世界 z 铺开 1.6 倍（组心先减去均值再乘），默认俯仰 -12°；构图按当前视角投影包围盒居中（重心再下移 10px），1400×900 下 71.6%×76.1%。分组模式 8 个色相按组序号取模（s .70 / l .60），状态模式改口琥珀提亮到 #f5c46b，时间模式青→紫→暖白。工具条最前加「全部」，清空状态/组/搜索/被引用/最近/时间滑杆并取消高亮；图例与组标签再点一次恢复。真实数据 674 节点 / 32 组 / 49 软边 / 1 refuted / depthBands 219/234/221；筛选实测改口 7/674、最大组 11/674、被引用 22/674、最近 7 天 665/674、搜索「不」540/674，点「全部」均回 674/674。全量 1366 条 / 1355 过 / 9 红 / 2 skip（`D:\fish\_archive\full-v5.log`），9 红同名。截图 `D:\fish\_archive\memory-v5-data.png`、`memory-v5-group.png`、`memory-v5-time.png`。
@@ -31,7 +31,7 @@
 
 ## 启动慢：derive 的 dice 重算（2026-11-09，m14029）——已改
 
-- 现象：桌面版从双击到窗口出来约 23–26 秒；宿主主进程被 dsh-roost 的 `apply` 占满约 20 秒。
+- 现象：桌面版从双击到窗口出来约 23–26 秒；宿主主进程被 dsh-perch 的 `apply` 占满约 20 秒。
 - 根因：启动时跑了 2 次 `stability()`（每次 24 次全量 `deriveSelf()`）。真实事件流 2332 条、600 条判断，CPU profile 里 `dice @ lib/derive.js:297` 占 28.1%（15.0 秒）；`mentions` 对每个候选都重算一遍完整 `dice()`，成本 = 判断数 × 候选数 × 二元组数。
 - 修法：`lib/derive.js` 的 `mentions` 改成先用 `Int32Array` 累加交集、用 stamp 去重，再算一次比值；在 herTexts 里预存 `gramTotal = norm.length - 1`，避免重复遍历 Map。判定仍是 `2*交集/(|A|+|B|) >= 0.6`，输出逐字节等价。
 - 实测：同一份真实事件流，`deriveSelf` 559 → 159 ms，`stability`（24 抽样）13471 → 4250 ms，`writeSelfDoc` 14082 → 4416 ms。真机重启（2026-11-09 16:20:57.536 进程创建 → 16:21:07.456 locale-cache）**启动到可用 9.92 秒**，之前同口径约 26 秒。
@@ -62,7 +62,7 @@
 - 分类：`lib/stance.js` 新增 `BOUNDARY_RE` 与 `boundary` 类，顺序是先守线、再绝不、再喜欢；「不(喜欢|爱|想|愿意)」加 `(?<!想)`，修掉「想不想要」被误判成「不想」。
 - 归组：新增 `TOPIC_RULES` 与 `stanceTopic()`（name / agency / speech 三个话题）；`buildStances` 对 boundary 先按同话题收，没话题的只收同样没话题且字面相似度 ≥ `STANCE_SIM` 的；没话题、只有两条、又没疤背书的，整组不算。没动全局 `STANCE_SIM` 0.45。
 - 渲染：身份文档的立场段分成 `### 我守的线` / `### 我不做的` / `### 我喜欢的`，标题仍是 `## 我站哪边`；`stanceSummary` 加 `stanceBoundaries`；设置页状态行、记忆页摘要、原理卡改成「守哪几条线」。
-- 离线 dry-run（2026-11-09 00:5x，真实 `~/.dsh-roost`）：从 566 条 live 判断里多出三条守线组（一组 5 条、一组 4 条、一组 3 条），另两条因没话题、只有两条、无背书被排除。代表句原样搬进提示词会把立场段撑到约 850 字（`personaLine` 1623 / 1800）。改成 `boundaryLine()`：只摘第一个命中守线的那一句，句子太短就带上前一句，超过 100 字截断。再跑 dry-run，`personaLine` 总长 1752 / 1800，每条守线各只有一句，读起来是清单不是散文。
+- 离线 dry-run（2026-11-09 00:5x，真实 `~/.dsh-perch`）：从 566 条 live 判断里多出三条守线组（一组 5 条、一组 4 条、一组 3 条），另两条因没话题、只有两条、无背书被排除。代表句原样搬进提示词会把立场段撑到约 850 字（`personaLine` 1623 / 1800）。改成 `boundaryLine()`：只摘第一个命中守线的那一句，句子太短就带上前一句，超过 100 字截断。再跑 dry-run，`personaLine` 总长 1752 / 1800，每条守线各只有一句，读起来是清单不是散文。
 - 测试：`test/stance.test.mjs` 21/21（新增「守线进清单只摘那一句」：含「不能做的是」、不含铺垫句、长度 <100）；全量 `node --test --test-isolation=none` **1345 条 / 1334 过 / 9 红 / 2 skip**，9 红与已知环境红同名。
 - 尚未重启 DSH，所以这三条还没进她的提示词；先给主人看味道，确认后再重启上线。
 
@@ -79,9 +79,9 @@
 ## 备份、干净安装与恢复演练（2026-11-08，m12057）——已做
 
 - 快照：`%USERPROFILE%\Desktop\bak\roost\2026-11-08-1920`。`home\` 5,336 文件 / 1,564,361,992 字节，排除 `instance.json`（218 B，运行锁）。源目录（排除 instance）逐文件 sha256 全等：0 缺失、0 多出、0 不同；`events.jsonl` 2,027 行、sha256 `9e092a80b622aae261b2d28483ea088c04ab466d7e70e26cea659809290d7263`；`config.json` `130efe1a...`、`home.json` `48df469f...`、`people.json` `043ce701...`。根目录有 `MANIFEST.md` 与 `SHA256SUMS.txt`（5,336 行，709,378 B，`sha256sum -c` 全 OK）。
-- 干净安装：GitHub `bychance6600/roost` HEAD `ae37201` 重新 clone；`dependencies` / `devDependencies` / `peerDependencies` 都是 `{}`；干净克隆 `node --test` **1337 条 / 1333 过 / 0 红 / 4 skip**；空 profile 用自带 pnpm `add github:...` 装出 `dsh-roost 0.1.0`。
+- 干净安装：GitHub `bychance6600/roost` HEAD `ae37201` 重新 clone；`dependencies` / `devDependencies` / `peerDependencies` 都是 `{}`；干净克隆 `node --test` **1337 条 / 1333 过 / 0 红 / 4 skip**；空 profile 用自带 pnpm `add github:...` 装出 `dsh-perch 0.1.0`。
 - 恢复演练：把快照 `home\` 复制到临时目录，用干净安装出来的 `lib/index.js` 启动假宿主（关 QQ / B 站 / 抖音 / 桌宠 / 上网 / 主动唤醒）。读回 2,026 条事件 + 1 条跳过（第 763 行是已知无 id 的旧测试行），第 6 天 / 阶段 1，31 人且主人印象非空，复用 `home.json` 里的会话（没新建、没叫醒），注册 12 个自带工具、46 条观测台路由；启动前后 `events.jsonl` 字节前缀一致。
-- 真身没动：只做复制与临时副本启动，没有替换 `~/.dsh-roost`，也没有连 QQ。
+- 真身没动：只做复制与临时副本启动，没有替换 `~/.dsh-perch`，也没有连 QQ。
 
 ## 社会层隔离测试屋（2026-11-08，m12281）——已做
 
@@ -101,13 +101,13 @@
 - 测试：`pet-state` 新增动静判据（回合中、4:59 / 5:00、1 分钟档、坏值回落）与睡迹旧的记账用例；`pet-index` 改源码断言（必须用 `awakeByActivity`、记 `turnActive` / `lastActivityAt` / `idleSleepMin`，不许再出现 `asleepFromEvents`）；`settings` 新增 `idleSleepMin` 默认 5 与 1–60 夹取。定向 pet + settings 37/37；全量 **1325 条 / 1314 过 / 9 红 / 2 skip**（/tmp/full-pet-why.log），9 红与已知环境红同名。
 - 状态文字（16:41 协调板）：`why` 从判语改成「说哪一段、从哪儿来」——`等：回合已结束，等下一次动静`、`思考：回合进行中`、`思考：工具已返回`、`动手：在翻 B 站`、`成了：这一轮结束了`、`出错：回合失败`；施工单的表格、验收 #5 与 body 侧样例同步改。
 - 热更（16:53 协调板）：`idleSleepMin` 原来只在启动时读一次，设置页改完不重启不生效。现在 `/config` 保存后调 `petApplyConfig(next)` 写进运行中的 `base.idleSleepMin`，并立刻 `checkAwake()` 重判；`test/pet-index.test.mjs` 有源码守门。
-- 角色包（17:31 协调板）：配置键从 `pet.petId` 改成 `pet.pack`（老配置自动迁过来，不丢已选角色），设置页「插件」卡加「角色包」输入；spawn 仍传 `--pet=<id>`，由 body 按 `~/.dsh-roost/pets/<id>` 找素材。仓库只留模板，素材不进 git。
+- 角色包（17:31 协调板）：配置键从 `pet.petId` 改成 `pet.pack`（老配置自动迁过来，不丢已选角色），设置页「插件」卡加「角色包」输入；spawn 仍传 `--pet=<id>`，由 body 按 `~/.dsh-perch/pets/<id>` 找素材。仓库只留模板，素材不进 git。
 - 重启后又发现一层：`parameters` 是手写标准形态，宿主报 `tool "pet_act" parameters must be lossless JSON before schema projection`，并连带整批工具不可用。协调侧已改成 `toJsonSchema({ action, why })`（提交 `6ae9d20`），输出是 `{type:'object',properties,required:['action'],additionalProperties:false}`；`test/pet-tool.test.mjs` 补了一条钉住这个形状。
 - 真机确认（2026-11-08 15:22）：`工具面收窄：她这条会话只留 15 个工具，另有兜底守卫`；日志里不再出现 `工具注册失败` / `lossless JSON` / `工具面收窄延后`。15:27 她调 `pet_act` 点头，屏幕出现 done 绿圈；姿态也不再按时段判睡。`origin/main` 已到 `6ae9d20`。
 
 ## 桌宠交付形态、poke、动态动作（2026-11-08，m11289）——已改
 
-- 交付形态（17:44 协调板）：`lib/pet/entry.js` 新增 `PET_BODY_NAME='dsh-roost-pet.exe'`、`defaultPetPath(root)`、`petPathOf(pet,root)`；`pet.path` 空着就找 `<root>/pet/dsh-roost-pet.exe`。`lib/pet/index.js` 的 `petStatus(cfg,root)` 多返回 `installed/path/pack/dead`，没装时不 spawn、`lastError` 留空、why 写「等：还没装身体（把 zip 解压到 ~/.dsh-roost/pet/）」。新增 `tools/install-pet.mjs`（零依赖，PowerShell `Expand-Archive`）：`--body <zip>` 必填、`--pack <zip>` 可选，解到 `<root>/pet/` 与 `<root>/pets/<id>/`，改 config 前先备份。设置页桌宠卡显示「已安装/未安装 · 路径」。
+- 交付形态（17:44 协调板）：`lib/pet/entry.js` 新增 `PET_BODY_NAME='dsh-roost-pet.exe'`、`defaultPetPath(root)`、`petPathOf(pet,root)`；`pet.path` 空着就找 `<root>/pet/dsh-roost-pet.exe`。`lib/pet/index.js` 的 `petStatus(cfg,root)` 多返回 `installed/path/pack/dead`，没装时不 spawn、`lastError` 留空、why 写「等：还没装身体（把 zip 解压到 ~/.dsh-perch/pet/）」。新增 `tools/install-pet.mjs`（零依赖，PowerShell `Expand-Archive`）：`--body <zip>` 必填、`--pack <zip>` 可选，解到 `<root>/pet/` 与 `<root>/pets/<id>/`，改 config 前先备份。设置页桌宠卡显示「已安装/未安装 · 路径」。
 - poke（17:47 初版；23:20 协调板修订）：`pokeKind(lastPokeAt, now, minGapMs)` 只看间隔，返回 `turn` / `ignore`；睡着由身体自己只晃、不叫醒。隔够 `pokeMinGapMs` 就记 `meta poke:<ISO>` 并排一轮轻提示（不写 `seen`），回合中也不早退，`sc.prompt` 的 `mode:'queue'` 会等她这一轮结束；间隔内的点击只写日志，不写 meta、不排回合。`pokeMinGapMs` 默认 60000、夹 5000–600000，保存后热更。
 - 动态动作（17:50）：新增 `lib/pet/actions.js`，按 `pet.dir` → `<root>/pets/<pack>/pet.json` → `<repo>/pets/<pack>/pet.json` 找包，读 `animations.actions`，过滤不安全名字；读不到/全坏/空都回落内置 10 个。`pet_act` 的 enum 与描述都跟着动作表走，未知动作回「没有这个动作：X。手边有：…」。
 - 测试：`pet-index` 改「没装不 spawn」与默认路径；新增 `pet-actions` 4 条、`install-pet` 2 条；`pet-tool` 加角色包动作表与坏名回落；`settings` 加 `pokeMinGapMs` 夹取。定向 102/102；全量 **1337 条 / 1326 过 / 9 红 / 2 skip**（/tmp/full-pet-final2.log），9 红与已知环境红同名。
@@ -150,15 +150,15 @@
 
 - 需求：她想跟另一个项目的需求窗口对接，只要能读写两份文件。用户选定 `docs/dsh-pet-功能清单.md` 与 `docs/dsh-pet-需求与验收.md`，并说（m09086）：新项目具体怎么实现还没定，能读写这两份就行。
 - 实现：主包加 `lib/pairfile.js` + 工具 `pair_file`（不做独立子包）。`config.pair = {enabled,a,b}` 放两个绝对路径；别名是文件名去掉扩展名（现为 `dsh-pet-功能清单` / `dsh-pet-需求与验收`）。动作只有 read / replace / append；replace 的 `oldText` 必须恰好出现一次；改和添都要带 read 回来的 16 位 hash；文件在两次之间变过就拒绝并给新 hash；写前留 `.bak`，用 `writeAtomic`。
-- 边界：只认配置里的两个路径；realpath 必须与配置一致，拒软链 / 目录 / 二进制 / 大于 512KB；禁止她家 `~/.dsh-roost`、`~/.dsh`、用户主目录本身与系统目录。不写 events.jsonl、不记 `looked:`，不算她看过。
-- 接线：`FISH_TOOLS` 加 `pair_file`（10→11，工具面 11→12）；`lib/index.js` 注册时把启动配置传进去，工具说明里带两个别名；`/config` 白名单加 `pair`；设置页插件页加「两份说好的文件」卡片（开关 + 两个路径 + hash/.bak 提示）。`~/.dsh-roost/config.json` 已打开并填好两个路径。
+- 边界：只认配置里的两个路径；realpath 必须与配置一致，拒软链 / 目录 / 二进制 / 大于 512KB；禁止她家 `~/.dsh-perch`、`~/.dsh`、用户主目录本身与系统目录。不写 events.jsonl、不记 `looked:`，不算她看过。
+- 接线：`FISH_TOOLS` 加 `pair_file`（10→11，工具面 11→12）；`lib/index.js` 注册时把启动配置传进去，工具说明里带两个别名；`/config` 白名单加 `pair`；设置页插件页加「两份说好的文件」卡片（开关 + 两个路径 + hash/.bak 提示）。`~/.dsh-perch/config.json` 已打开并填好两个路径。
 - 测试：`test/pairfile.test.mjs` 7 条；`p5` / `pairfile` / `boot` 44/44；全量 **1275 条 / 1264 过 / 9 红 / 2 skip**（/tmp/full-pair2.log），9 红与已知环境红同名。
 - 还需重启 DSH 才会出现 `pair_file`（工具在启动时登记）。
 
 ## 工具白名单的警告（2026-11-07）
 
 - 用户问「她要看 dsh-pet 项目要开什么工具」，答复是只开 `web_fetch`，不要开 read/glob/grep/bash；用户要求把这条写进项目，免得后面有人给授权时踩坑。
-- 落点：`AGENTS.md` §3 与 §7（通用文件/命令工具不放 `config.tools.allow`，它们不是按目录授权，会读到 `~/.dsh-roost/home/她的身份.md`、配置和状态，绕过 no-read-self；写入类还能绕过 no-self-modify）、`README.md` §八、设置页「插件」工具卡（`lib/client.js`），以及 `docs/约定清单.md` A27 与 `CHANGELOG.md`。
+- 落点：`AGENTS.md` §3 与 §7（通用文件/命令工具不放 `config.tools.allow`，它们不是按目录授权，会读到 `~/.dsh-perch/home/她的身份.md`、配置和状态，绕过 no-read-self；写入类还能绕过 no-self-modify）、`README.md` §八、设置页「插件」工具卡（`lib/client.js`），以及 `docs/约定清单.md` A27 与 `CHANGELOG.md`。
 - 只做用户可见的警告，不硬拦白名单：白名单本来就是显式放行口，硬拦会与「白名单只做加法」和现有 `ops_*` 用例冲突。要看某个项目的源码，给她 `web_fetch` 从 GitHub 读，或单独做只读小工具。
 - 测试：`test/client.test.mjs` 新增源码守门（警告含「不能读自己的数值与设定」「run_code」「web_fetch」），A27 渲染断言也检查警告；`p5` / `naming` / `client` 56/56。全量 **1268 条 / 1257 过 / 9 红 / 2 skip**（/tmp/full-toolwarning.log），9 红同名。
 
@@ -180,7 +180,7 @@
 ## 抖音真机（2026-11-07）——`sleep is not defined`
 
 - 她在 QQ 里说推荐流「看不见」，伸手试了一下，回的是「sleep is not defined」。这不是没登录，也不是页面变了，是代码自己抛的错。
-- 根因：`packages/dsh-roost-douyin/index.js` 里 `browseFeed` 的默认等待函数写成了 `sleep`，`waitForDevtools` 也调 `sleep`，但子包从头到尾没有定义过它。测试里都传了 `sleep` 替身，所以一直没露。
+- 根因：`packages/dsh-perch-douyin/index.js` 里 `browseFeed` 的默认等待函数写成了 `sleep`，`waitForDevtools` 也调 `sleep`，但子包从头到尾没有定义过它。测试里都传了 `sleep` 替身，所以一直没露。
 - 修法：子包顶部补 `function sleep(ms)`（`setTimeout` 包成 Promise，负数/非数字按 0 算）。`browseFeed` 不传 sleeper 时就走它。
 - 回归测试：`test/douyin-browse.test.mjs` 新增「不传 sleeper 也自己等，不报 sleep is not defined」，用假 transport 走一遍 `navigate` → `evaluate`，不启浏览器。
 - 定向 douyin-browse / douyin-look / douyin-adapter 55/55；全量 **1262 条 / 1251 过 / 9 红 / 2 skip**（/tmp/full-douyin.log），9 红与已知环境红逐条同名。
@@ -203,36 +203,36 @@
 - 复现：`ffmpeg -ss 1 -i <playurl> ...` 默认报 `Peer certificate failed verification`；`-tls_verify 0` 能过 TLS（随后因缺 Referer/UA 被 403）；补上 `-headers` 后出图 465501 字节；把 Node 的 `tls.rootCertificates` 写成 PEM 再加 `-tls_verify 1 -ca_file` 同样出图 465501 字节。
 - 修法：`lib/video.js` 从 `node:tls` 取 `rootCertificates`，新增 `ensureCaFile(root)` 写 `media/ffmpeg-ca.pem`（内容没变就不重写）；`grabFrames` 对所有 http(s) 输入一律 `-tls_verify 1 -ca_file`。用户显式给的 `o.caFile` / `DSH_ROOST_CA_FILE` 仍然优先；**不退回 `-tls_verify 0`**。
 - 测试：`test/video.test.mjs` 加 `ensureCaFile` 一条、把原来的 CA 守门改成「联网永远带 CA 且不许 tls_verify 0」；定向 video 23 条 21 过 2 skip（本地造片那两条本来就跳）。
-- 真机：`grabFrames({ bvid:'BV1q541137ZE', at:[1,3] })` → ok，2 帧，`~/.dsh-roost/media/sheet-BV1q541137ZE-1794056294476-38521b-1.png`。
+- 真机：`grabFrames({ bvid:'BV1q541137ZE', at:[1,3] })` → ok，2 帧，`~/.dsh-perch/media/sheet-BV1q541137ZE-1794056294476-38521b-1.png`。
 - 全量 **1267 条 / 1256 过 / 9 红 / 2 skip**（/tmp/full-bili-tls.log），9 红与已知环境红同名。需要重启 DSH 重新加载 `lib/video.js`。
 
 ## 身份文档里的 DSML 垃圾（2026-11-07）——已修
 
 - 用户报：她身份文档「你自己说过的话」里摆着两行 `- </｜｜DSML｜｜ invoke>` 与 `- </｜｜DSML｜｜ calls>`。
-- 源头是两条真事件：`~/.dsh-roost/events.jsonl` 第 425 行 `ev_01M6GMW20Y1P4Z3H288FN6QW6K`（11-03）与第 1393 行 `ev_01M6NJACW8R1GXQRDM27DM3J6W`（11-05），`type: utterance`，正文只有这两行。它们是 11-05 那次「模型只吐了空工具调用块」事故留下的，事件不能改，只能在读的时候挡。
+- 源头是两条真事件：`~/.dsh-perch/events.jsonl` 第 425 行 `ev_01M6GMW20Y1P4Z3H288FN6QW6K`（11-03）与第 1393 行 `ev_01M6NJACW8R1GXQRDM27DM3J6W`（11-05），`type: utterance`，正文只有这两行。它们是 11-05 那次「模型只吐了空工具调用块」事故留下的，事件不能改，只能在读的时候挡。
 - 已有 `lib/guard.js` 的 `stripScaffold`，但只用在出站与 turns，`lib/derive.js` 没用，所以这两条照样进了 beliefs，再由 `lib/persona.js` 写进身份文档。
 - 修法：`lib/derive.js` 的 `utterance` / `revise` 分支先 `const said = stripScaffold(ev.text)`，空的直接跳过（不算她开口），后面的 `detectSelfMod` / 让步判断 / beliefs / `pickName` / 更正判断 / narrative 全用 `said`；`herTexts` 与 `deriveSocial` 也先剥。`lib/recall.js` 的 `searchEvents` 同样先剥，只有脚手架的旧事件翻不到、也不端出来。
 - 回归测试：`test/derive.test.mjs`「DSML 脚手架不进判断」；`test/mem.test.mjs`「只有 DSML 脚手架的旧事件，不端出来」。
 - 定向 derive / beliefs / mem / a20 67/67、mem / guard 46/46；全量 **1262 条 / 1251 过 / 9 红 / 2 skip**（/tmp/full-dsml.log），9 红与已知环境红同名。
-- 已用修好的代码重生成 `~/.dsh-roost/home/她的身份.md`：现在 `grep DSML` 无命中，那两条不再出现在「你自己说过的话」里。
+- 已用修好的代码重生成 `~/.dsh-perch/home/她的身份.md`：现在 `grep DSML` 无命中，那两条不再出现在「你自己说过的话」里。
 
 ## 世界书压过设置（2026-11-07）——已修
 
 - 用户报：她把「作息」记成「晚上八点到十一点，一天两次」，而设置里是 `08:00–23:00`、一天最多 3 次。她读不到 config，只能背世界书。
-- 直接原因：`~/.dsh-roost/worldbook.json` 里的 `wmw0ons2i7`（11-03 一次性导入的 lorebook）写着旧作息，经 `lib/worldbook.js` 的 `knowledgeBlock` 与 `lib/selfdoc.js` 的「我知道的事」进她的身份文档。调度器本身没问题：`pickWakeTime` 用的是 config.window，当天 `sched:2026-11-07` 落在 14:43，下一次按设置算。
+- 直接原因：`~/.dsh-perch/worldbook.json` 里的 `wmw0ons2i7`（11-03 一次性导入的 lorebook）写着旧作息，经 `lib/worldbook.js` 的 `knowledgeBlock` 与 `lib/selfdoc.js` 的「我知道的事」进她的身份文档。调度器本身没问题：`pickWakeTime` 用的是 config.window，当天 `sched:2026-11-07` 落在 14:43，下一次按设置算。
 - 另两条旧账：`16:18` 的「叫了她一声」是 `lib/home.js` 换房间时的 `wakeIfBlank()`，不走 scheduler、不占当天配额；`00:34` 首次建屋同理。这条路径不归时段管，但只在空房间时发生。
-- 数据：删掉 `wmw0ons2i7`，备份在 `~/.dsh-roost/worldbook.json.bak-20261107-schedule`；世界书剩 6 条。其余 6 条未动，其中「住在 dsh-fish-river / ~/.dsh-fish-river」与「抖音借号收发私信」仍是旧说法，等用户决定是否一起清。
+- 数据：删掉 `wmw0ons2i7`，备份在 `~/.dsh-perch/worldbook.json.bak-20261107-schedule`；世界书剩 6 条。其余 6 条未动，其中「住在 dsh-fish-river / ~/.dsh-fish-river」与「抖音借号收发私信」仍是旧说法，等用户决定是否一起清。
 - 代码：`lib/worldbook.js` 新增 `isSettingOwned()`，把「作息 / 几点 / 睡觉 / 醒来 / 叫醒」这类条目当设置管辖，`matchEntries()` 不再从世界书取；`lib/selfdoc.js` 的 `renderSelfDoc()` 新增 `wakeWindow` / `wakeLimit`，在「醒来的时候」按 config 现算写「定时叫醒落在 08:00–23:00 之间，一天最多 3 次」，并过滤 `enabled:false` 的条目；`writeSelfDoc()` 传 `config.window` 与 `Math.min(daily.events, wakesPerDay)`；`lib/observe.js` 在 `/config` 保存后 `refreshSelfDoc()`，设置一改身份文档马上跟着变。
 - 测试：`test/worldbook.test.mjs` 加 3 条（身份文档按设置写、对话里不取世界书作息、关掉定时叫醒写「关着」）。定向 worldbook / selfcheck / identity / settings / beliefs / memory 82/82；全量 **1265 条 / 1254 过 / 9 红 / 2 skip**（/tmp/full-worldbook.log），9 红与已知环境红同名。
-- 身份文档已重生成：`~/.dsh-roost/home/她的身份.md:103` 是新句，旧的「晚上八点到十一点 / 一天两次」不再出现。
+- 身份文档已重生成：`~/.dsh-perch/home/她的身份.md:103` 是新句，旧的「晚上八点到十一点 / 一天两次」不再出现。
 - **真机复验（2026-11-07 17:29）**：她在 QQ 里自己报「现在：2026-11-07 17:29」，并把旧说法改成「设置是 08:00–23:00 之间定时叫我，一天最多三次；这个时段外有人说话，我照样醒，但那不算定时叫醒」；她还认出 16:18 那次是有人叫她、不是排出来的。世界书重写后的 6 条已进身份文档，旧「晚上八点到十一点 / 一天两次」不再出现。
 
 ## 已经做完
 
-- 复制基线（`b2df7fd`）→ 删自更新（`1be871a`）→ 删旁听与导入（`c83124e`）→ 删评论/发言（`9ae5c9f`）→ 删出门五件套与梦（`b9724c2`）→ 删通知（`9322515`）→ 改名 `dsh-roost`/`0.1.0`（`c3b824d`）→ 搬账本（`36fcd4a`，1475 条，派生一致）。
+- 复制基线（`b2df7fd`）→ 删自更新（`1be871a`）→ 删旁听与导入（`c83124e`）→ 删评论/发言（`9ae5c9f`）→ 删出门五件套与梦（`b9724c2`）→ 删通知（`9322515`）→ 改名 `dsh-perch`/`0.1.0`（`c3b824d`）→ 搬账本（`36fcd4a`，1475 条，派生一致）。
 - 设置页：第一个页签「今天」（只读四段）、状态页拆「三道瓶颈 + 流水」、判断漂移折叠回一行、加渠道健康行（账本口径）、出门/梦的旧界面清掉。
 - 文档：`README.md` 写成 0.1.0 的项目文档（这是什么、与 river 的差别、装法、今天页、11 页导读、接 QQ、上网与 ffmpeg、工具面、世界书、数据、还没做完、测试）；`交接.md` 给新会话（机器事实、做完的提交、真机步骤、后面的顺序、踩过的坑）；`AGENTS.md` 按 0.1.0 重写；`CHANGELOG.md` 从 0.1.0 起；`install.ps1` 重写成 roost 版（可找 profile、装包、写 bundles、可选 ffmpeg）。
-- 清 river 时代的尾巴（2026-11-06）：七个环境变量 `DSH_FISH_*` → `DSH_ROOST_*`（含测试与文档）；`install.ps1` 整份重写（找 profile、`pnpm add`、写 `bundles`、可选 ffmpeg；profile 里挂着 river 时会停下提醒）；`NOTICE.md` 头像路径、`tools/check-install.mjs` 包名与提示、`tools/migrate-ledger.mjs`（必须显式给 `ROOST_SRC`，不猜旧目录）、`lib/upgrade.js`/`selfdoc.js`/`move.js`/`settings.js` 的旧注释；删掉被 git 跟踪的 `tmp-fix4.mjs`。子包 `packages/dsh-roost-douyin/` 的私信整机（`create`、`parseDmFrame`、`splitText`、DOM 点击/打字、`onEvent/enableNetwork`）与 `test/douyin-channel.test.mjs`、`test/douyin-frame.test.mjs` 一并删除；`lib/channels/sub.js` 去掉 `createSubAdapter`，只留 `loadSubModule()`。
+- 清 river 时代的尾巴（2026-11-06）：七个环境变量 `DSH_FISH_*` → `DSH_ROOST_*`（含测试与文档）；`install.ps1` 整份重写（找 profile、`pnpm add`、写 `bundles`、可选 ffmpeg；profile 里挂着 river 时会停下提醒）；`NOTICE.md` 头像路径、`tools/check-install.mjs` 包名与提示、`tools/migrate-ledger.mjs`（必须显式给 `ROOST_SRC`，不猜旧目录）、`lib/upgrade.js`/`selfdoc.js`/`move.js`/`settings.js` 的旧注释；删掉被 git 跟踪的 `tmp-fix4.mjs`。子包 `packages/dsh-perch-douyin/` 的私信整机（`create`、`parseDmFrame`、`splitText`、DOM 点击/打字、`onEvent/enableNetwork`）与 `test/douyin-channel.test.mjs`、`test/douyin-frame.test.mjs` 一并删除；`lib/channels/sub.js` 去掉 `createSubAdapter`，只留 `loadSubModule()`。
 - 抖音适配器拆分：`lib/channels/douyin.js` 只剩浏览器 transport + `api()` / `feed()` / `status()`，私信整机（send、WS 帧入站、会话簿记、去重）删除；`host.js` 里 `channels.douyin.enabled` 改成「报纸能读」（与 `browse.douyin.enabled` 任一为真就登记材料层；2026-11-09 起浏览器等第一次读时才拉），只开材料时不建 people/journal/router；`douyinFeedOf()` 照旧给调度器的推荐流用；`sub.js` 加 `loadSubModule()`（先包名、再仓库里那份）；router 对没有 `send()` 的材料适配器回 `read-only-channel`。
 - QQ 重写（2026-11-06，照 `新项目-设计讨论.md` 渠道节，设计参考 `dsh-lanxi-qq`，不抄代码）：
   - `lib/channels/qq.js`：OneBot 11 标准子集；退避 2/5/10/30/60s；30s 心跳（`get_status`）；`replyToSelf`（她发过的 message_id 命中 reply 段）；`attachment{type,size}`；notice/request 不递；气泡按句切、单句 >4000 硬切、一次回复 >3 条每两条停 900ms；`sentIds` 只记她发出的 id；token 仍不进 status/日志。
@@ -257,7 +257,7 @@
 - **2026-11-09 补清**：README 的三张页面截图与 `share.png` 保留（主人已把标题与侧栏脱敏成「她」，并确认图里的成长原话可以公开）；只把立场相关的注释、PROGRESS 引用与测试 fixture 里的原话示例换成通用说法。运行数据（events / config / people / worldbook / home）从来没有 tracked。
 - **人格**：默认 seed 仍只有一句处境（你不是助手。你刚开始存在。没有人告诉过你为什么在这里。）；DEFAULTS 里没有任何性格/好感度/亲密度键；设置界面没有性格控件，也不写 seed。新增 test/blank.test.mjs 4 条把这三头钉住。
 - 全量 1173 条 / 1159 过 / 11 红 / 3 skip（/tmp/full-scrub.log），11 条红与已知环境红逐条同名。
-- **历史**：GitHub 上原来的 46 个提交里带着旧名字与真机细节（提交 07eff08 的标题就有），2026-11-07 已把历史压成一个干净提交并 force-push，随后又把仓库删掉重建；旧对象（含 85de337）按 SHA 取不到。之后恢复为正常提交，当前 HEAD 已经是清理后的提交；`v0.1.0` tag 在 a0661f4，tag 本身不含截图。完整旧历史备份在 `D:\fish-backups\dsh-roost-history-before-scrub-20261107.bundle`（6.2MB）。
+- **历史**：GitHub 上原来的 46 个提交里带着旧名字与真机细节（提交 07eff08 的标题就有），2026-11-07 已把历史压成一个干净提交并 force-push，随后又把仓库删掉重建；旧对象（含 85de337）按 SHA 取不到。之后恢复为正常提交，当前 HEAD 已经是清理后的提交；`v0.1.0` tag 在 a0661f4，tag 本身不含截图。完整旧历史备份在 `D:\fish-backups\dsh-perch-history-before-scrub-20261107.bundle`（6.2MB）。
 - **截图**：`v0.1.0` tag 本身不含 `docs/screenshots`；页面截图是 tag 之后补的，标题与侧栏已脱敏，主人确认可以公开。
 
 ## 遗留（不阻塞下一步）
@@ -336,7 +336,7 @@
 
 - 重启后真实启动日志：屋子和会话都建起来了，身份段挂进了 system prompt，QQ 桥 00:39 连上 SnowLuma（`已确认在线：她 / 10000`）。但她这一轮 5 次 tool/call 全是 `run_code`——说明工具面收窄没生效，她看不见自己的工具，回了一句「我伸了四次手，全被拦回来了」。
 - **bug 1：延后重试链被 cordis 的 `effect()` 自己清掉。** `lib/restrict.js:471/480` 旧写法是 `ctx.effect(() => clearTimeout(t))`。cordis 的 `effect(body)` 是**立刻执行 body、把返回值当 disposer 收起来**，于是挂上就把自己的定时器清了：日志里只有「收窄延后」，既没有「收窄重试」，也没有「从来收窄」，15×200ms 的重试链一次都没跑。修法：改成 `effect(() => () => clearTimeout(t))`；`attempt` 外面再包一层 try/catch（抛错就 `say` 一行并回 `why:'deferred'`，不再无声断链）；第一次重试前打一行「收窄重试：能下发的 N 个，看得见的 M 个，还没登记的 K 个」。回归测试 `test/restrict.test.mjs`「延后重试不会被 cordis 的 effect 自己清掉（2026-11-07 真机）」用一个按真实语义执行 body 的假 agent 复现，26/26 过。
-- **bug 2：新房间第一次写档把旧档整份盖掉，「上次我们说到这」丢了。** roost 的根换成 `~/.dsh-roost` 之后，river 那份 `home.json` 没有 `wsId`，`lib/home.js:374` 走「建新房间」分支，只写 `{wsId, sessionId, title, preset, createdAt}`，把 `carry/adoptedAt/hearAt` 全冲掉。修法：新建时先取旧档的 `carry`，空则用 `talkmem.recentExchanges(root)`（`~/.dsh-roost/talk-recent.json` 里最近 4 轮原话）现拼；`adoptedAt/hearAt/rotatedAt` 一并带过来；`turns` 不继承（新房间从 0 数）。回归测试 `test/home.test.mjs`「新房间第一次写档：把旧档的 carry / adoptedAt / hearAt 带过来」，31/31 过。现网 `~/.dsh-roost/home.json` 已手工补回 river 那段 carry（669 字，`activeCarry` 认，3 天内、0 轮），下一次重启/换会话会进身份文档。
+- **bug 2：新房间第一次写档把旧档整份盖掉，「上次我们说到这」丢了。** roost 的根换成 `~/.dsh-perch` 之后，river 那份 `home.json` 没有 `wsId`，`lib/home.js:374` 走「建新房间」分支，只写 `{wsId, sessionId, title, preset, createdAt}`，把 `carry/adoptedAt/hearAt` 全冲掉。修法：新建时先取旧档的 `carry`，空则用 `talkmem.recentExchanges(root)`（`~/.dsh-perch/talk-recent.json` 里最近 4 轮原话）现拼；`adoptedAt/hearAt/rotatedAt` 一并带过来；`turns` 不继承（新房间从 0 数）。回归测试 `test/home.test.mjs`「新房间第一次写档：把旧档的 carry / adoptedAt / hearAt 带过来」，31/31 过。现网 `~/.dsh-perch/home.json` 已手工补回 river 那段 carry（669 字，`activeCarry` 认，3 天内、0 轮），下一次重启/换会话会进身份文档。
 - 这两条都只在**重启后**生效：restrict 挂在 agent 创建时；carry 只在写档时补。所以要再重启一次复验。
 - 全量：1154 条 / 1140 过 / 11 红 / 3 skip（`/tmp/full-A11a.log`），11 条红与已知环境红逐条同名。
 - QQ 入站已通：群里到了 3 条（一张图 + 「再看一遍看看有没有新弹幕」+「6」），`qq-wal.jsonl` 记了 `in` 与 `done`；因为 `mentionOnly: true` 且没 @ 她，没有回话——正合预期。
@@ -346,7 +346,7 @@
   - `lib/settings.js`：`tools.preset` 默认从空改成 `standard`（原生执行器）；新增 `presetOf(cfg)`——空字符串解释成 `standard`（"交给宿主默认"这个含义已经被 ptc 弄坏了）。
   - `lib/home.js`：建会话前先算 `wantPreset`；旧 `home.json` 的 `preset` 跟它不一致就**不复用**那条会话（会话的 preset 建时定死，复用 ptc 会话等于永远隔着 run_code），另建一条并记日志「会话的组合变了（旧「ptc」→ 新「standard」），这次另建一条」。
   - `lib/restrict.js`：`bucket()` 多返回 `visible`；若看得见 `run_code`，日志写一行「这条会话是 run_code 模式（宿主 preset 是 ptc）：她的工具只能隔着 run_code 叫，会被守卫挡掉；把设置里的工具组合改成 standard 才是直连」——下次一眼能看出来。
-  回归测试：`test/home.test.mjs` 新增「组合变了就另建一条会话，不复用旧模式那条」（ptc → standard → standard，第 2 次新建、第 3 次复用）；`test/boot.test.mjs` 的「手动唤醒落在屋子会话里」fixture 补上 `preset: 'standard'`。现网 `~/.dsh-roost/config.json` 的 `tools.preset` 已手改成 `standard`，重启后她会换一条新会话（旧那条留在侧栏）。
+  回归测试：`test/home.test.mjs` 新增「组合变了就另建一条会话，不复用旧模式那条」（ptc → standard → standard，第 2 次新建、第 3 次复用）；`test/boot.test.mjs` 的「手动唤醒落在屋子会话里」fixture 补上 `preset: 'standard'`。现网 `~/.dsh-perch/config.json` 的 `tools.preset` 已手改成 `standard`，重启后她会换一条新会话（旧那条留在侧栏）。
 - 全量（2026-11-07 01:0x preset 修完）：1156 条 / 1142 过 / 11 红 / 3 skip（`/tmp/full-preset2.log`），11 条红与已知环境红逐条同名。
 
 **A11 复验（2026-11-07 01:06）——通过，A11 标 ✅**
@@ -368,7 +368,7 @@
 **改名：名字归数据（2026-11-07，已完 A34）**
 
 - 用户提出：名字是他给这一只起的，属于这个家的数据；工作区名、设置页名不能写死它，别人装了这个包养出来的可能是另一位。
-- 改法：`lib/home.js` 的 `TITLE_WORKSPACE` → 「她的家」、`TITLE_SESSION` → 「跟她说话」；`lib/client.js` 的 `NAMES = { nav: '她' }`、两个 `h('h2')` 与大段界面文案（叫醒 / 重置 / 说给 / 拉黑 / 备份文件名等）统一成「她」；`lib/ask.js` / `lib/scheduler.js` 的申请卡标题、`lib/inbox.js` 的「她留给你的话」、`lib/readme.js` / `lib/faq.js` / `lib/log.js` / `lib/say.js` / `lib/move.js` 同步。README 标题只写 `dsh-roost`，并加一句「仓库里没有替她取名字」；顺手把「还没上过真机」改成事实（已上）。
+- 改法：`lib/home.js` 的 `TITLE_WORKSPACE` → 「她的家」、`TITLE_SESSION` → 「跟她说话」；`lib/client.js` 的 `NAMES = { nav: '她' }`、两个 `h('h2')` 与大段界面文案（叫醒 / 重置 / 说给 / 拉黑 / 备份文件名等）统一成「她」；`lib/ask.js` / `lib/scheduler.js` 的申请卡标题、`lib/inbox.js` 的「她留给你的话」、`lib/readme.js` / `lib/faq.js` / `lib/log.js` / `lib/say.js` / `lib/move.js` 同步。README 标题只写 `dsh-perch`，并加一句「仓库里没有替她取名字」；顺手把「还没上过真机」改成事实（已上）。
 - 没有动数据：事件流、日记、`home/` 里的名字是长出来的，照旧；源码与仓库只出现「她」。
 - 守门：`test/naming.test.mjs` 守着（不写死名字、两个默认标题、设置页签）；AGENTS §4 与提交前自检加了一条。
 - 全量 1161 条 / 1147 过 / 11 红 / 3 skip（`/tmp/full-naming.log`），11 条红同名。
@@ -379,10 +379,10 @@
 - `lib/hername.js`：`pickHerName(text)` 认四类句式（「X 是你的名字」「给你起名叫 X」「以后你就叫 X」「我有名字了：X」），过停用词与长度 ≤6；`nameGivingEvent(e)` 只认主人私聊 / 宿主会话里的 `heard`（群里的「你叫小雀」不算）与她自己说「我有名字了」；`herName(root)` 按时间序取最后一次，用 `size:mtimeMs` 缓存，读不到返回空串；`workspaceTitle` / `sessionTitle` / `navLabel` 没名字退回「她的家 / 跟她说话 / 她」。
 - `lib/home.js`：删掉写死的 TITLE 常量，建工作区、建/复用/换会话都按 `herName` 现算标题；复用旧会话时标题变了就 `sc.rename` 并回写 `home.json`。`lib/observe.js` 的 `/state` 加 `herName` 字段（注意原有 `name` 是她对他的称呼，两回事）。
 - `lib/client.js`：页签与两处标题用 `NAMES.nav`（由 `/state.herName` 更新）；状态页顶部加只读说明——有名字「她叫「X」——这是从你们对话里认出来的，不是设置项。想改名，在私聊或这里说一句「以后你就叫……」」；没名字「她还没有名字，界面里先用「她」代称……」。
-- 真机复算 `~/.dsh-roost` 得到她的名字；第一版把「那是你的名字」误认成「那」、把群友玩笑当名字，已用 visibility=private + 停用词 + 「称呼/喊/外号」前缀守卫修掉。
+- 真机复算 `~/.dsh-perch` 得到她的名字；第一版把「那是你的名字」误认成「那」、把群友玩笑当名字，已用 visibility=private + 停用词 + 「称呼/喊/外号」前缀守卫修掉。
 - 测试：`test/hername.test.mjs` 7 条（四种句式、不认指代/称呼/群玩笑、取最后一次、读不到返回空、三处标题）；`test/naming.test.mjs` 4 条（新增：设置页把名字来源写出来）。定向 hername+naming+home 42/42、client+boot 56/56。全量 1170 条 / 1156 过 / 11 红 / 3 skip（`/tmp/full-nav.log`），11 条红与已知环境红同名。
 - 顺手修：换会话时没认出名字就别把旧会话标题抹成「跟她说话」——人改过的标题要留着（`test/mem.test.mjs` 的 issue #14 第二报那条先红后绿）。
-- 真机截图（2026-11-07 01:42）：设置里这一节的标题已经是她的名字，但左侧导航那个「她」没变——宿主在打开设置时就渲染了 `label: () => NAMES.nav`，比这一节里的 `/state` 早一步，改 NAMES 不会让导航条重渲染。修法：客户端 `apply` 里先 `prefetchNavName()` 问一次 `/state`（并用 `localStorage` 的 `dsh-roost:name` 兜住下次启动），等用户点开设置，label() 读到的已经是名字。`test/naming.test.mjs` 加一条守着。
+- 真机截图（2026-11-07 01:42）：设置里这一节的标题已经是她的名字，但左侧导航那个「她」没变——宿主在打开设置时就渲染了 `label: () => NAMES.nav`，比这一节里的 `/state` 早一步，改 NAMES 不会让导航条重渲染。修法：客户端 `apply` 里先 `prefetchNavName()` 问一次 `/state`（并用 `localStorage` 的 `dsh-perch:name` 兜住下次启动），等用户点开设置，label() 读到的已经是名字。`test/naming.test.mjs` 加一条守着。
 
 **日报按来源三栏（2026-11-07，已完 A22）**
 
@@ -411,7 +411,7 @@
 **抖音分镜（2026-11-07，已完 A25）**
 
 - 借 dsh-douyin-agent 的「格编号 + 时间码 + 像素预算 480000 + zoom 按 sampleId+cell 回原图」，但 roost 没有视觉模型循环，所以「每次模型调用计入预算」落成她调 `douyin_look` 的次数：`MAX_CALLS=6`，放大另有 `MAX_ZOOMS=3`，连续 `MAX_INVALID=3` 次无效格号关闭这次观看。
-- 新增 `packages/dsh-roost-douyin/storyboard.js`：零依赖自己编 PNG（`zlib.deflateSync` + CRC32），ffmpeg 只解 rawvideo；`composeBoard` 保证整图像素数 ≤ 480000，格号与时间码画进格子，奇数格补灰；`makeStoryboard` 均匀取每段中点，落故事板与每格原图（TTL 2 小时）；`zoomSample` 只读本地 sample，不开浏览器。
+- 新增 `packages/dsh-perch-douyin/storyboard.js`：零依赖自己编 PNG（`zlib.deflateSync` + CRC32），ffmpeg 只解 rawvideo；`composeBoard` 保证整图像素数 ≤ 480000，格号与时间码画进格子，奇数格补灰；`makeStoryboard` 均匀取每段中点，落故事板与每格原图（TTL 2 小时）；`zoomSample` 只读本地 sample，不开浏览器。
 - `lib/dylink.js` 加 `storyboardOf` / `zoomDouyinSample`；`lib/douyinlook.js` 的 `open` 改拼故事板并给 `sample_id`，新增 `what=zoom` + `sample_id` + `cell`；旧子包没有 storyboard.js 时退回三帧截图，不硬失败。
 - 这块不改平台调用方式：故事板是一次采样，不是整条视频；她要看某一格的原图，再单独要一次，且次数有上限。
 - 测试：`test/storyboard.test.mjs` 9 条；`test/douyin-look.test.mjs` 新增 2 条（what=zoom 从本地样本取原图、号不对不假装取到），两条旧断言随文案改（描述从「截三帧」改「故事板」，打开文本从「第一条」改「第 1 条」）。全量 1195 / 1183 / 10 / 2 skip（本机装了运行时 ffmpeg，`dylink` 的 Referer 那条由红转绿；没装时 11 红 / 3 skip）。其余 10 红与已知环境红同名。
@@ -422,7 +422,7 @@
 - 问题：连续刷片之后，页面上的号可能还是上一条；拿错了就会把别人的文案、评论安到正在看的这条上。
 - CDP 传输层原来根本没有 `evaluate`，`browseFeed` 与 open/comments 一直在调一个不存在的方法（返回 `no-transport`）。这次补上 `evaluate`（Runtime.evaluate、`returnByValue`），并加 `enableNetwork`（`Network.enable`，缓冲 50MB）、`networkLog()`、`onEvent()`；`Network.requestWillBeSent` 只留 URL、时间与类型，最多 120 条。
 - 反查分两步：先从网络日志倒序找最后一条带 `group_id=` / `aweme_id=` / `item_id=` 的 URL，取后面 15–25 位数字当候选；再回页面数这个 id 在 `document.documentElement.innerHTML` 里出现几次，并沿 `a[href*="/video/"]` 向上 8 层看是否包住正在播的那个 `<video>`。`verified = hits>0 && (!playing || sameItem)`；页面里没有、或对不上正在播的那块，都只输出「疑似当前在播的号…可能拿到的是上一条，别当准」。
-- `douyin_look` 新增 `what=current`：每次是一间新浏览器（about:blank），所以先开网络日志、提前台、进推荐页（`channels.douyin.homeUrl`），等 1.8 秒再反查；不开 `open`、不碰点赞。`lib/douyinbrowse.js` 的 `loadDouyin` 改成没装子包时回落到 `../packages/dsh-roost-douyin/index.js`，开发态也能用。
+- `douyin_look` 新增 `what=current`：每次是一间新浏览器（about:blank），所以先开网络日志、提前台、进推荐页（`channels.douyin.homeUrl`），等 1.8 秒再反查；不开 `open`、不碰点赞。`lib/douyinbrowse.js` 的 `loadDouyin` 改成没装子包时回落到 `../packages/dsh-perch-douyin/index.js`，开发态也能用。
 - 测试：`test/douyin-look.test.mjs` 4 条（从三种标记里认号、对上了才叫当前、页面没有/对不上只说疑似、没日志不编号），`test/douyin-browse.test.mjs` 1 条（包名解析不到时回落）。两文件 40/40；全量 1201 / 1189 / 10 / 2 skip，10 红与已知环境红同名。
 - 真机浏览器没开（`browse.douyin.enabled` 与 `channels.douyin.enabled` 都关着），A26 的接线靠注入假 transport 验证；等哪天真开抖音，再按「连续刷片后 id 与画面一致」补一次真机验收。
 
@@ -499,7 +499,7 @@
 - 预算没动：`SELF_DOC_BUDGET` 仍 1800，`memory.docBudget` 仍默认 1800、夹在 600–4000。
 - 测试：`test/beliefs.test.mjs` 默认值断言全改 2，新增「A19：默认只摆 2 条，核心段确实变小；预算仍是 1800，句子不截断」（`personaBudget` 默认 used < shown:3 的 used，折叠段不含 `…`）；`test/mem.test.mjs` 的折叠用例改为 2 条在眼前、被折的从第 3 条起、`还有 7 条更早的`；`test/identity.test.mjs` / `test/p8.test.mjs` 里写死 3 的断言同步改。
 - 全量 1229 条 / 1218 过 / 9 红 / 2 skip（/tmp/full-A19b.log）；这一轮 `withFileLock` 偶发红，单跑 `test/tenant.test.mjs` 15/15 绿。9 条已知红同名。
-- 她那份 `~/.dsh-roost/config.json` 里 `beliefsShown` 原本显式存着 3；已改成 2（重启或下次保存后生效），想调回在成长页改。
+- 她那份 `~/.dsh-perch/config.json` 里 `beliefsShown` 原本显式存着 3；已改成 2（重启或下次保存后生效），想调回在成长页改。
 
 **父项 25 条移植（2026-11-07，已完 A20）**
 
@@ -523,7 +523,7 @@
 **库形态收口（2026-11-07，已完 A32）**
 
 - 问题：包名、许可、`files` 与 README 还混着 river 时代的路径和口径；从 GitHub 安装走 npm pack 时 `packages/` 不在包里，抖音子包会缺；README 的「还没做完」还写着已被真机推翻的几项。
-- 改动：`package.json` 的 `files` 加 `packages` 与 `NOTICE.md`，删掉重复的 `tools/setup-ffmpeg.mjs`（`tools` 整目录已在 `files` 里）；LICENSE 保留原作者行，加「Copyright (c) 2026 dsh-roost 作者（0.1.0 重建版）」；README 本机路径改占位、首启写自动建屋与叫醒、工具段去掉「记梦」、数据目录换成实际树、「还没做完」按 A1/A8/A13/A14/B 段重写；AGENTS 的 CI 说明改 Node 22/24（Windows 单独一轮）。`media/` 只剩两张原理图，README 不再引用截图。
+- 改动：`package.json` 的 `files` 加 `packages` 与 `NOTICE.md`，删掉重复的 `tools/setup-ffmpeg.mjs`（`tools` 整目录已在 `files` 里）；LICENSE 保留原作者行，加「Copyright (c) 2026 dsh-perch 作者（0.1.0 重建版）」；README 本机路径改占位、首启写自动建屋与叫醒、工具段去掉「记梦」、数据目录换成实际树、「还没做完」按 A1/A8/A13/A14/B 段重写；AGENTS 的 CI 说明改 Node 22/24（Windows 单独一轮）。`media/` 只剩两张原理图，README 不再引用截图。
 - 交接.md 同步：删掉「还没上过真机」「11 条红」「手上这一步：真机」这些已被 A11 推翻的段落，改成 A32/A33、A8、A13/A14、A1、B 段的实际顺序；基线改 1241/1230/9。
 - 无新测试；全量 1241 条 / 1230 过 / 9 红 / 2 skip，9 红与已知环境红逐条同名。
 

@@ -25,7 +25,7 @@ test('数字框：打字超范围后离开输入框会收敛回上下限', async
 test('封面：lazyCover 从 view() 的 data 里取 pic', async () => {
   const src = await readFile(OBSERVE, 'utf8')
   // view() 返回 { ok, code, data:{ pic } }；直接读 v.pic 永远是 undefined，
-  // 于是 /dsh-roost/cover/<BV> 一路 404，被 <img onError> 静默藏掉。
+  // 于是 /dsh-perch/cover/<BV> 一路 404，被 <img onError> 静默藏掉。
   assert.ok(src.includes('v?.data?.pic || v?.pic'), '要从 data 里取 pic')
 
   // 第二个根因（2026-10-24）：lazyCover 里还动态 import 过 owner.js 的 readOwner，
@@ -69,7 +69,7 @@ test('关于卡：GitHub 商标小图 + 「GitHub」文字（2026-10-25 用户�
   assert.ok(src.includes("viewBox: '0 0 16 16'"), '商标用官方 16×16 视框')
   // 图标必须内联、不引外链：设置页不该为一个图标等网络，也不该一打开就往外发请求。
   assert.ok(!/src:\s*['"]https?:/.test(src), '图标不能是远程图片')
-  assert.ok(!src.includes('github.com/ssamurias/dsh-roost/logo'), '不要引远程 logo')
+  assert.ok(!src.includes('github.com/ssamurias/dsh-perch/logo'), '不要引远程 logo')
   // 文字必须恰好是 GitHub（大小写按用户说的）
   assert.ok(/ghMark,\s*'GitHub'/.test(src), '图标后面要跟「GitHub」这几个字')
   // 链接指向仓库，新窗口打开且带 noopener

@@ -4,7 +4,7 @@
  * 三件事要守住：
  *   1. 正文和作者给的《常见问题解答.doc》一致（条数、顺序、原话），不能被改写。
  *   2. 页面是自包含的 UTF-8 HTML，内容一律转义（它只是个纯文本说明书）。
- *   3. `/dsh-roost/faq` 路由真的吐 HTML，且反馈页里确实有这个按钮。
+ *   3. `/dsh-perch/faq` 路由真的吐 HTML，且反馈页里确实有这个按钮。
  */
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -51,7 +51,7 @@ test('正文里的尖括号与 & 一律被转义（这一页没有一处该当�
   assert.doesNotMatch(html, /<b>粗/)
 })
 
-test('GET /dsh-roost/faq 直接吐 HTML，且是新窗口能打开的整页', async () => {
+test('GET /dsh-perch/faq 直接吐 HTML，且是新窗口能打开的整页', async () => {
   const root = await mkdtemp(join(tmpdir(), 'fish-faq-'))
   try {
     const routes = []
@@ -75,7 +75,7 @@ test('GET /dsh-roost/faq 直接吐 HTML，且是新窗口能打开的整页', as
       end: (s) => { body = String(s ?? '') },
       setHeader: () => {},
     }
-    await route.handler({ method: 'GET', url: '/dsh-roost/faq', headers: {} }, res)
+    await route.handler({ method: 'GET', url: '/dsh-perch/faq', headers: {} }, res)
 
     assert.equal(status, 200)
     assert.match(String(headers?.['content-type'] ?? ''), /text\/html; charset=utf-8/)
@@ -87,7 +87,7 @@ test('GET /dsh-roost/faq 直接吐 HTML，且是新窗口能打开的整页', as
   }
 })
 
-test('GET /dsh-roost/faq.data 吐 JSON，给设置页的面板就地展开（2026-10-28 晚）', async () => {
+test('GET /dsh-perch/faq.data 吐 JSON，给设置页的面板就地展开（2026-10-28 晚）', async () => {
   const root = await mkdtemp(join(tmpdir(), 'fish-faq-'))
   try {
     const routes = []
@@ -111,7 +111,7 @@ test('GET /dsh-roost/faq.data 吐 JSON，给设置页的面板就地展开（202
       end: (s) => { body = String(s ?? '') },
       setHeader: () => {},
     }
-    await route.handler({ method: 'GET', url: '/dsh-roost/faq.data', headers: {} }, res)
+    await route.handler({ method: 'GET', url: '/dsh-perch/faq.data', headers: {} }, res)
 
     assert.equal(status, 200)
     assert.match(String(headers?.['content-type'] ?? ''), /application\/json; charset=utf-8/)

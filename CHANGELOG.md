@@ -4,11 +4,11 @@
 
 ### 改名
 
-- **包名 `dsh-roost` → `dsh-roost-core`**（2026-11-10）。npm 上的 `dsh-roost` 已被另一个独立项目占用（`tdcq9594/dsh-roost`，2026-10-26 建、AGPL-3.0），继续同名会让「一键安装」和包名解析撞车。仓库名、插件 id（`dsh-roost`）、数据目录 `~/.dsh-roost`、路由 `/dsh-roost/*` **都不变**；`lib/upgrade.js` 读依赖时同时认新旧两个包名，老 profile 不用改也能升级。
+- **包名 `dsh-perch` → `dsh-perch`**（2026-11-10）。npm 上的 `dsh-perch` 已被另一个独立项目占用（`tdcq9594/dsh-perch`，2026-10-26 建、AGPL-3.0），继续同名会让「一键安装」和包名解析撞车。仓库名、插件 id（`dsh-perch`）、数据目录 `~/.dsh-perch`、路由 `/dsh-perch/*` **都不变**；`lib/upgrade.js` 读依赖时同时认新旧两个包名，老 profile 不用改也能升级。
 
 ## 0.1.0（2026-11-08）
 
-重建版。代码从 `dsh-fish-river` 0.1.68 复制过来，改名 `dsh-roost`，数据目录迁到 `~/.dsh-roost`。这是新线的第一版（2026-11-07 已上真机：A11 首检通过）。
+重建版。代码从 `dsh-fish-river` 0.1.68 复制过来，改名 `dsh-perch`，数据目录迁到 `~/.dsh-perch`。这是新线的第一版（2026-11-07 已上真机：A11 首检通过）。
 
 ### 重写
 
@@ -20,10 +20,10 @@
 - **桌宠（身体）**：新增 `lib/pet/`，按 `dsh-roost-pet` 的协议 v1 用 stdio 一行一 JSON 对话。身体只负责显示五档（思考 / 动手 / 等 / 出错 / 成了）和做十种动作，不生成台词、不自动打招呼；`pet_act` 只在开启时通过 `registerToolRestrict` 的 `extra` 追加，不进 `FISH_TOOLS`，`selfcheck` 的期望名单也跟着开关走。聊天框里的原文只走 `sayToHer`，`looksLikeRewriting` 命中就静默丢；`/pet/status` 返回中文档位与事实，不出现模型英文名。默认关着，关着不启动进程、不订阅会话、不多一个工具；`talkSessionId` 拿不到就不挂，spawn 连续三次失败置 dead 且只记一次。测试用注入的 `PassThrough` 假身体，不真 spawn。
 - **桌宠启动按 launch.md 对齐**：`pet.path` 指向打包后的可执行文件；开发态用 `electron.exe <repo>`，`repo` 从 `pet.repo` 取，没填才按标准布局反推。stdio 三个 pipe、不 detached、不经 shell、cwd 按打包/开发两种；spawn 前删 `ELECTRON_RUN_AS_NODE`；参数补 `--pet=<id>`。退出码按 `launch.md`：0 正常 / 1 崩溃 / 2 握手或协议失败 / 3 已有实例 / 4 参数或配置错，0 与 bye 不重拉，3/4 置 dead，其余按 1 秒、5 秒退避最多三次。
 - **`pet_act` 补上 output 与 parameters 转换**：宿主现在要求工具声明 `output { schema, render }`；`lib/pet/tool.js` 照 `capture.js` 的写法补了 `{ ok, note }` 与返回 ContentBlock 数组的 render。真机又发现手写 `parameters` 会被宿主以 `must be lossless JSON` 拒掉并连带整批工具不可用，已改成 `toJsonSchema()`；现在工具面收窄到 15 个，`pet_act` 能正常调用。
-- **睡不睡按「在不在做事」**：桌宠的 `checkAwake` 改成 `awake = 回合进行中 || 距最后一次动静 < idleSleepMin`。回合进行中一律算醒，五分钟只在回合结束后起算；睡着之后只有 `turn/start`、`tool/call`、`assistant/message` 能叫醒，余额 / 通知 / 日历 / 到点本身不算。`pet.idleSleepMin` 默认 5、范围 1–60，设置页「插件」页可改；旧的 `asleepFromEvents()` 只留给 scheduler 的「想一想」记账。状态文字同时改成说「哪一段、从哪儿来」：`思考：回合进行中` / `思考：工具已返回` / `等：回合已结束，等下一次动静` / `成了：这一轮结束了`。设置页保存 `idleSleepMin` 后由 `petApplyConfig()` 当场热更并重判，不用重启。角色包配置键统一为 `pet.pack`（老 `petId` 自动迁移），设置页「插件」卡可直接填 `~/.dsh-roost/pets/<id>` 的文件夹名；素材不进仓库。
+- **睡不睡按「在不在做事」**：桌宠的 `checkAwake` 改成 `awake = 回合进行中 || 距最后一次动静 < idleSleepMin`。回合进行中一律算醒，五分钟只在回合结束后起算；睡着之后只有 `turn/start`、`tool/call`、`assistant/message` 能叫醒，余额 / 通知 / 日历 / 到点本身不算。`pet.idleSleepMin` 默认 5、范围 1–60，设置页「插件」页可改；旧的 `asleepFromEvents()` 只留给 scheduler 的「想一想」记账。状态文字同时改成说「哪一段、从哪儿来」：`思考：回合进行中` / `思考：工具已返回` / `等：回合已结束，等下一次动静` / `成了：这一轮结束了`。设置页保存 `idleSleepMin` 后由 `petApplyConfig()` 当场热更并重判，不用重启。角色包配置键统一为 `pet.pack`（老 `petId` 自动迁移），设置页「插件」卡可直接填 `~/.dsh-perch/pets/<id>` 的文件夹名；素材不进仓库。
 - **桌宠交付形态**：`pet.path` 留空时默认找 `<root>/pet/dsh-roost-pet.exe`；文件不在就报「还没装身体」，不 spawn、不报错。新增 `tools/install-pet.mjs`，用 PowerShell 解压身体与角色包 zip，写 config 前先备份。
 - **戳一下**：睡着只让身体晃；回合进行中只记一条 `meta poke:`，不另起一轮；醒着且距上次戳够 `pet.pokeMinGapMs`（默认 60 秒，5–600 秒可调）才起一轮轻提示。poke 不算「她听过」，不进记忆。
-- **动作表跟着角色包走**：`pet_act` 的动作与描述从 `~/.dsh-roost/pets/<pack>/pet.json` 的 `animations.actions` 现读，坏名滤掉；读不到回落内置 10 个。换角色包要重启。
+- **动作表跟着角色包走**：`pet_act` 的动作与描述从 `~/.dsh-perch/pets/<pack>/pet.json` 的 `animations.actions` 现读，坏名滤掉；读不到回落内置 10 个。换角色包要重启。
 - **叫醒时段**：默认窗口改 `08:00–23:00`，设置页与身份文档统一写「每天几点可以被叫醒」，并说明「不是在这段时间里一直醒着」；`lib/client.js` 的兜底也跟着改。
 - **两份说好的文件**：插件页新增一张卡，填两个绝对路径并打开后，她多一个 `pair_file` 工具，只能读、按原文改一段、在末尾添一句。改 / 添都要带 read 回来的 16 位 hash；文件在两次之间变过会让她重读；写前留 `.bak`。只认这两个路径，拒软链 / 目录 / 二进制 / 大于 512KB，也不许指进她家、`~/.dsh` 或系统目录。这条路不写事件流、不记 `looked:`。默认关着。
 - **成长节奏的配置改名**：`growthDays` 改成 `stageSpanDays`——它只是「四个阶段一共多少天」的尺子，不是寿命上限。老配置里的 `growthDays` 在 `normalizeConfig` 里迁移一次（新旧都有时以新键为准，保存时清掉旧键）。`absence` / `ask` / `capture` 四处写事件信封不再跑完整 `deriveSelf`，改用只算 `{day,stage}` 的 `stampOf()`；过滤口径（驳回、梦、`influence:none`、非 constitution）收进 `constitutionEvents()` 与 `deriveSelf` 共用。主动说话默认隔 3 小时（内部值，不上界面），上限只留 1–6 且不设 0，界面不再有「允许她主动开口」总开关，文案写明「上限不是任务」。
@@ -69,7 +69,7 @@
 - **预算与刹车**：每次调用都计入预算（`MAX_CALLS=6`），放大另有三次上限；连续三次格号不对就停这次观看。零依赖：PNG 自己编，ffmpeg 只解 rawvideo；没装 ffmpeg 或旧子包没有 storyboard 时退回原来的三帧截图。
 - **知道此刻在播哪一条**：`douyin_look` 新增 `what=current`。先从 CDP 网络日志里倒序找最后一条带 `group_id` / `aweme_id` / `item_id` 的请求当候选，再回页面数这个 id 出现几次、并核对它是否就是正在播的那一块；对不上就说「疑似…可能拿到的是上一条」，不拿上一条假装这一条。
 - **浏览器通道补齐 `evaluate`**：之前 `browseFeed` 与打开/评论都在调一个不存在的 `evaluate`，所以一直回 `no-transport`；这次补上，并加了网络事件的开启与读取。
-- **开发态也能用抖音子包**：包名解析不到时回落到仓库里的 `packages/dsh-roost-douyin/`，和分镜模块同一个口径。
+- **开发态也能用抖音子包**：包名解析不到时回落到仓库里的 `packages/dsh-perch-douyin/`，和分镜模块同一个口径。
 - **推荐流真机通了**：`browseFeed` 的默认等待函数引用了未定义的 `sleep`，真机上直接报 `sleep is not defined`（测试每次都传了替身，所以没露）。补上真的 `sleep` 和不传替身的回归测试；2026-11-07 16:40 重启后真机取到两条推荐、搜到「画眉 学口」，`FEED_SELECTORS` 不用再等。
 
 ### 清理
@@ -131,14 +131,14 @@
 
 ### 库形态
 
-- **包名与许可收口**：`package.json` 用 `dsh-roost` / `0.1.0` / MIT，仓库地址指向 GitHub；`files` 加 `packages` 与 `NOTICE.md`（从 GitHub 安装走 npm pack，不带 `packages` 时抖音子包会缺），删掉重复的 `tools/setup-ffmpeg.mjs`。LICENSE 保留原 `dsh-fish` 作者行，另加 0.1.0 重建版的版权行。
+- **包名与许可收口**：`package.json` 用 `dsh-perch` / `0.1.0` / MIT，仓库地址指向 GitHub；`files` 加 `packages` 与 `NOTICE.md`（从 GitHub 安装走 npm pack，不带 `packages` 时抖音子包会缺），删掉重复的 `tools/setup-ffmpeg.mjs`。LICENSE 保留原 `dsh-fish` 作者行，另加 0.1.0 重建版的版权行。
 - **README 与 0.1.0 对齐**：本机路径改占位；首启写明自动建屋 + 叫醒一次，没醒再点「现在叫醒她」；工具段去掉已删的「记梦」；数据目录换成实际树（`home/` 里只有身份文件，日记 / 日报 / 便条 / 留话都在账本根）；「还没做完」按 A1 / A8 / A13 / A14 / B 段重写，不再把真机、印象层、WAL 说成没做。
 - **截图不随仓库走**：`media/` 只剩两张原理图（`/media` 路由真要它们），README 不再引用截图。
 
 ### 接线核验
 
 - **保留模块逐条核过**：`docs/接线核验.md` 把 15 个文件 / 16 条入口列清楚（备份恢复、换家、日报、今天页、看视频历史、头像、说话意图、会话申请卡、QQ 桥、B 站扫码、自检、风控、宿主版本、记忆体检、FAQ），每条写入口与代码位置。没有只被测试引用的孤儿模块。
-- **FAQ 暂时只留直链**：反馈页按 A14 仍是「还没有写」的空状态；`lib/faq.js` 与 `/dsh-roost/faq`、`/dsh-roost/faq.data` 都还在，等 A14 按 0.1.0 重写后再接面板。
+- **FAQ 暂时只留直链**：反馈页按 A14 仍是「还没有写」的空状态；`lib/faq.js` 与 `/dsh-perch/faq`、`/dsh-perch/faq.data` 都还在，等 A14 按 0.1.0 重写后再接面板。
 
 ### 删除
 
@@ -149,20 +149,20 @@
 ### 命名
 
 - **名字归数据，不写进代码**：界面、侧栏、设置页、README 里不再写死任何名字——名字是这一只被养出来之后才有的。默认工作区标题「她的家」、会话标题「跟她说话」、设置页签「她」；别人的这一只叫什么，由他们自己的对话长出来。`test/naming.test.mjs` 守着。
-- README 标题只写 `dsh-roost`，并注明「仓库里没有替她取名字」。
+- README 标题只写 `dsh-perch`，并注明「仓库里没有替她取名字」。
 - **名字是变量，从对话里认**：不设名字输入框。`lib/hername.js` 从事件流里认「X 是你的名字」「给你起名叫 X」「以后你就叫 X」「我有名字了：X」这类句子（只认主人私聊 / 宿主会话，群友玩笑不算），取最后一次；工作区「X的家」、会话「跟X说话」、侧栏页签 `X`，认不出退回「她」。设置页状态页顶部写清这是从对话里认出来的、不是设置项，要改名就在对话里说一句。
 
 ### 清理
 
 - 环境变量统一成 `DSH_ROOST_*`：`DSH_ROOST_HOMES`、`DSH_ROOST_LOCATION`、`DSH_ROOST_PROFILES`、`DSH_ROOST_FFMPEG`、`DSH_ROOST_CA_FILE`、`DSH_ROOST_HOME`、`DSH_ROOST_DEV`。旧名不再认。
-- `install.ps1` 整份重写：roost 版能找 `~/.dsh/profiles/*`、找 node/pnpm、`pnpm add` 本包、把 `dsh-roost` 写进 `dsh.profile.bundles`（带时间戳备份），可选跑 `tools/setup-ffmpeg.mjs`；profile 里还挂着 `dsh-fish-river` 时会停下来要求确认。
+- `install.ps1` 整份重写：roost 版能找 `~/.dsh/profiles/*`、找 node/pnpm、`pnpm add` 本包、把 `dsh-perch` 写进 `dsh.profile.bundles`（带时间戳备份），可选跑 `tools/setup-ffmpeg.mjs`；profile 里还挂着 `dsh-fish-river` 时会停下来要求确认。
 - `tools/migrate-ledger.mjs` 不再默认猜旧数据目录：必须显式给 `ROOST_SRC`。
 - `NOTICE.md` 头像路径、`tools/check-install.mjs` 的包名与提示、若干旧注释都已改到 roost；删掉被 git 跟踪的 `tmp-fix4.mjs`。
 - 抖音子包里的私信整机（`create`/`parseDmFrame`/`splitText`/DOM 点击与打字/`onEvent`/`enableNetwork`）删除，只留 `createCdpTransport`/`browseFeed`；对应两条测试一并删除。
 
 ### 数据
 
-- 账本从旧目录迁到 `~/.dsh-roost`（1475 条，派生结果一致）；事件流仍然只追加。
+- 账本从旧目录迁到 `~/.dsh-perch`（1475 条，派生结果一致）；事件流仍然只追加。
 
 ### 验收
 

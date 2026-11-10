@@ -13,7 +13,7 @@
  *   3. 改 <root>/config.json：pet.enabled=true、pet.path=<exe>、pet.pack=<id>
  *      改之前留 config.json.bak-<时间>
  *
- * root 默认 ~/.dsh-roost；测试或临时装可以用 --root。
+ * root 默认 ~/.dsh-perch；测试或临时装可以用 --root。
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync, readdirSync } from 'node:fs'
@@ -31,7 +31,7 @@ function usage() {
     '  --body  桌宠 body 的便携版 zip（解到 <root>/pet/）',
     '  --pack  角色包 zip（解到 <root>/pets/<id>/）',
     '  --id    角色包文件夹名，默认 default',
-    '  --root  她的数据目录，默认 ~/.dsh-roost',
+    '  --root  她的数据目录，默认 ~/.dsh-perch',
     '  --help  看这一页',
   ].join('\n')
 }
@@ -96,7 +96,7 @@ function main() {
   const bodyZip = argOf(argv, '--body')
   const packZip = argOf(argv, '--pack')
   const id = String(argOf(argv, '--id', 'default')).trim() || 'default'
-  const root = resolve(argOf(argv, '--root', process.env.DSH_ROOST_HOME || join(homedir(), '.dsh-roost')))
+  const root = resolve(argOf(argv, '--root', process.env.DSH_ROOST_HOME || join(homedir(), '.dsh-perch')))
 
   if (!bodyZip) die('要 --body <zip>。\n\n' + usage())
   if (!PACK_RE.test(id)) die('角色包 id 只能用字母、数字、点、下划线、短横线：' + id)

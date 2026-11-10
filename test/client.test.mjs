@@ -105,7 +105,7 @@ async function loadClient({ react }) {
 
   assert.equal(loaded.length, 1, '必须调用一次 window.__ModuleLoader__.load')
   const spec = loaded[0]
-  assert.equal(spec.id, 'dsh-roost-core', 'loader id 必须等于包名，否则客户端模块挂不上')
+  assert.equal(spec.id, 'dsh-perch', 'loader id 必须等于包名，否则客户端模块挂不上')
   const exports = spec.factory((id) => {
     if (id === 'react') return react
     throw new Error(`unexpected require: ${id}`)
@@ -150,8 +150,8 @@ test('apply 注册设置节、侧栏「记忆图谱」行与 main 页面', async
   exports.apply(ctx)
 
   assert.deepEqual(injected.map((x) => x.name), ['settings.section', 'sidebar.panellist', 'main'])
-  assert.equal(injected[1].label, 'dsh-roost: memory sidebar entry')
-  assert.equal(injected[2].label, 'dsh-roost: memory panel')
+  assert.equal(injected[1].label, 'dsh-perch: memory sidebar entry')
+  assert.equal(injected[2].label, 'dsh-perch: memory panel')
   assert.equal(registered.length, 3)
 
   const settings = registered.find((x) => x.meta.name === 'settings.section')
@@ -180,7 +180,7 @@ test('apply 注册设置节、侧栏「记忆图谱」行与 main 页面', async
   }
   walk(panel.Component())
   assert.equal(found.length, 1)
-  assert.equal(found[0].props.src, '/dsh-roost/memory')
+  assert.equal(found[0].props.src, '/dsh-perch/memory')
   assert.equal(found[0].props.title, '记忆图谱')
   assert.equal(found[0].props.style.width, '100%')
   assert.equal(found[0].props.style.height, '100%')
@@ -229,7 +229,7 @@ test('拿不到 layout 服务时，记忆图谱入口退回顶层新标签', asy
   const link = findAnchor(grow)
   assert.ok(link)
   link.props.onClick({ preventDefault() {} })
-  assert.deepEqual(opened, [['/dsh-roost/memory', '_blank', 'noopener,noreferrer']])
+  assert.deepEqual(opened, [['/dsh-perch/memory', '_blank', 'noopener,noreferrer']])
 })
 
 test('组件在"还没有数据"时也能渲染，不抛错', async () => {

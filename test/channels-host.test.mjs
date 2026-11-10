@@ -124,7 +124,7 @@ test('host：材料层起不来时如实报错，不说自己起来了', async (
       root,
       config: { channels: { qq: { enabled: false }, douyin: { enabled: true } } },
       log: () => {},
-      adapterLoader: async () => ({ ok: false, why: '没装抖音子包 dsh-roost-douyin' }),
+      adapterLoader: async () => ({ ok: false, why: '没装抖音子包 dsh-perch-douyin' }),
     })
     const boot = await h.ready
     assert.equal(boot.ok, false)

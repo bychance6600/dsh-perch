@@ -1,8 +1,8 @@
 {
-  "name": "dsh-roost-douyin",
+  "name": "dsh-perch-douyin",
   "version": "0.1.0",
   "private": true,
-  "description": "抖音材料层（可选装）：用一个真的 Chromium 读推荐流、翻详情与评论。dsh-roost 的独立子包。",
+  "description": "抖音材料层（可选装）：用一个真的 Chromium 读推荐流、翻详情与评论。dsh-perch 的独立子包。",
   "type": "module",
   "main": "index.js",
   "exports": { ".": "./index.js", "./storyboard.js": "./storyboard.js" },

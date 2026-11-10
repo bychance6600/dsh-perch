@@ -19,7 +19,7 @@ import { logFile, logLine } from '../lib/log.js'
 async function withRoot(fn) {
   const root = await mkdtemp(join(tmpdir(), 'fish-boot-'))
   // 2026-10-29：不隔离的话 apply() 里的 noteRoot 会往**真实**的家谱
-  // （~/.dsh-roost-homes.json）写临时家。那天全量测试灌进去 20 个
+  // （~/.dsh-perch-homes.json）写临时家。那天全量测试灌进去 20 个
   // Temp\fish-boot-*，之后每次真启动都把最后一条临时家当成「上次的家」，
   // 于是每次启动都记一条假「家换了」，还往她的事件流里写假 meta。
   // 用例自己带一本账，finally 一定还回去（并发跑别的用例时也不串）。
@@ -72,7 +72,7 @@ async function waitFor(fn, ms = 5000) {
 }
 
 test('插件元信息：名字与 inject', () => {
-  assert.equal(name, 'dsh-roost-core')
+  assert.equal(name, 'dsh-perch')
   assert.ok(Array.isArray(inject), 'inject 必须是数组（写成对象会让 sessionController 静默丢失）')
   for (const k of ['sessionController', 'tools', 'webServer', 'connection']) assert.ok(inject.includes(k), `缺 ${k}`)
   // 2026-10-30（m02961）：可选服务不能写进 inject。cordis 的规则是「少一个就整个插件不启动」，
@@ -110,9 +110,9 @@ test('注册了 growth_commit 与观测台路由', async () => {
 
     assert.ok(await waitFor(() => tools.has('growth_commit')))
     const paths_ = routes.map((r) => r.path)
-    assert.ok(paths_.includes('/dsh-roost'), '首页要注册')
-    assert.ok(paths_.includes('/dsh-roost/state'))
-    assert.ok(paths_.includes('/dsh-roost/config'))
+    assert.ok(paths_.includes('/dsh-perch'), '首页要注册')
+    assert.ok(paths_.includes('/dsh-perch/state'))
+    assert.ok(paths_.includes('/dsh-perch/config'))
     h.dispose?.()
   })
 })
@@ -123,9 +123,9 @@ test('信任栅栏 fail-closed：connection 拒绝时 403', async () => {
     const h = apply(ctx, { root })
     await new Promise((r) => setTimeout(r, 120))
 
-    const route = await waitFor(() => routes.find((r) => r.path === '/dsh-roost/state'))
+    const route = await waitFor(() => routes.find((r) => r.path === '/dsh-perch/state'))
     const res = fakeRes()
-    await route.handler({ url: '/dsh-roost/state', method: 'GET' }, res)
+    await route.handler({ url: '/dsh-perch/state', method: 'GET' }, res)
     assert.equal(res.code, 403)
 
     h.dispose?.()
@@ -138,9 +138,9 @@ test('观测台 /state 不泄露 needs 数值', async () => {
     const h = apply(ctx, { root })
     await new Promise((r) => setTimeout(r, 120))
 
-    const route = await waitFor(() => routes.find((r) => r.path === '/dsh-roost/state'))
+    const route = await waitFor(() => routes.find((r) => r.path === '/dsh-perch/state'))
     const res = fakeRes()
-    await route.handler({ url: '/dsh-roost/state', method: 'GET' }, res)
+    await route.handler({ url: '/dsh-perch/state', method: 'GET' }, res)
     assert.equal(res.code, 200)
     const dumped = res.body.toLowerCase()
     for (const leak of ['autonomy', 'competence', 'relatedness', 'needs', 'affinity']) {
@@ -163,18 +163,18 @@ test('/state 与 /memory 把「对不上」和「记得很牢」报出来（2026
     await appendEvent({ type: 'utterance', source: 'tool', text: '它是在看我。' }, {}, root)
     await appendEvent({ type: 'utterance', source: 'tool', text: '它不是在看我。' }, {}, root)
 
-    const stateRoute = await waitFor(() => routes.find((r) => r.path === '/dsh-roost/state'))
+    const stateRoute = await waitFor(() => routes.find((r) => r.path === '/dsh-perch/state'))
     const sres = fakeRes()
-    await stateRoute.handler({ url: '/dsh-roost/state', method: 'GET' }, sres)
+    await stateRoute.handler({ url: '/dsh-perch/state', method: 'GET' }, sres)
     assert.equal(sres.code, 200)
     assert.ok(sres.json.tension, '对不上要在 /state 里露出来')
     assert.equal(sres.json.tension.count, 1)
     assert.ok(sres.json.tension.a && sres.json.tension.b, '两句原话都要给，界面才能显示')
     assert.equal(typeof sres.json.solidCount, 'number')
 
-    const memRoute = await waitFor(() => routes.find((r) => r.path === '/dsh-roost/memory'))
+    const memRoute = await waitFor(() => routes.find((r) => r.path === '/dsh-perch/memory'))
     const mres = fakeRes()
-    await memRoute.handler({ url: '/dsh-roost/memory', method: 'GET' }, mres)
+    await memRoute.handler({ url: '/dsh-perch/memory', method: 'GET' }, mres)
     assert.equal(mres.code, 200)
     assert.equal(mres.json.sections.tensions, 1)
     assert.ok(mres.json.sections.tensionFirst)
@@ -188,27 +188,27 @@ test('/state 与 /memory 把「对不上」和「记得很牢」报出来（2026
 
 test('记忆图谱：页面认 text/html，数据同源只读，不带 Accept 仍走栅栏', async () => {
   await withRoot(async (root) => {
-    // allow=false 模拟没登录的浏览器：除了明确放行的，所有 /dsh-roost/* 都该 403。
+    // allow=false 模拟没登录的浏览器：除了明确放行的，所有 /dsh-perch/* 都该 403。
     const { ctx, routes } = fakeCtx({ allow: false })
     const h = apply(ctx, { root })
     await new Promise((r) => setTimeout(r, 120))
 
-    const pageRoute = await waitFor(() => routes.find((r) => r.path === '/dsh-roost/memory'))
+    const pageRoute = await waitFor(() => routes.find((r) => r.path === '/dsh-perch/memory'))
     const page = fakeRes()
-    await pageRoute.handler({ url: '/dsh-roost/memory', method: 'GET', headers: { accept: 'text/html,application/xhtml+xml' } }, page)
+    await pageRoute.handler({ url: '/dsh-perch/memory', method: 'GET', headers: { accept: 'text/html,application/xhtml+xml' } }, page)
     assert.equal(page.code, 200, '地址栏直接打开要给整页，不能 403')
     assert.match(page.body, /记忆图谱/)
-    assert.match(page.body, /\/dsh-roost\/api\/memory/, '页面要自己取数据')
+    assert.match(page.body, /\/dsh-perch\/api\/memory/, '页面要自己取数据')
     assert.match(page.body, /读不到记忆/, '断网/空数据要有空态，不能白屏')
     assert.ok(!/(?:src|href)\s*=\s*["']https?:/i.test(page.body), '页面不引外部脚本/样式，断网也要能开')
 
     const json = fakeRes()
-    await pageRoute.handler({ url: '/dsh-roost/memory', method: 'GET' }, json)
+    await pageRoute.handler({ url: '/dsh-perch/memory', method: 'GET' }, json)
     assert.equal(json.code, 403, '页面里的 JSON 老路径仍要过信任栅栏')
 
-    const apiRoute = await waitFor(() => routes.find((r) => r.path === '/dsh-roost/api/memory'))
+    const apiRoute = await waitFor(() => routes.find((r) => r.path === '/dsh-perch/api/memory'))
     const api = fakeRes()
-    await apiRoute.handler({ url: '/dsh-roost/api/memory', method: 'GET' }, api)
+    await apiRoute.handler({ url: '/dsh-perch/api/memory', method: 'GET' }, api)
     assert.equal(api.code, 200, '同源只读数据不设栅栏')
     assert.equal(api.json.ok, true)
     assert.ok(Array.isArray(api.json.nodes))
@@ -232,9 +232,9 @@ test('图谱 v2：旧句带 status/mentions，被推翻单独成边，计数一�
       refs: [oldEv.id], verdict: 'refuted', confidence: 0.8,
     }, {}, root)
 
-    const apiRoute = await waitFor(() => routes.find((r) => r.path === '/dsh-roost/api/memory'))
+    const apiRoute = await waitFor(() => routes.find((r) => r.path === '/dsh-perch/api/memory'))
     const api = fakeRes()
-    await apiRoute.handler({ url: '/dsh-roost/api/memory', method: 'GET' }, api)
+    await apiRoute.handler({ url: '/dsh-perch/api/memory', method: 'GET' }, api)
     assert.equal(api.code, 200)
     assert.equal(api.json.ok, true)
     assert.equal(api.json.stats.refuted, 1)
@@ -268,7 +268,7 @@ test('config POST 白名单挡住指向她本人的键', async () => {
     const h = apply(ctx, { root })
     await new Promise((r) => setTimeout(r, 120))
 
-    const route = await waitFor(() => routes.find((r) => r.path === '/dsh-roost/config'))
+    const route = await waitFor(() => routes.find((r) => r.path === '/dsh-perch/config'))
     const bad = fakeRes()
     await route.handler(reqWithBody('POST', JSON.stringify({ personality: { clingy: 0.9 } })), bad)
     assert.equal(bad.code, 400, '改人格的键必须被拒')
@@ -302,7 +302,7 @@ test('请求体里的中文即使被 TCP 切断也要完整还原（跨 chunk �
     const h = apply(ctx, { root })
     await new Promise((r) => setTimeout(r, 120))
 
-    const route = await waitFor(() => routes.find((r) => r.path === '/dsh-roost/config'))
+    const route = await waitFor(() => routes.find((r) => r.path === '/dsh-perch/config'))
 
     // 真机病史（2026-10-23）：她回「传过来的字是碎的，我认不出」。
     // 根因是 readBody 用 `data += chunk`，Buffer 隐式 toString 按 latin1 逐字节拆中文
@@ -315,7 +315,7 @@ test('请求体里的中文即使被 TCP 切断也要完整还原（跨 chunk �
     const res = fakeRes()
     await route.handler({
       method: 'POST',
-      url: '/dsh-roost/config',
+      url: '/dsh-perch/config',
       on(ev, cb) {
         if (ev === 'data') for (const p of parts) cb(p)
         if (ev === 'end') cb()
@@ -332,15 +332,15 @@ test('请求体里的中文即使被 TCP 切断也要完整还原（跨 chunk �
   })
 })
 
-test('/dsh-roost 根路径只给一句「搬走了」，不再吐单页观测台', async () => {
+test('/dsh-perch 根路径只给一句「搬走了」，不再吐单页观测台', async () => {
   await withRoot(async (root) => {
     const { ctx, routes } = fakeCtx()
     const h = apply(ctx, { root })
     await new Promise((r) => setTimeout(r, 120))
 
-    const route = await waitFor(() => routes.find((r) => r.path === '/dsh-roost'))
+    const route = await waitFor(() => routes.find((r) => r.path === '/dsh-perch'))
     const res = fakeRes()
-    await route.handler({ url: '/dsh-roost', method: 'GET' }, res)
+    await route.handler({ url: '/dsh-perch', method: 'GET' }, res)
     assert.equal(res.code, 200)
     assert.ok(res.body.includes('设置'), '要告诉人去设置里看')
     assert.ok(!res.body.includes('现在叫醒她'), '旧页面不该还在（它打不开，留着就是死代码）')
@@ -360,9 +360,9 @@ test('日记默认不可见：只给日期，不给正文', async () => {
     const { writeDaily } = await import('../lib/store.js')
     await writeDaily('diaryDir', '2026-10-20', '今天没人来。', root)
 
-    const route = await waitFor(() => routes.find((r) => r.path === '/dsh-roost/diary'))
+    const route = await waitFor(() => routes.find((r) => r.path === '/dsh-perch/diary'))
     const res = fakeRes()
-    await route.handler({ url: '/dsh-roost/diary', method: 'GET' }, res)
+    await route.handler({ url: '/dsh-perch/diary', method: 'GET' }, res)
     assert.equal(res.json.visible, false)
     assert.deepEqual(res.json.lockedDates, ['2026-10-20'])
     assert.ok(!JSON.stringify(res.json).includes('今天没人来'), '不可见时正文绝不能出现在响应里')
@@ -384,11 +384,11 @@ test('日记可见时一天一页：默认只给最新一天，?day= 取指定�
     await writeDaily('diaryDir', '2026-10-19', '前一天写的。', root)
     await writeDaily('diaryDir', '2026-10-20', '今天没人来。', root)
 
-    const route = await waitFor(() => routes.find((r) => r.path === '/dsh-roost/diary'))
+    const route = await waitFor(() => routes.find((r) => r.path === '/dsh-perch/diary'))
 
     // 默认：日期全给（新在前），正文只给最新一天
     const r1 = fakeRes()
-    await route.handler({ url: '/dsh-roost/diary', method: 'GET' }, r1)
+    await route.handler({ url: '/dsh-perch/diary', method: 'GET' }, r1)
     assert.deepEqual(r1.json.dates, ['2026-10-20', '2026-10-19'])
     assert.equal(r1.json.items.length, 1, '默认只带一天正文')
     assert.equal(r1.json.items[0].date, '2026-10-20')
@@ -396,7 +396,7 @@ test('日记可见时一天一页：默认只给最新一天，?day= 取指定�
 
     // 指定更早一天：只回那一天，页里不能混进别的日子
     const r2 = fakeRes()
-    await route.handler({ url: '/dsh-roost/diary?day=2026-10-19', method: 'GET' }, r2)
+    await route.handler({ url: '/dsh-perch/diary?day=2026-10-19', method: 'GET' }, r2)
     assert.equal(r2.code, 200)
     assert.equal(r2.json.date, '2026-10-19')
     assert.ok(String(r2.json.text).includes('前一天写的'))
@@ -404,7 +404,7 @@ test('日记可见时一天一页：默认只给最新一天，?day= 取指定�
 
     // 那天没有（或日期不是 YYYY-MM-DD）：404 带说明
     const r3 = fakeRes()
-    await route.handler({ url: '/dsh-roost/diary?day=2026-01-01', method: 'GET' }, r3)
+    await route.handler({ url: '/dsh-perch/diary?day=2026-01-01', method: 'GET' }, r3)
     assert.equal(r3.code, 404)
 
     h.dispose?.()
@@ -700,7 +700,7 @@ function reqWithBody(method, body) {
   const chunks = [Buffer.from(body, 'utf8')]
   return {
     method,
-    url: '/dsh-roost/config',
+    url: '/dsh-perch/config',
     on(ev, cb) {
       if (ev === 'data') for (const c of chunks) cb(c)
       if (ev === 'end') cb()
@@ -718,7 +718,7 @@ test('工具面白名单：拼错的名字不许保存，合法名字按全角�
     const h = apply(ctx, { root })
     await new Promise((r) => setTimeout(r, 120))
 
-    const route = await waitFor(() => routes.find((r) => r.path === '/dsh-roost/config'))
+    const route = await waitFor(() => routes.find((r) => r.path === '/dsh-perch/config'))
 
     // 拼错一个字母：形状合法、名单里没有 —— 存进去就会让整条收窄失效，必须 400。
     // 带 strictTools：这条路是「用户刚敲完字点的保存」，坏名字要当场拦。
@@ -735,9 +735,9 @@ test('工具面白名单：拼错的名字不许保存，合法名字按全角�
     assert.deepEqual(okRes.json.config.tools.allow, ['skill', 'read_image'])
 
     // /tools 把名字给界面（只给名字，不给定义）
-    const toolsRoute = routes.find((r) => r.path === '/dsh-roost/tools')
+    const toolsRoute = routes.find((r) => r.path === '/dsh-perch/tools')
     const listRes = fakeRes()
-    await toolsRoute.handler({ url: '/dsh-roost/tools', method: 'GET' }, listRes)
+    await toolsRoute.handler({ url: '/dsh-perch/tools', method: 'GET' }, listRes)
     assert.equal(listRes.code, 200)
     assert.equal(listRes.json.ok, true)
     assert.deepEqual(listRes.json.known, ['read_image', 'skill', 'web_search'])

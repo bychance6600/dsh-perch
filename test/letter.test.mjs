@@ -29,7 +29,7 @@ import { readEvents, paths } from '../lib/store.js'
 import { dateKey } from '../lib/settings.js'
 
 async function withRoot(fn) {
-  const root = await mkdtemp(join(tmpdir(), 'dsh-roost-letter-'))
+  const root = await mkdtemp(join(tmpdir(), 'dsh-perch-letter-'))
   try {
     return await fn(root)
   } finally {
@@ -206,7 +206,7 @@ test('buildInbox 在没有留话时不冒出 letters 字段值（0，不是 unde
 
 test('registerLetter 注册 her_leave，参数是合法 object schema', () => {
   const ctx = fakeCtx()
-  registerLetter(ctx, { root: join(tmpdir(), 'dsh-roost-letter-reg') })
+  registerLetter(ctx, { root: join(tmpdir(), 'dsh-perch-letter-reg') })
   assert.equal(ctx._tools.length, 1)
   const spec = ctx._tools[0]
   assert.equal(spec.name, 'her_leave')
@@ -218,7 +218,7 @@ test('registerLetter 注册 her_leave，参数是合法 object schema', () => {
 
 test('her_leave 的 render 返回 ContentBlock 数组（不是字符串）', () => {
   const ctx = fakeCtx()
-  registerLetter(ctx, { root: join(tmpdir(), 'dsh-roost-letter-render') })
+  registerLetter(ctx, { root: join(tmpdir(), 'dsh-perch-letter-render') })
   const spec = ctx._tools[0]
   const okBlocks = spec.output.render({ text: 'x' }, { ok: true, note: '' })
   assert.ok(Array.isArray(okBlocks))
@@ -232,7 +232,7 @@ test('her_leave 的 render 返回 ContentBlock 数组（不是字符串）', () 
 
 test('回执不写成她能复述的句子——同一次唤醒里她不该「接着说」工具返回的话', () => {
   const ctx = fakeCtx()
-  registerLetter(ctx, { root: join(tmpdir(), 'dsh-roost-letter-tone') })
+  registerLetter(ctx, { root: join(tmpdir(), 'dsh-perch-letter-tone') })
   const spec = ctx._tools[0]
   const ok = spec.output.render({}, { ok: true, note: '' })[0].text
   const bad = spec.output.render({}, { ok: false, note: '太长了，他读不完。' })[0].text
@@ -245,7 +245,7 @@ test('回执不写成她能复述的句子——同一次唤醒里她不该「�
 
 test('her_leave 的返回值不含任何状态数字（只 ok + note）', () => {
   const ctx = fakeCtx()
-  registerLetter(ctx, { root: join(tmpdir(), 'dsh-roost-letter-out') })
+  registerLetter(ctx, { root: join(tmpdir(), 'dsh-perch-letter-out') })
   const spec = ctx._tools[0]
   assert.deepEqual(Object.keys(spec.output.schema.properties).sort(), ['note', 'ok'])
 })

@@ -261,7 +261,7 @@ test('peersOnMachine：认得别的 B 站插件的状态库，但不把我们自
   // 这条只保证「能看见别人」，不负责拦。
   const home = await mkdtemp(join(tmpdir(), 'fish-peers-'))
   try {
-    for (const d of ['.dsh-roost', '.dsh-roost-backups', '.dsh-bili-whale', '.dsh-bili-scroll', 'some-other']) {
+    for (const d of ['.dsh-perch', '.dsh-perch-backups', '.dsh-bili-whale', '.dsh-bili-scroll', 'some-other']) {
       await mkdir(join(home, d), { recursive: true })
     }
     const got = peersOnMachine(home).sort()

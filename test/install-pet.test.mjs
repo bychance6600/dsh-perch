@@ -36,7 +36,7 @@ test('没有 --body 时不装，只说用法', () => {
 test('解 body、解角色包、写配置；改配置前留备份（2026-11-08 17:44）', async (t) => {
   // 解压用的是 PowerShell 的 Expand-Archive；Linux 的 runner 上没有这个命令。
   if (process.platform !== 'win32') return t.skip('身体和角色包只在 Windows 上解压')
-  const tmp = await mkdtemp(join(tmpdir(), 'dsh-roost-install-'))
+  const tmp = await mkdtemp(join(tmpdir(), 'dsh-perch-install-'))
   const src = join(tmp, 'src')
   const body = join(src, 'body')
   const pack = join(src, 'pack')

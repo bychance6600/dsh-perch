@@ -83,7 +83,7 @@ test('宿主没有 workspaceRegistry：明确返回 ok:false，不假装成功',
   } finally { await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }) }
 })
 
-test('建屋子：工作区指向 ~/.dsh-roost/home，会话挂进工作区并改标题', async () => {
+test('建屋子：工作区指向 ~/.dsh-perch/home，会话挂进工作区并改标题', async () => {
   const root = await tmpRoot()
   try {
     const { ctx, created, renamed } = fakeCtx()
@@ -258,7 +258,7 @@ test('身份文件：有禁令、有工具说明，且不泄露任何路径/数�
 
     // 硬约束：不能出现状态库路径、不能出现字段名、不能出现数值型 needs
     assert.equal(md.includes(root), false, '不能把状态库绝对路径写进去')
-    assert.equal(md.includes('.dsh-roost'), false)
+    assert.equal(md.includes('.dsh-perch'), false)
     assert.equal(md.includes('needs'), false)
     assert.equal(md.includes('events.jsonl'), false)
     assert.equal(md.includes('config.json'), false)
@@ -505,7 +505,7 @@ test('bootstrapHome：占着的时候连工作区都不建（避免又长一间�
 })
 
 test('新房间第一次写档：把旧档的 carry / adoptedAt / hearAt 带过来（2026-11-07 真机）', async () => {
-  // 真机：roost 的根换到 ~/.dsh-roost，river 的 home.json 里没有 wsId，
+  // 真机：roost 的根换到 ~/.dsh-perch，river 的 home.json 里没有 wsId，
   // 于是走「建新房间」这条路，整份旧档被覆盖——「上次我们说到这」没了。
   const root = await tmpRoot()
   const { ctx } = fakeCtx()

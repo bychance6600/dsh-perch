@@ -1,6 +1,6 @@
 # openq 回放候选句
 
-从 `~/.dsh-roost/events.jsonl` 的 668 条 utterance（其中 625 条 source=system）按三族窄正则捞出的候选，51 行。
+从 `~/.dsh-perch/events.jsonl` 的 668 条 utterance（其中 625 条 source=system）按三族窄正则捞出的候选，51 行。
 人工复核后真正算「等它长出来」类的是其中两条：2026-11-08「等它自己长出来吧」、2026-11-09「自己催出来的东西长不成」。其余是边界样本，留给识别规则调阈值用。
 来源：`D:\fish\.tmp-openq.txt`（临时文件，已收进这里）。
 

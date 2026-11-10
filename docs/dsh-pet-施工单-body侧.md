@@ -3,7 +3,7 @@
 - 日期：2026-11-08
 - 你要写的：一个新仓库 `dsh-roost-pet`——桌面上那只透明的、只有身体的窗口。
 - 你不需要读 roost 的代码。roost 会把它需要的一切，通过下面这套协议喂给你。
-- 需求准绳在 `dsh-roost/docs/dsh-pet-给roost设计.md`（29 条）。本单是它的施工版；冲突时以需求文档为准。
+- 需求准绳在 `dsh-perch/docs/dsh-pet-给roost设计.md`（29 条）。本单是它的施工版；冲突时以需求文档为准。
 - **协调板（2026-11-08 起）**：`D:\fish\dsh-pet-协调.md`，append-only、不进 git。每轮开始先读最后几节「当前下一步 / 给 ROOST / 给 BODY」；做完在末尾追加一条 `## [BODY] 2026-11-08 HH:MM`，写「做完：…，提交 …」或「卡住：…」。不改上面的内容，不提交这个文件。
 
 ---
@@ -68,7 +68,7 @@ Electron 怎么装、主进程怎么起、窗口怎么建，都是 body 内部�
 roost 用 `spawn(path, args, { cwd, env, stdio: ['pipe','pipe','pipe'], windowsHide: true })`：
 
 - 不经过 shell；路径里有空格也不会被拆开。
-- 打包产物：`cwd` 是 body 可执行文件所在目录；开发态 Electron：`cwd` 是 body 仓库根。都不是她的数据目录（`~/.dsh-roost`）。
+- 打包产物：`cwd` 是 body 可执行文件所在目录；开发态 Electron：`cwd` 是 body 仓库根。都不是她的数据目录（`~/.dsh-perch`）。
 - spawn 前从 env 删掉 `ELECTRON_RUN_AS_NODE`，否则 Electron 会当 node 跑，主进程根本不启动。
 - 不 `detached`；roost 退出，body 的 stdin 会 EOF，body 必须跟着退。
 

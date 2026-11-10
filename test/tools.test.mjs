@@ -3,7 +3,7 @@
  *
  * 为什么单独一个文件（2026-10-25）：
  *   用全新 profile 从 tarball 装一遍才发现，npm 装进来的插件真实路径在
- *   `<profile>/node_modules/dsh-roost/`，往上能找到宿主的 `@deepseek-ai/dsh-tools`，
+ *   `<profile>/node_modules/dsh-perch/`，往上能找到宿主的 `@deepseek-ai/dsh-tools`，
  *   于是 `defineTool` 真的被调用——它期待「简写 DSL 属性表」，我们传的是完整
  *   JSON Schema，编译时把根上的 `type:'object'` 当成一个叫 type 的参数，报
  *     unsupported JSON schema: parameters.type must be a value schema object
@@ -35,7 +35,7 @@ import { FISH_TOOLS, HER_TOOLS } from '../lib/restrict.js'
 import { runChecks } from '../lib/selfcheck.js'
 
 const LIB = fileURLToPath(new URL('../lib/', import.meta.url))
-const ROOT = join(tmpdir(), 'dsh-roost-tools-test')
+const ROOT = join(tmpdir(), 'dsh-perch-tools-test')
 
 function fakeCtx() {
   const defs = []
@@ -166,7 +166,7 @@ test('自检按 registry 里真的在不在判断，而不是配置名单', asyn
 // 就当成已装（2026-10-28 read_image 误报是同一类错误）。
 test('自检按 FISH_TOOLS 全量核对：缺 her_note 要报，不能拿清单当已装', async () => {
   const cfg = { stageSpanDays: 30, window: { start: '20:00', end: '23:00' }, tools: {} }
-  const root = join(tmpdir(), `dsh-roost-sc-note-${process.pid}`)
+  const root = join(tmpdir(), `dsh-perch-sc-note-${process.pid}`)
   const missingNote = { get: (n) => (n === 'her_note' ? undefined : { name: n }) }
   const missRes = await runChecks({ root, config: cfg, host: {}, tools: missingNote, net: false })
   const missItem = missRes.items.find((i) => i.id === 'tools')

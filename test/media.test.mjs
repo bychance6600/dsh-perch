@@ -26,7 +26,7 @@ const PNG_B64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
 
 async function tmpRoot() {
-  return mkdtemp(join(tmpdir(), 'dsh-roost-media-'))
+  return mkdtemp(join(tmpdir(), 'dsh-perch-media-'))
 }
 
 test('sniffMime 认得 png/jpeg/webp/gif，其余一律 null', () => {
@@ -136,7 +136,7 @@ test('sweepMedia：只删过期的，留着新的；空目录不炸', async () =
 })
 
 test('sweepMedia：目录还不存在时返回全零，不抛错', async () => {
-  const root = join(tmpdir(), `dsh-roost-missing-${Date.now()}`)
+  const root = join(tmpdir(), `dsh-perch-missing-${Date.now()}`)
   const r = await sweepMedia(root)
   assert.deepEqual(r, { removed: 0, kept: 0 })
 })

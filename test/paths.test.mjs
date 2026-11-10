@@ -26,7 +26,7 @@ test('readme：缺了就写一份，带着版本标记', () => {
   const text = fs.readFileSync(join(root, README_NAME), 'utf8')
   assert.ok(text.startsWith(README_MARK), '第一行必须是版本标记')
   assert.ok(text.includes('events.jsonl'))
-  assert.ok(text.includes('logs/dsh-roost.log'))
+  assert.ok(text.includes('logs/dsh-perch.log'))
   assert.equal(text, README_TEXT)
 })
 

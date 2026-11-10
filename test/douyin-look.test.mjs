@@ -20,8 +20,8 @@ import {
   normalizeComments,
   renderComments,
 } from '../lib/douyinlook.js'
-import { makeStoryboard } from '../packages/dsh-roost-douyin/storyboard.js'
-import { idFromUrl, currentIdFromLog, currentId, renderCurrentId } from '../packages/dsh-roost-douyin/index.js'
+import { makeStoryboard } from '../packages/dsh-perch-douyin/storyboard.js'
+import { idFromUrl, currentIdFromLog, currentId, renderCurrentId } from '../packages/dsh-perch-douyin/index.js'
 
 const FEED = {
   aweme_list: [

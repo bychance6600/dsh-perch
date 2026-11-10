@@ -1,6 +1,6 @@
-# dsh-roost-douyin
+# dsh-perch-douyin
 
-抖音材料层的可选子包，`dsh-roost` 用它开一个独立的浏览器。
+抖音材料层的可选子包，`dsh-perch` 用它开一个独立的浏览器。
 
 它**不是渠道**。没有 `send`、没有 `onMessage`、不收私信。主包只拿它做三件事：
 
@@ -9,7 +9,7 @@
 - 让 `douyin_look` / 链接解析能借这个登录态翻页。
 
 ```bash
-pnpm add dsh-roost-douyin
+pnpm add dsh-perch-douyin
 ```
 
 装了就多一个能读的浏览器；没装时主包静默跳过（`loadSubModule()` 返回 `null`），刷抖音和 `douyin_look` 都回一句「抖音子包没装」，不报错、不建目录。
@@ -35,7 +35,7 @@ pnpm add dsh-roost-douyin
 ## 接口
 
 ```js
-import { createCdpTransport, browseFeed, feedScript } from 'dsh-roost-douyin'
+import { createCdpTransport, browseFeed, feedScript } from 'dsh-perch-douyin'
 
 const transport = createCdpTransport({ browserPath: '', profileDir: '<root>/douyin-profile', debugPort: 9333 })
 await transport.launch()          // start() 是别名

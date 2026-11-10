@@ -141,7 +141,7 @@ test('/config 白名单收下观测台提交的全部环境键（含 chat 与 me
     const body = JSON.stringify(patch)
     const req = {
       method: 'POST',
-      url: '/dsh-roost/config',
+      url: '/dsh-perch/config',
       headers: { 'content-type': 'application/json' },
       on: (ev, fn) => { if (ev === 'data') fn(Buffer.from(body, 'utf8')); if (ev === 'end') fn() },
     }
@@ -201,7 +201,7 @@ test('白名单仍然挡得住"指向她本人"的键', async () => {
     const body = JSON.stringify({ persona: { name: '小美' }, traits: { shy: 1 } })
     const req = {
       method: 'POST',
-      url: '/dsh-roost/config',
+      url: '/dsh-perch/config',
       headers: { 'content-type': 'application/json' },
       on: (ev, fn) => { if (ev === 'data') fn(Buffer.from(body, 'utf8')); if (ev === 'end') fn() },
     }
@@ -260,7 +260,7 @@ test('own 层的 ops_* 能存进白名单，且 /tools 会说明「收窄挡不�
       end: (s) => { payload = JSON.parse(s || '{}') },
       setHeader: () => {},
     }
-    await tools.handler({ method: 'GET', url: '/dsh-roost/tools', headers: {} }, res)
+    await tools.handler({ method: 'GET', url: '/dsh-perch/tools', headers: {} }, res)
     assert.ok(payload.known.includes('ops_bash'), '白名单校验必须认得这个名字')
     assert.deepEqual(payload.ownLayer, ['ops_bash'], 'own 层名单用来解释「加进来只是让守卫放行」')
     assert.equal(payload.descriptions.ops_bash, '跑一条 shell 命令', '工具说明要照 registry 给，界面不许自己编')
@@ -269,7 +269,7 @@ test('own 层的 ops_* 能存进白名单，且 /tools 会说明「收窄挡不�
     const body = JSON.stringify({ tools: { restrict: true, allow: ['ops_bash', 'read_image'] } })
     const req = {
       method: 'POST',
-      url: '/dsh-roost/config',
+      url: '/dsh-perch/config',
       headers: { 'content-type': 'application/json' },
       on: (ev, fn) => { if (ev === 'data') fn(Buffer.from(body, 'utf8')); if (ev === 'end') fn() },
     }
@@ -306,7 +306,7 @@ test('config 里留着一个早就不存在的工具名，不该让整页设置�
       const body = JSON.stringify(payload)
       const req = {
         method: 'POST',
-        url: '/dsh-roost/config',
+        url: '/dsh-perch/config',
         headers: { 'content-type': 'application/json' },
         on: (ev, fn) => { if (ev === 'data') fn(Buffer.from(body, 'utf8')); if (ev === 'end') fn() },
       }
@@ -348,7 +348,7 @@ test('整张表全是坏名字时也只是白名单清空，不报错', async ()
     const body = JSON.stringify({ tools: { restrict: true, allow: ['delete', 'remove'] } })
     const req = {
       method: 'POST',
-      url: '/dsh-roost/config',
+      url: '/dsh-perch/config',
       headers: { 'content-type': 'application/json' },
       on: (ev, fn) => { if (ev === 'data') fn(Buffer.from(body, 'utf8')); if (ev === 'end') fn() },
     }

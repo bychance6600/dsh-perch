@@ -43,7 +43,7 @@ test('找 pet.json 的顺序：pet.dir > 家目录角色包 > 开发态仓库', 
 })
 
 test('读角色包：只认 animations.actions 的键，过滤坏名字，labels 只留用得到的', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'dsh-roost-pack-'))
+  const root = await mkdtemp(join(tmpdir(), 'dsh-perch-pack-'))
   const dir = join(root, 'pets', 'cat')
   await mkdir(dir, { recursive: true })
   await writeFile(join(dir, 'pet.json'), JSON.stringify({
@@ -67,7 +67,7 @@ test('读角色包：只认 animations.actions 的键，过滤坏名字，labels
 })
 
 test('角色包缺了、读坏了、动作是空的：回落内置那 10 个', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'dsh-roost-pack-bad-'))
+  const root = await mkdtemp(join(tmpdir(), 'dsh-perch-pack-bad-'))
   const dir = join(root, 'pets', 'cat')
   await mkdir(dir, { recursive: true })
   await writeFile(join(dir, 'pet.json'), '{ 这不是 json')

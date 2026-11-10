@@ -1,7 +1,7 @@
 /**
  * move.test.mjs —— 迁移工作区（2026-10-28，用户 m06510）
  *
- * 只测纯逻辑与文件搬运，不碰真实 ~/.dsh-roost：
+ * 只测纯逻辑与文件搬运，不碰真实 ~/.dsh-perch：
  *   - planMove 的各种拒绝分支（相对路径、不存在、套进自己、上级套进来）
  *   - moveRoot 真搬一份小档 → 文件在、字节对、指针写了、旧目录被改名封存
  *   - 复制后字节对不上时**不写指针**（这条最重要：写指针 == 承认迁移成功）
@@ -33,7 +33,7 @@ async function withEnv(fn) {
   await writeFile(join(src, 'config.json'), '{"stageSpanDays":30}')
   await writeFile(join(src, 'home', '她的身份.md'), '# 我是谁\n')
   await writeFile(join(src, 'diary', '2026-10-28.md'), '今天\n')
-  await writeFile(join(src, 'logs', 'dsh-roost.log'), '不该被搬走\n')
+  await writeFile(join(src, 'logs', 'dsh-perch.log'), '不该被搬走\n')
   try {
     return await fn({ box, src, loc })
   } finally {
@@ -88,13 +88,13 @@ test('planMove：目标里已有非空 dsh-fish 就拒绝，空的话就用它',
     await mkdir(dst, { recursive: true })
     const p1 = await planMove(src, dst)
     assert.equal(p1.ok, true)
-    assert.equal(p1.target, join(dst, 'dsh-roost'))
+    assert.equal(p1.target, join(dst, 'dsh-perch'))
 
-    await mkdir(join(dst, 'dsh-roost'), { recursive: true })
+    await mkdir(join(dst, 'dsh-perch'), { recursive: true })
     const p2 = await planMove(src, dst)
     assert.equal(p2.ok, true, '空的 dsh-fish 可以直接用')
 
-    await writeFile(join(dst, 'dsh-roost', 'x.txt'), 'x')
+    await writeFile(join(dst, 'dsh-perch', 'x.txt'), 'x')
     const p3 = await planMove(src, dst)
     assert.equal(p3.ok, false)
     assert.match(p3.why, /不是空的/)
@@ -107,26 +107,26 @@ test('moveRoot：文件全过去、字节对、指针写了、旧目录封存、
     await mkdir(dst, { recursive: true })
     const r = await moveRoot(null, { root: src, target: dst })
     assert.equal(r.ok, true, r.why)
-    assert.equal(r.to, join(dst, 'dsh-roost'))
+    assert.equal(r.to, join(dst, 'dsh-perch'))
 
     // 关键文件都在，内容一致
-    assert.equal(await readFile(join(dst, 'dsh-roost', 'events.jsonl'), 'utf8'), '{"id":"ev_1"}\n')
-    assert.equal(await readFile(join(dst, 'dsh-roost', 'home', '她的身份.md'), 'utf8'), '# 我是谁\n')
-    assert.equal(await readFile(join(dst, 'dsh-roost', 'diary', '2026-10-28.md'), 'utf8'), '今天\n')
+    assert.equal(await readFile(join(dst, 'dsh-perch', 'events.jsonl'), 'utf8'), '{"id":"ev_1"}\n')
+    assert.equal(await readFile(join(dst, 'dsh-perch', 'home', '她的身份.md'), 'utf8'), '# 我是谁\n')
+    assert.equal(await readFile(join(dst, 'dsh-perch', 'diary', '2026-10-28.md'), 'utf8'), '今天\n')
 
     // logs/ 不搬
-    const kids = await readdir(join(dst, 'dsh-roost'))
+    const kids = await readdir(join(dst, 'dsh-perch'))
     assert.ok(!kids.includes('logs'), 'logs 不该被搬走')
 
     // 指针写了，且 readLocationSync 读得到
     const ptr = JSON.parse(await readFile(loc, 'utf8'))
-    assert.equal(ptr.root, join(dst, 'dsh-roost'))
-    assert.equal(readLocationSync(), join(dst, 'dsh-roost'))
+    assert.equal(ptr.root, join(dst, 'dsh-perch'))
+    assert.equal(readLocationSync(), join(dst, 'dsh-perch'))
 
     // 旧目录改名封存，原位置不再是一个目录
     await assert.rejects(async () => stat(src))
     assert.ok(r.oldDirMoved)
-    assert.match(r.oldDir, /dsh-roost-backups/)
+    assert.match(r.oldDir, /dsh-perch-backups/)
     assert.equal(await readFile(join(r.oldDir, 'events.jsonl'), 'utf8'), '{"id":"ev_1"}\n')
   })
 })
@@ -166,7 +166,7 @@ test('moveStatus：没迁过时 moved=false，迁过之后 moved=true', async ()
   })
 })
 
-test('defaultRoot 是本机的 ~/.dsh-roost', () => {
-  assert.match(defaultRoot(), /\.dsh-roost$/)
-  assert.match(locationFile(), /\.dsh-roost-location\.json$/)
+test('defaultRoot 是本机的 ~/.dsh-perch', () => {
+  assert.match(defaultRoot(), /\.dsh-perch$/)
+  assert.match(locationFile(), /\.dsh-perch-location\.json$/)
 })

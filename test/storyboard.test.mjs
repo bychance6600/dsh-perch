@@ -17,7 +17,7 @@ import {
   readSample,
   timecode,
   zoomSample,
-} from '../packages/dsh-roost-douyin/storyboard.js'
+} from '../packages/dsh-perch-douyin/storyboard.js'
 
 function frame(w = 320, h = 568, shade = 90) {
   const data = Buffer.alloc(w * h * 3, shade)

@@ -1,7 +1,7 @@
 # dsh-pet 施工单（roost 侧 · 给写 roost 代码的会话）
 
 - 日期：2026-11-08
-- 你改的是 `D:\fish\dsh-roost`。body 侧另一个窗口在写 `D:\fish\dsh-roost-pet`，并**已拿到** `docs/dsh-pet-施工单-body侧.md`。
+- 你改的是 `D:\fish\dsh-perch`。body 侧另一个窗口在写 `D:\fish\dsh-roost-pet`，并**已拿到** `docs/dsh-pet-施工单-body侧.md`。
 - 需求准绳：`docs/dsh-pet-给roost设计.md`（29 条）。本单只写 roost 这半边。
 - 约束照旧：零依赖、`events.jsonl` 只追加、新输入口过 `lib/guard.js`、不加人格设置界面、不改成长口径。
 - **协调板（2026-11-08 起）**：`D:\fish\dsh-pet-协调.md`，append-only、不进 git。每轮开始先读最后几节「当前下一步 / 给 ROOST / 给 BODY」；做完在末尾追加一条 `## [ROOST] 2026-11-08 HH:MM`，写「做完：…，提交 …」或「卡住：…」。不改上面的内容，不提交这个文件。roost 当前这一轮先跑完，下一轮再按此执行。
@@ -41,7 +41,7 @@ pet: {
   size: 1.0,             // 0.5–2.0
   position: '',          // '' = body 记住上次位置；或 'bottom-right'
   clickThrough: true,
-  pack: 'default',       // 角色包文件夹名（~/.dsh-roost/pets/<id>）；--pet=<id>
+  pack: 'default',       // 角色包文件夹名（~/.dsh-perch/pets/<id>）；--pet=<id>
   idleSleepMin: 5,       // 多久没动静算睡着，1–60；保存后热更
   pokeMinGapMs: 60000,   // 两次点击之间至少隔多久，5000–600000
 },
@@ -49,7 +49,7 @@ pet: {
 
 `AGENTS.md` 补一句：`pet` 是环境参数，不是人格参数。
 
-角色素材不放仓库：一个角色 = `~/.dsh-roost/pets/<id>/` 一个文件夹（`pet.json` + 视频文件），文件夹名就是 `pet.pack`。仓库里只留不含素材的模板。
+角色素材不放仓库：一个角色 = `~/.dsh-perch/pets/<id>/` 一个文件夹（`pet.json` + 视频文件），文件夹名就是 `pet.pack`。仓库里只留不含素材的模板。
 
 ---
 
@@ -73,7 +73,7 @@ test/install-pet.test.mjs
 ### 3.1 `startPet(ctx, deps)`
 
 - 读 `deps.config.pet`；`enabled` 假 → 直接返回 `() => {}`（不 spawn、不注册工具、不挂事件）。
-- `pet.path` 空时用 `petPathOf()` 找 `<root>/pet/dsh-roost-pet.exe`；文件不存在就算没装：不 spawn、`lastError` 留空、why 写「等：还没装身体（把 zip 解压到 ~/.dsh-roost/pet/）」。
+- `pet.path` 空时用 `petPathOf()` 找 `<root>/pet/dsh-roost-pet.exe`；文件不存在就算没装：不 spawn、`lastError` 留空、why 写「等：还没装身体（把 zip 解压到 ~/.dsh-perch/pet/）」。
 - `const spec = entrySpec({ ...pet, path: petPath }); spawn(spec.path, spec.args, { stdio: ['pipe','pipe','pipe'], cwd: spec.cwd, windowsHide: true })`。两种入口由 `lib/pet/entry.js` 的 `entrySpec()` 统一解析：打包产物直接起、`cwd` 是 exe 所在目录；开发态 `pet.path` 指 `node_modules/electron/dist/electron.exe`，`pet.repo` 填 body 仓库根（缺省只从标准布局反推，推不出就报错，不猜别的路径），参数前面加仓库根、`cwd` 也是仓库根。`pet.args` 原样接在最后。
 - 参数由 `lib/pet/entry.js` 生成：`--protocol=1 --size=… [--position=…] --click-through=0|1 --pet=<id>`，再接 `pet.args`。`<id>` 取 `config.pet.pack`（老配置的 `petId` 自动迁过来）。spawn 前从 env 删掉 `ELECTRON_RUN_AS_NODE`。
   入口约定正文在 body 仓库的 `docs/launch.md`；不要在这里另写一份。

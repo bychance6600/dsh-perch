@@ -1,6 +1,6 @@
 # 交接：给写 README 的会话
 
-写于 2026-11-08 20:30，基于 `dsh-roost` HEAD `263976d`。工作树干净。
+写于 2026-11-08 20:30，基于 `dsh-perch` HEAD `263976d`。工作树干净。
 
 这不是 README 成稿，是一份**事实清单**。README 可以换说法；第 5 节「不能写错的」不要改。
 
@@ -67,7 +67,7 @@
 - **今天页默认、永远只读**：一行现状、今天的时间线（默认收起原文，可点开）、今天变了什么（新学会 / 改了口 / 被推翻，各最多 3 条）、手边（工具数、身份文档预算、渠道连接、最近一次限流）。可切昨天、前天，不做无限滚动。
 - 社会页只读，没有「替她开」的按钮；开闸只有她自己能按。
 - 住所页能看会话健康、能手动换一条新会话；连续两次「没送进去」会自动换。
-- 数据页：数据在哪、备份恢复、每日报告、运行日志导出、自检、换家留痕、记忆体检、会话归档、从头开始。恢复前把旧档挪去 `dsh-roost-backups/pre-restore-*`；重置是改名前缀封存，不删。
+- 数据页：数据在哪、备份恢复、每日报告、运行日志导出、自检、换家留痕、记忆体检、会话归档、从头开始。恢复前把旧档挪去 `dsh-perch-backups/pre-restore-*`；重置是改名前缀封存，不删。
 - 身份文档生成、不手写；预算默认 1800 字；超预算丢段时写日志，不截断句子。
 
 ### 3.5 社会层
@@ -92,7 +92,7 @@
 - 五档姿态：思考 / 动手 / 等 / 出错 / 成了。动作由角色包的 `pet.json` 定义；`sleep / wake / quiet / loud` 是协议控制名，不写进包也永远可用。
 - 单击只发 `poke`，反应归 roost；睡着单击只轻晃、不叫醒。拖拽跟手、松手抛掷、边缘反弹、落地挤压。
 - 睡觉判据：`awake = turnActive || 距最后活动 < idleSleepMin`；默认 5 分钟，范围 1–60，设置页可改，保存即热更，不用重启。不是看钟点。
-- 安装：先在桌宠仓库 `pnpm install`、`node scripts/build-portable.js` 得到约 137.7 MB 的 zip；再用 `node tools/install-pet.mjs --body <zip> --pack <zip> --id <id>` 装到 `~/.dsh-roost/pet/` 与 `~/.dsh-roost/pets/<id>/`；配置项是 `pet.path` / `pet.pack` / `pet.idleSleepMin`，换角色改 `pet.pack`，保存后重启。
+- 安装：先在桌宠仓库 `pnpm install`、`node scripts/build-portable.js` 得到约 137.7 MB 的 zip；再用 `node tools/install-pet.mjs --body <zip> --pack <zip> --id <id>` 装到 `~/.dsh-perch/pet/` 与 `~/.dsh-perch/pets/<id>/`；配置项是 `pet.path` / `pet.pack` / `pet.idleSleepMin`，换角色改 `pet.pack`，保存后重启。
 - 仓库目前没有预编译 Release，README 要写「自己构建」，不要写成「下载即用」；如果那边后来发了 Release，再改这一句。
 - 桌宠还没做：别针与吸附、注意力、双击聊天框、右键菜单、设置窗、失败演练。不要写成已有。
 
@@ -100,7 +100,7 @@
 
 - 零依赖：`dependencies` / `peerDependencies` / `devDependencies` 三个永远 `{}`；测试只用 `node:test`。桌宠是独立项目，Electron 不算主包依赖。
 - 许可：主包 MIT；上游 `dsh-fish` 0.8.5、`dsh-fish-soul` 0.12.0、`dsh-fish-river` 都是 MIT；第三方与致谢见 `NOTICE.md`。
-- 安装：profile 里 `pnpm add github:bychance6600/roost`，再把 `dsh-roost` 写进 `package.json` 的 `dsh.profile.bundles`；或跑 `install.ps1`（支持 `-LocalPath`、`-DryRun`、`-FfmpegZip`）。装完必须重启 DSH。
+- 安装：profile 里 `pnpm add github:bychance6600/roost`，再把 `dsh-perch` 写进 `package.json` 的 `dsh.profile.bundles`；或跑 `install.ps1`（支持 `-LocalPath`、`-DryRun`、`-FfmpegZip`）。装完必须重启 DSH。
 - 0.1.0 边界：原理页停在现有理论卡（A13 的验收是页面在、内容不随 0.1.0 重写）；反馈页 FAQ 按设计留空（A14）；世界书内容由会话侧生成、你导入，插件不替你写。
 
 ## 4. README 建议怎么讲
@@ -137,10 +137,10 @@
 
 | 事 | 事实 |
 | --- | --- |
-| 包名 / 版本 | `dsh-roost` / `0.1.0` |
+| 包名 / 版本 | `dsh-perch` / `0.1.0` |
 | DSH 版本 | `>=0.2.0-rc.1 <0.3.0-0` |
 | Node | `>=22` |
-| 数据目录 | `~/.dsh-roost`（Windows `C:\Users\<你>\.dsh-roost`） |
+| 数据目录 | `~/.dsh-perch`（Windows `C:\Users\<你>\.dsh-perch`） |
 | 事件流 | `events.jsonl`，只追加，唯一可信源 |
 | 派生品 | `state.json`，可 `rebuild()` 重算 |
 | QQ 桥 | OneBot 11 正向 WebSocket；SnowLuma 默认 `ws://127.0.0.1:3001`；NapCat 协议一致可换 |
@@ -169,7 +169,7 @@
 
 ## 8. 写完自检
 
-在 `D:/fish/dsh-roost`：
+在 `D:/fish/dsh-perch`：
 
 ```bash
 # 守门：README 必须含三句

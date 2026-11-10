@@ -82,13 +82,13 @@ test('清单里她该有的工具都在，且不含危险口子', () => {
 })
 
 test('isHerAgent 只认她的屋子，不认别的目录', () => {
-  const her = 'C:\\Users\\someone\\.dsh-roost\\home'
+  const her = 'C:\\Users\\someone\\.dsh-perch\\home'
   assert.equal(isHerAgent({ session: { header: { cwd: her } } }, her), true)
   // 末尾斜杠不该影响判断（任何平台）
   assert.equal(isHerAgent({ session: { header: { cwd: `${her}\\` } } }, her), true)
   // 大小写不敏感是 Windows 文件系统的性质，macOS/Linux 区分大小写，别在那边硬要求
   if (process.platform === 'win32') {
-    assert.equal(isHerAgent({ session: { header: { cwd: 'c:/users/someone/.dsh-roost/home/' } } }, her), true)
+    assert.equal(isHerAgent({ session: { header: { cwd: 'c:/users/someone/.dsh-perch/home/' } } }, her), true)
   }
   assert.equal(isHerAgent({ session: { header: { cwd: 'D:\\work\\my-project' } } }, her), false)
   // 拿不到 cwd 时一律不放行（宁可漏收窄，也不误伤别人的会话）

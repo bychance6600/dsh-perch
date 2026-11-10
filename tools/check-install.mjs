@@ -15,7 +15,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, posix, resolve } from 'node:path'
 
-export const PKG_NAME = 'dsh-roost'
+export const PKG_NAME = 'dsh-perch'
 const DEP_FIELDS = ['dependencies', 'devDependencies', 'optionalDependencies']
 
 /** 形如 `D:/x`、`D:\x`、`\\server\share` 的 Windows 绝对路径 */
@@ -48,7 +48,7 @@ export function parseFileDep(spec, profileDir) {
   return resolve(profileDir, raw)
 }
 
-/** 从 package.json 文本里取 dsh-roost 的依赖写法；坏 JSON 返回 null。 */
+/** 从 package.json 文本里取 dsh-perch 的依赖写法；坏 JSON 返回 null。 */
 export function readDep(text) {
   let pkg
   try {
@@ -129,7 +129,7 @@ export function inspectProfile(profileDir) {
   }
   if (!dep) {
     out.verdict = 'no-dep'
-    out.why = 'profile 的 dependencies 里没有 dsh-roost'
+    out.why = 'profile 的 dependencies 里没有 dsh-perch'
     return out
   }
   out.verdict = 'no-dep'
@@ -151,10 +151,10 @@ export function inspectProfile(profileDir) {
 
   if (!existsSync(out.copy)) {
     out.verdict = 'empty-copy'
-    out.why = 'node_modules 里没有 dsh-roost：pnpm 根本没装成功'
+    out.why = 'node_modules 里没有 dsh-perch：pnpm 根本没装成功'
   } else if (!out.copyVersion) {
     out.verdict = 'empty-copy'
-    out.why = 'node_modules/dsh-roost 里没有能读的 package.json：副本是空的或只落了一半'
+    out.why = 'node_modules/dsh-perch 里没有能读的 package.json：副本是空的或只落了一半'
   } else if (out.copyJs < out.sourceJs * 0.8) {
     out.verdict = 'empty-copy'
     out.why = `副本只有 ${out.copyJs} 个 js 文件，源目录有 ${out.sourceJs} 个：装了一半`
@@ -168,7 +168,7 @@ export function inspectProfile(profileDir) {
   return out
 }
 
-/** 找出一个 DSH_HOME 下所有装过 dsh-roost 的 profile。 */
+/** 找出一个 DSH_HOME 下所有装过 dsh-perch 的 profile。 */
 export function findProfiles(home = join(homedir(), '.dsh')) {
   const root = join(home, 'profiles')
   if (!existsSync(root)) return []
@@ -206,12 +206,12 @@ export function main(argv = process.argv.slice(2)) {
   if (only) {
     dirs = dirs.filter((d) => d.split(/[\\/]/).pop().toLowerCase() === only)
     if (!dirs.length) {
-      console.error(`在 ${home} 里没找到 profile「${only}」，或者它没装 dsh-roost`)
+      console.error(`在 ${home} 里没找到 profile「${only}」，或者它没装 dsh-perch`)
       return 2
     }
   }
   if (!dirs.length) {
-    console.error(`在 ${home}\\profiles 里没找到任何装过 dsh-roost 的 profile`)
+    console.error(`在 ${home}\\profiles 里没找到任何装过 dsh-perch 的 profile`)
     return 2
   }
 
@@ -225,7 +225,7 @@ export function main(argv = process.argv.slice(2)) {
     console.log(`  说明    ${r.why}`)
     if (r.verdict === 'empty-copy' || r.verdict === 'stale-copy') {
       bad += 1
-      console.log('  修法    关掉 DSH → 在 profile 目录里 pnpm install --force（或删掉 node_modules/dsh-roost）→ 再启动')
+      console.log('  修法    关掉 DSH → 在 profile 目录里 pnpm install --force（或删掉 node_modules/dsh-perch）→ 再启动')
     }
   }
   console.log(bad ? '\n有问题：上面标出来的那几条按「修法」重装一次。' : '\n看着没问题。')

@@ -39,7 +39,7 @@ function fakeCtx() {
 }
 
 async function withRoot(fn) {
-  const root = await mkdtemp(join(tmpdir(), 'dsh-roost-watch-'))
+  const root = await mkdtemp(join(tmpdir(), 'dsh-perch-watch-'))
   try {
     return await fn(root)
   } finally {
@@ -49,7 +49,7 @@ async function withRoot(fn) {
 
 test('registerWatch：注册一个叫 bili_watch 的工具，参数是合法 JSON Schema', () => {
   const ctx = fakeCtx()
-  registerWatch(ctx, { root: join(tmpdir(), 'dsh-roost-watch-test') })
+  registerWatch(ctx, { root: join(tmpdir(), 'dsh-perch-watch-test') })
   assert.equal(ctx._tools.length, 1)
   const t = ctx._tools[0]
   assert.equal(t.name, 'bili_watch')

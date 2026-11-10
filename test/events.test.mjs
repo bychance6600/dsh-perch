@@ -151,7 +151,7 @@ test('personaLine 不泄露 needs 数值/字段名/路径', () => {
     beliefs: [{ id: 'a', text: '我不喜欢被催。', since: new Date().toISOString() }],
     needs: { autonomy: 0.31, competence: 0.42, relatedness: 0.53 },
   }))
-  for (const leak of ['0.31', '0.42', '0.53', 'autonomy', 'competence', 'relatedness', 'dsh-roost', 'events.jsonl', 'needs']) {
+  for (const leak of ['0.31', '0.42', '0.53', 'autonomy', 'competence', 'relatedness', 'dsh-perch', 'events.jsonl', 'needs']) {
     assert.ok(!text.includes(leak), `不应出现 ${leak}`)
   }
   assert.ok(text.includes('我不喜欢被催。'), '她的判断必须出现在提示里')

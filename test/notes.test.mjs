@@ -24,7 +24,7 @@ import {
 } from '../lib/notes.js'
 
 async function withRoot(fn) {
-  const root = await mkdtemp(join(tmpdir(), 'dsh-roost-notes-'))
+  const root = await mkdtemp(join(tmpdir(), 'dsh-perch-notes-'))
   try {
     return await fn(root)
   } finally {
@@ -115,7 +115,7 @@ test('叫醒消息：空纸给空串，有纸只摊最后三条', async () => {
 
 test('registerNotes 注册 her_note：参数是 object schema，render 返回 ContentBlock', async () => {
   const ctx = fakeCtx()
-  registerNotes(ctx, { root: join(tmpdir(), 'dsh-roost-notes-reg') })
+  registerNotes(ctx, { root: join(tmpdir(), 'dsh-perch-notes-reg') })
   const spec = ctx._tools[0]
   assert.equal(spec.name, 'her_note')
   assert.equal(spec.parameters.type, 'object')

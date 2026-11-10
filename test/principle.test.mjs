@@ -48,7 +48,7 @@ test('出图走服务端白名单路由，客户端不内联图', async () => {
   const ob = await readFile(OBSERVE, 'utf8')
   assert.ok(ob.includes("['/media', async (req, res)"), '必须有 /media 路由')
   // 2026-11-06：反馈页撤掉交流群二维码，/media 白名单里只留原理图。
-  assert.ok(ob.includes('/^\\/dsh-roost\\/media\\/((?:principle-[a-z]+\\.svg))$/'), '文件名必须白名单匹配')
+  assert.ok(ob.includes('/^\\/dsh-perch\\/media\\/((?:principle-[a-z]+\\.svg))$/'), '文件名必须白名单匹配')
   // 同一条路由按扩展名给类型，不再是一句写死的常量。
   assert.ok(ob.includes("'image/svg+xml; charset=utf-8'"), '必须声明 svg 类型')
   assert.ok(!ob.includes('feedback-qr'), '反馈页二维码已撤，白名单里不再放行它')

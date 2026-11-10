@@ -1,5 +1,5 @@
 /**
- * dsh-roost-douyin —— 抖音材料层（可选子包）
+ * dsh-perch-douyin —— 抖音材料层（可选子包）
  *
  * 它不是渠道：没有 send、没有 onMessage、不收私信。主包只用它开一个独立浏览器，
  * 读推荐流、翻详情/评论、让 douyin_look 借这个登录态。
@@ -316,7 +316,7 @@ export function createCdpTransport(opts = {}) {
   const eventHandlers = new Set()
 
   const port = Number(opts.debugPort ?? DEFAULTS.debugPort)
-  const profileDir = opts.profileDir || path.join(os.tmpdir(), 'dsh-roost-douyin-profile')
+  const profileDir = opts.profileDir || path.join(os.tmpdir(), 'dsh-perch-douyin-profile')
 
   async function waitForDevtools(timeoutMs = 15000) {
     const started = Date.now()

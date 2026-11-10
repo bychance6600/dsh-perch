@@ -31,16 +31,16 @@ test('compareVersion：数字位与预发布号', () => {
 
 test('fileDepDir：三种 file: 写法都认，link: 不认', () => {
   const profile = join('C:', 'Users', 'x', '.dsh', 'profiles', 'desktop')
-  const winAbs = { dependencies: { 'dsh-roost': 'file:D:/DSH/plugins-src/dsh-roost' } }
-  assert.match(fileDepDir(profile, winAbs).replace(/\\/g, '/'), /^D:\/DSH\/plugins-src\/dsh-roost$/i)
+  const winAbs = { dependencies: { 'dsh-perch': 'file:D:/DSH/plugins-src/dsh-perch' } }
+  assert.match(fileDepDir(profile, winAbs).replace(/\\/g, '/'), /^D:\/DSH\/plugins-src\/dsh-perch$/i)
 
-  const rel = { dependencies: { 'dsh-roost': 'file:../../../plugins-src/dsh-roost' } }
-  assert.ok(fileDepDir(profile, rel).replace(/\\/g, '/').endsWith('plugins-src/dsh-roost'))
+  const rel = { dependencies: { 'dsh-perch': 'file:../../../plugins-src/dsh-perch' } }
+  assert.ok(fileDepDir(profile, rel).replace(/\\/g, '/').endsWith('plugins-src/dsh-perch'))
 
-  const dev = { devDependencies: { 'dsh-roost': 'file:../src' } }
+  const dev = { devDependencies: { 'dsh-perch': 'file:../src' } }
   assert.ok(fileDepDir(profile, dev).endsWith('src'))
 
-  assert.equal(fileDepDir(profile, { dependencies: { 'dsh-roost': 'link:D:/x' } }), '', 'link: 不是副本，不用提醒')
+  assert.equal(fileDepDir(profile, { dependencies: { 'dsh-perch': 'link:D:/x' } }), '', 'link: 不是副本，不用提醒')
   assert.equal(fileDepDir(profile, {}), '')
 })
 
@@ -49,8 +49,8 @@ test('checkUpgrade：源目录比正在跑的新 → stale，并给出两个版�
   try {
     const profile = join(s.dir, 'profiles', 'desktop')
     const src = join(s.dir, 'src')
-    await writeJson(join(profile, 'package.json'), { dependencies: { 'dsh-roost': 'file:' + src } })
-    await writeJson(join(src, 'package.json'), { name: 'dsh-roost', version: '0.8.0' })
+    await writeJson(join(profile, 'package.json'), { dependencies: { 'dsh-perch': 'file:' + src } })
+    await writeJson(join(src, 'package.json'), { name: 'dsh-perch', version: '0.8.0' })
 
     const r = await checkUpgrade({ version: '0.7.6', profilesDir: profile })
     assert.equal(r.ok, true)
@@ -71,8 +71,8 @@ test('checkUpgrade：版本一致 → 不提醒', async () => {
   try {
     const profile = join(s.dir, 'profiles', 'desktop')
     const src = join(s.dir, 'src')
-    await writeJson(join(profile, 'package.json'), { dependencies: { 'dsh-roost': 'file:' + src } })
-    await writeJson(join(src, 'package.json'), { name: 'dsh-roost', version: '0.7.6' })
+    await writeJson(join(profile, 'package.json'), { dependencies: { 'dsh-perch': 'file:' + src } })
+    await writeJson(join(src, 'package.json'), { name: 'dsh-perch', version: '0.7.6' })
 
     const r = await checkUpgrade({ version: '0.7.6', profilesDir: profile })
     assert.equal(r.ok, true)
@@ -88,8 +88,8 @@ test('checkUpgrade：源目录比正在跑的旧 → stale + older', async () =>
   try {
     const profile = join(s.dir, 'profiles', 'desktop')
     const src = join(s.dir, 'src')
-    await writeJson(join(profile, 'package.json'), { dependencies: { 'dsh-roost': 'file:' + src } })
-    await writeJson(join(src, 'package.json'), { name: 'dsh-roost', version: '0.6.0' })
+    await writeJson(join(profile, 'package.json'), { dependencies: { 'dsh-perch': 'file:' + src } })
+    await writeJson(join(src, 'package.json'), { name: 'dsh-perch', version: '0.6.0' })
 
     const r = await checkUpgrade({ version: '0.7.6', profilesDir: profile })
     assert.equal(r.stale, true)
@@ -104,7 +104,7 @@ test('checkUpgrade：没有 file: 依赖 / 源目录没版本 / 坏 json → 静
   const s = await sandbox()
   try {
     const linkProfile = join(s.dir, 'p1')
-    await writeJson(join(linkProfile, 'package.json'), { dependencies: { 'dsh-roost': 'link:D:/x' } })
+    await writeJson(join(linkProfile, 'package.json'), { dependencies: { 'dsh-perch': 'link:D:/x' } })
     const r1 = await checkUpgrade({ version: '0.7.6', profilesDir: linkProfile })
     assert.equal(r1.stale, false)
     assert.equal(r1.skipped, true)
@@ -112,7 +112,7 @@ test('checkUpgrade：没有 file: 依赖 / 源目录没版本 / 坏 json → 静
 
     const noVer = join(s.dir, 'p2')
     const srcNoVer = join(s.dir, 'src-nover')
-    await writeJson(join(noVer, 'package.json'), { dependencies: { 'dsh-roost': 'file:' + srcNoVer } })
+    await writeJson(join(noVer, 'package.json'), { dependencies: { 'dsh-perch': 'file:' + srcNoVer } })
     await mkdir(srcNoVer, { recursive: true })
     const r2 = await checkUpgrade({ version: '0.7.6', profilesDir: noVer })
     assert.equal(r2.skipped, true)
@@ -137,8 +137,8 @@ test('profileDirs：读不到目录返回空数组，不抛', () => {
 })
 
 test('runningPkgFile：从模块 URL 往上两级', () => {
-  const url = pathToFileURL(join('C:', 'x', 'node_modules', 'dsh-roost', 'lib', 'index.js')).href
-  assert.ok(runningPkgFile(url).replace(/\\/g, '/').endsWith('node_modules/dsh-roost/package.json'))
+  const url = pathToFileURL(join('C:', 'x', 'node_modules', 'dsh-perch', 'lib', 'index.js')).href
+  assert.ok(runningPkgFile(url).replace(/\\/g, '/').endsWith('node_modules/dsh-perch/package.json'))
   assert.equal(runningPkgFile('not a url'), '')
 })
 
@@ -151,13 +151,13 @@ test('checkUpgrade：两个 profile 钉着不同源目录时，认「装进去�
     const srcNew = join(s.dir, 'src-new')
     const srcOld = join(s.dir, 'src-old')
 
-    await writeJson(join(desktop, 'package.json'), { dependencies: { 'dsh-roost': 'file:' + srcNew } })
-    await writeJson(join(srcNew, 'package.json'), { name: 'dsh-roost', version: '0.8.0' })
+    await writeJson(join(desktop, 'package.json'), { dependencies: { 'dsh-perch': 'file:' + srcNew } })
+    await writeJson(join(srcNew, 'package.json'), { name: 'dsh-perch', version: '0.8.0' })
 
-    await writeJson(join(web, 'package.json'), { dependencies: { 'dsh-roost': 'file:' + srcOld } })
-    await writeJson(join(srcOld, 'package.json'), { name: 'dsh-roost', version: '0.7.6' })
+    await writeJson(join(web, 'package.json'), { dependencies: { 'dsh-perch': 'file:' + srcOld } })
+    await writeJson(join(srcOld, 'package.json'), { name: 'dsh-perch', version: '0.7.6' })
     // web 这个 profile 装进去的那份正好是正在跑的 0.7.6 → 它才是当前这条命
-    await writeJson(join(web, 'node_modules', 'dsh-roost', 'package.json'), { name: 'dsh-roost', version: '0.7.6' })
+    await writeJson(join(web, 'node_modules', 'dsh-perch', 'package.json'), { name: 'dsh-perch', version: '0.7.6' })
 
     const r = await checkUpgrade({ version: '0.7.6', home: s.dir, env: { DSH_ROOST_PROFILES: base } })
     assert.equal(r.stale, false, '不能拿另一个 profile 的源目录报警')

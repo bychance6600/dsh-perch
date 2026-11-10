@@ -2,13 +2,13 @@
 
 给要动这份代码的人（或 AI）看。**这个文件只讲「不能做什么」**，不是安装手册，也不是产品介绍——装法看 `README.md`，改了什么看 `CHANGELOG.md`。
 
-> **2026-11-06：本文件已按 dsh-roost 0.1.0 重写。** 下面各节的规则都按重建后的现状写；旧版 `dsh-fish-river` 的条款里，凡提到渠道、出门、导入、通知、自更新、测试基线的，一律以这里为准：
+> **2026-11-06：本文件已按 dsh-perch 0.1.0 重写。** 下面各节的规则都按重建后的现状写；旧版 `dsh-fish-river` 的条款里，凡提到渠道、出门、导入、通知、自更新、测试基线的，一律以这里为准：
 >
 > - 渠道只剩 **QQ（OneBot 11）+ DSH 会话**。B 站私信、抖音私信/群，连同 `lib/channels/bili.js`、`lib/channels/douyin.js` 里的私信整机都已删除。抖音只留推荐流/详情这类只读材料。
 > - **出门/请神**（`outing.js`/`possess.js`/`keepsake.js`/`pocket.js`/`sessionnote.js`/`keep.js`/`dream.js`）已删除；只在设计文档里留了「以后要接回来的接口」。
 > - **导入别人养过的那一位**（旧 0.5.3 例外）已删除。人格入口现在没有任何用户可填的地方。
 > - **桌面通知**（`notify.js`）与 **自更新**（`update.js`/`selfupdate.js`）已删除。
-> - 数据目录是 `~/.dsh-roost`；包名 `dsh-roost`；版本从 `0.1.0` 重新起。
+> - 数据目录是 `~/.dsh-perch`；包名 `dsh-perch`；版本从 `0.1.0` 重新起。
 > - 测试基线以 `node --test --test-isolation=none` 的实测为准（当前 1349 条 / 1338 过 / 9 条已知环境红，见 `PROGRESS.md`），不要再引用 1359。
 > - 「三道门」统一叫「三道瓶颈」；「四道门」统一叫「四个阶段」。文案守门规则不变。
 
@@ -49,7 +49,7 @@
 
 - **物理层与契约层不进提示词。** 写「你不可以读设定」等于告诉她「旁边有份设定，很关键」——那是诱因，不是防线。靠代码不给路径、不给工具来保证。
 - **不要绕过 `lib/guard.js`。** 她是"根本没看见"重塑人格那句话，不是"看见了但被劝住"。任何新的输入口（新工具、新接口、新外部文本源）都必须过 `guard.js`；秘密外发（cookie / token / `sk-` / Bearer / 长 base64）在这里一律拦下。
-- **不要把通用文件 / 命令工具放进 `config.tools.allow`。** `read` / `write` / `edit` / `glob` / `grep` / `bash` / `run_code` 这类不是按目录授权的：一放行，她就能读到 `~/.dsh-roost/home/她的身份.md`、配置和状态，等于绕过 `no-read-self`；写入类还能绕过 `no-self-modify`。要看某个项目的源码，给她 `web_fetch` 从 GitHub 读，或者单独做一个只读的小工具。
+- **不要把通用文件 / 命令工具放进 `config.tools.allow`。** `read` / `write` / `edit` / `glob` / `grep` / `bash` / `run_code` 这类不是按目录授权的：一放行，她就能读到 `~/.dsh-perch/home/她的身份.md`、配置和状态，等于绕过 `no-read-self`；写入类还能绕过 `no-self-modify`。要看某个项目的源码，给她 `web_fetch` 从 GitHub 读，或者单独做一个只读的小工具。
 
 ## 4. 文案有守门词，改之前先看测试
 
@@ -57,18 +57,18 @@
 
 - **不出现男字旁的「他」**，统一写「你」。`test/p5.test.mjs` 逐字扫。例外只有 `其他/其它` 这类词素。她自己的话、引用别人的话不受此限。
 - **统一「四个阶段」与「三道瓶颈」**，**禁**「四道门 / 三道门」。`test/principle-zoom.test.mjs` 明确断言 `三道门`/`四道门` 不出现。
-- **不把她的名字写进代码与文案。** 名字是这一只被养出来之后才有的，属于 `~/.dsh-roost` 里的数据，不属于项目。随包发布的界面、侧栏、设置页、README 一律只用「她」：默认工作区标题「她的家」、会话标题「跟她说话」、设置页签「她」。事件流、日记、`home/` 里出现她的名字是正常的（那是长出来的），代码里写死才是错。`test/naming.test.mjs` 守着。
+- **不把她的名字写进代码与文案。** 名字是这一只被养出来之后才有的，属于 `~/.dsh-perch` 里的数据，不属于项目。随包发布的界面、侧栏、设置页、README 一律只用「她」：默认工作区标题「她的家」、会话标题「跟她说话」、设置页签「她」。事件流、日记、`home/` 里出现她的名字是正常的（那是长出来的），代码里写死才是错。`test/naming.test.mjs` 守着。
 - **立场不是第五关。** 措辞只能是「四个阶段完成之后才会开始有立场」。图上不许再退回「底部一行小字」的表达——立场是独立区块，由 `test/principle.test.mjs`（viewBox 1160 + 含「立场清单」）与 `test/stance.test.mjs`（旧的「纵向长「立场清单」」写法必须不存在）共同守着。
 
 改文案时**先跑这三条**再改别的，否则会来回返工。
 
 ## 5. `events.jsonl` 只能追加
 
-`~/.dsh-roost/events.jsonl` 不能删除记录，是唯一可信源，一行一条。**任何改写/删除/重排都是篡改她的记忆。**
+`~/.dsh-perch/events.jsonl` 不能删除记录，是唯一可信源，一行一条。**任何改写/删除/重排都是篡改她的记忆。**
 
 - 状态（`state.json`）是派生品，随时可由 `rebuild()` 重算；改它没意义，会被覆盖。
 - 「让她忘」不是删行，是**降低召回**（`lib/persona.js` 的 `foldOlderBeliefs`：更早的判断折成一行「记不清原话了」，疤那类永不折叠），事件原文始终还在 `events.jsonl` 里，她也能用 `her_recall` 翻回去。
-- 重置与恢复都不删数据：`reset.js` 改名前缀封存，`backup.js` 恢复前把旧档搬去 `dsh-roost-backups/pre-restore-*`。
+- 重置与恢复都不删数据：`reset.js` 改名前缀封存，`backup.js` 恢复前把旧档搬去 `dsh-perch-backups/pre-restore-*`。
 - 新增事件类型**不必**改 `lib/schema.js` 的 `EVENT_SCHEMA_VERSION`：旧读者读不认识的 `type` 会跳过（`readEvents` 对未知类型宽容），`ask`、`answer`、`heard` 都是这样加进去的。但**改字段语义、把可选字段变必填、删字段**必须升 `v` 并写迁移（旧版本遇到新 `v` 要拒，否则静默丢字段）。
 
 ## 6. 改完必须跑全套测试
@@ -137,7 +137,7 @@ CI 也跑同一套（`.github/workflows/test.yml`，Node 22 / 24 各跑一遍，
 - **渠道全关时不建文件、不连网**：`startChannels` 必须在 `createPeople`/`createJournal` 之前短路。这条有测试（`test/channels*.test.mjs`），别为了「统一初始化」把它挪走。
 - **适配器永不抛**：`start/stop/send/status` 一律 `{ ok, why }`；凭据不进 `status()`、不进日志。
 - **抖音不是渠道，是材料层**。`lib/channels/douyin.js` 只有 `start/stop/status/api()/feed()`，没有 `send`/`onMessage`；`channels.douyin.enabled` 的意思是「报纸能读」，不是「私信开着」。router 遇到没有 `send()` 的适配器回 `read-only-channel`。`start()` 只登记材料层，不拉浏览器；第一次 `api()/feed()` 才开，闲置 3 分钟自己关（2026-11-09：启动就拉太占资源）。
-- **协议不进主包**：主包只有 QQ 的 OneBot 客户端与各渠道的薄壳；抖音这种要真浏览器的，实现放在 `packages/dsh-roost-douyin/`，由 `lib/channels/sub.js` 的 `loadSubModule()` 懒加载（先找已安装的 `dsh-roost-douyin`，找不到就用仓库里那份；代码分开，随仓库一起分发）。可选性由「开不开」+「懒加载」体现：不开就不 `import`、不拉浏览器、不建 `douyin-profile`；开了也只是登记，等她第一次真去读才拉。
+- **协议不进主包**：主包只有 QQ 的 OneBot 客户端与各渠道的薄壳；抖音这种要真浏览器的，实现放在 `packages/dsh-perch-douyin/`，由 `lib/channels/sub.js` 的 `loadSubModule()` 懒加载（先找已安装的 `dsh-perch-douyin`，找不到就用仓库里那份；代码分开，随仓库一起分发）。可选性由「开不开」+「懒加载」体现：不开就不 `import`、不拉浏览器、不建 `douyin-profile`；开了也只是登记，等她第一次真去读才拉。
 - **登录态是主人的，也是她自己的**：B 站扫码拿到的 cookie 只写 `owner.json`（0600），不进日志、不进 `status()`、不回显；二维码只活在内存里。抖音用 `<root>/douyin-profile` 这一个浏览器目录，扫码一次就留着。
 - **代发是主人的话，不是她的话**：`POST /channels/send` 只做三件事——发出去、写一行 `role:'owner'` 的流水、返回结果。不问她、不过 gate、不过出站筛、不写事件流。
 
@@ -185,7 +185,7 @@ CI 也跑同一套（`.github/workflows/test.yml`，Node 22 / 24 各跑一遍，
 - **社会层**：群聊、评论区里的别人（`voice` 事件）、陌生人私信。开闸前**不参与派生**，开闸后也只进 `influence.social`，永不进 `beliefs`（§8）。
 - **刷抖音与刷 B 站同地位**：两个配额合并成一个每日上限（0–6，界面上一个控件），互不挤占；`lookBeforeWake` 必须把两路结果合起来交给同一次唤醒，不许只留一路。
 - **素材不是记忆**：`dy-browse:` / `video` 这类只写「此刻推到你面前的」，她的感想才走 `utterance`。
-- 子包 `dsh-roost-douyin` 没装时，刷抖音静默跳过（`loadSubModule()` 返回 `null`），不许报错、不许建目录。
+- 子包 `dsh-perch-douyin` 没装时，刷抖音静默跳过（`loadSubModule()` 返回 `null`），不许报错、不许建目录。
 
 ## 15. ffmpeg 是运行时资产，不是依赖，也不进 git
 

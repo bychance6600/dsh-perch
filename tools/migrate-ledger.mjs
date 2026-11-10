@@ -6,7 +6,7 @@ import path from 'node:path'
 import { deriveSelf } from '../lib/derive.js'
 
 const SRC = process.env.ROOST_SRC || ''
-const DST = process.env.ROOST_DST || path.join(os.homedir(), '.dsh-roost')
+const DST = process.env.ROOST_DST || path.join(os.homedir(), '.dsh-perch')
 const WRITE = process.argv.includes('--write')
 if (!SRC) {
   console.error('先设 ROOST_SRC：它指向旧数据目录（例如 D:\\backup\\river-data），不是默认去猜。')

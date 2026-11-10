@@ -121,7 +121,7 @@ test('日记返回值不暴露写给谁看 / 写在哪', async () => {
     registerWriteDiary(ctx, { root })
     const out = await ctx.regs.get('write_diary').execute({ text: '随便写一句。' })
     const dumped = JSON.stringify(out)
-    for (const leak of ['visible', 'diary/', '.dsh-roost', 'root', '给你看']) {
+    for (const leak of ['visible', 'diary/', '.dsh-perch', 'root', '给你看']) {
       assert.ok(!dumped.includes(leak), `返回值不应含 ${leak}`)
     }
   })

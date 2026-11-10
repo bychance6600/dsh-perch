@@ -23,7 +23,7 @@ const BVID = 'BV1ph4y1g75E'
 const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
 
 async function tmpRoot() {
-  return mkdtemp(join(tmpdir(), 'dsh-roost-video-'))
+  return mkdtemp(join(tmpdir(), 'dsh-perch-video-'))
 }
 
 /** 一个假客户端：view/playurl 两条都按 B 站形状返回，可由用例覆盖 */
@@ -179,7 +179,7 @@ test('源码守门：失败原因要先过 scrub 再交出去（stderr 里可能
 })
 
 test('源码守门：不给 ffmpeg 任何文件路径输出（issue #13 的核心）', async () => {
-  // #13 的根因是「沙箱不让 ffmpeg 子进程写 ~/.dsh-roost」。修法不是给 ffmpeg 换个能写的路径，
+  // #13 的根因是「沙箱不让 ffmpeg 子进程写 ~/.dsh-perch」。修法不是给 ffmpeg 换个能写的路径，
   // 而是**根本不让它写文件**：帧和拼图都走 stdout，落盘由插件自己做。
   // 这条守门就是防止以后有人「顺手」把输出路径加回去——加了在完整权限下照样绿，
   // 只有在 workspace-write 的真机上才会炸，那时候就很难查了。
