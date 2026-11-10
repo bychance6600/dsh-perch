@@ -148,7 +148,7 @@ ctx.on('session/event', (session, event) => {
 
 ## 4. 协议（roost 这半边要实现的）
 
-完整表见 `https://github.com/bychance6600/roost-pet/blob/main/docs/protocol.md`（v1，唯一来源；本仓库不存第二份）。roost 只需实现：
+完整表见 `https://github.com/bychance6600/dsh-perch-pet/blob/main/docs/protocol.md`（v1，唯一来源；本仓库不存第二份）。roost 只需实现：
 
 - 发：`hello`、`say`、`state`、`act`、`bye`
 - 收：`hello`、`input`、`poke`、`ack`、`log`、`bye`

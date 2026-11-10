@@ -69,11 +69,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bychance6600/roost.git"
+    "url": "git+https://github.com/bychance6600/dsh-perch.git"
   },
-  "homepage": "https://github.com/bychance6600/roost#readme",
+  "homepage": "https://github.com/bychance6600/dsh-perch#readme",
   "bugs": {
-    "url": "https://github.com/bychance6600/roost/issues"
+    "url": "https://github.com/bychance6600/dsh-perch/issues"
   },
   "engines": {
     "node": ">=22",

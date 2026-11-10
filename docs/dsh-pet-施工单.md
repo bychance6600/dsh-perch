@@ -32,7 +32,7 @@
 ## 两边必须对齐的两件事
 
 1. **进程入口**：`pet.path` 指 body 自己的可执行文件（不是 Electron runtime，也不是 .cmd）；参数、10 秒握手、3 次重试（1/5 秒）、退出码 0/1/2/3/4 的约定在 `docs/dsh-pet-施工单-body侧.md` §4，roost 的可执行版本在 `lib/pet/entry.js`。
-2. **消息协议**：版本 `v1`，唯一来源：`https://github.com/bychance6600/roost-pet/blob/main/docs/protocol.md`。任何一边要加字段，先改这张表并在变更记录里加一行，再同步两边代码；不要各写各的。
+2. **消息协议**：版本 `v1`，唯一来源：`https://github.com/bychance6600/dsh-perch-pet/blob/main/docs/protocol.md`。任何一边要加字段，先改这张表并在变更记录里加一行，再同步两边代码；不要各写各的。
 
 ---
 

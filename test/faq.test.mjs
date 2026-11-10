@@ -133,6 +133,6 @@ test('反馈页不再挂常见问题面板：只留仓库链接与一句空状�
   assert.ok(!src.includes('faq-btn'), '不再渲染常见问题按钮')
   assert.ok(!src.includes("jget('/faq.data')"), '设置页不再向 /faq.data 取内容')
   assert.ok(!src.includes('faqOpenNow'), '开合状态的函数已删')
-  assert.ok(src.includes('github.com/bychance6600/roost'), '反馈页要留仓库地址')
+  assert.ok(src.includes('github.com/bychance6600/dsh-perch'), '反馈页要留仓库地址')
   assert.ok(src.includes('还没有写'), 'FAQ 这一块留空状态，不编内容')
 })

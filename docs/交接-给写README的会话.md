@@ -87,7 +87,7 @@
 
 ### 3.7 桌宠（可选）
 
-- 独立仓库 [dsh-roost-pet](https://github.com/bychance6600/roost-pet)，Electron 43.3.0，代码 MIT；角色素材 CC BY-NC-SA、非商用，**素材不入库**。
+- 独立仓库 [dsh-roost-pet](https://github.com/bychance6600/dsh-perch-pet)，Electron 43.3.0，代码 MIT；角色素材 CC BY-NC-SA、非商用，**素材不入库**。
 - 透明、置顶、默认不吃点击的小窗；没有对话框、没有按钮、没有台词；roost 说什么它原样冒出来，roost 不说它就安静待着。
 - 五档姿态：思考 / 动手 / 等 / 出错 / 成了。动作由角色包的 `pet.json` 定义；`sleep / wake / quiet / loud` 是协议控制名，不写进包也永远可用。
 - 单击只发 `poke`，反应归 roost；睡着单击只轻晃、不叫醒。拖拽跟手、松手抛掷、边缘反弹、落地挤压。
@@ -100,7 +100,7 @@
 
 - 零依赖：`dependencies` / `peerDependencies` / `devDependencies` 三个永远 `{}`；测试只用 `node:test`。桌宠是独立项目，Electron 不算主包依赖。
 - 许可：主包 MIT；上游 `dsh-fish` 0.8.5、`dsh-fish-soul` 0.12.0、`dsh-fish-river` 都是 MIT；第三方与致谢见 `NOTICE.md`。
-- 安装：profile 里 `pnpm add github:bychance6600/roost`，再把 `dsh-perch` 写进 `package.json` 的 `dsh.profile.bundles`；或跑 `install.ps1`（支持 `-LocalPath`、`-DryRun`、`-FfmpegZip`）。装完必须重启 DSH。
+- 安装：profile 里 `pnpm add github:bychance6600/dsh-perch`，再把 `dsh-perch` 写进 `package.json` 的 `dsh.profile.bundles`；或跑 `install.ps1`（支持 `-LocalPath`、`-DryRun`、`-FfmpegZip`）。装完必须重启 DSH。
 - 0.1.0 边界：原理页停在现有理论卡（A13 的验收是页面在、内容不随 0.1.0 重写）；反馈页 FAQ 按设计留空（A14）；世界书内容由会话侧生成、你导入，插件不替你写。
 
 ## 4. README 建议怎么讲
@@ -204,5 +204,5 @@ git diff --check
 - [docs/约定清单.md](约定清单.md)
 - [docs/从哪来.md](从哪来.md)
 - [docs/定过的取舍.md](定过的取舍.md)
-- [GitHub Release v0.1.0](https://github.com/bychance6600/roost/releases/tag/v0.1.0)
-- [dsh-roost-pet](https://github.com/bychance6600/roost-pet)
+- [GitHub Release v0.1.0](https://github.com/bychance6600/dsh-perch/releases/tag/v0.1.0)
+- [dsh-roost-pet](https://github.com/bychance6600/dsh-perch-pet)
