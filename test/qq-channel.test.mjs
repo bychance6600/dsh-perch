@@ -328,6 +328,15 @@ test('CQ 码里的 @ 她同样记成 mentionedSelf', async () => {
   adapter.stop()
 })
 
+test('桥把 @ 展开成正文「@昵称」时也算点名，并把前缀剥掉', async () => {
+  const { adapter, messages, ws } = await started()
+  ws.push(group({ message_id: 609, user_id: 20002, message: [{ type: 'text', data: { text: '@小满 能看到这个群里的消息吗' } }] }))
+  assert.equal(messages.length, 1)
+  assert.equal(messages[0].mentionedSelf, true, '正文里的 @昵称 要认成点名')
+  assert.equal(messages[0].text, '能看到这个群里的消息吗')
+  adapter.stop()
+})
+
 test('图片最多收 4 张', async () => {
   const { adapter, messages, ws } = await started()
   const segs = Array.from({ length: 6 }, (_, i) => ({ type: 'image', data: { url: `https://example.com/${i}.png` } }))
