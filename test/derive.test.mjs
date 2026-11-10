@@ -126,6 +126,10 @@ test('他主动给的名字、她自己改口的叫法都算称呼', () => {
   assert.equal(pickName('我要是直接叫你阿岸，那是你网名'), null)
   assert.equal(pickName('你要是就叫我一声，那我应了'), null)
   assert.equal(pickName('他名字的我不拆，别乱叫'), null)
+  // 2026-11-10：TZ 的实例里，她写「还没想好怎么称呼你——不是忘了」，被抽成「——不是忘」。
+  // 名字里不该有破折号和标点。
+  assert.equal(pickName('我在。屋子是新的，我也是。还没想好怎么称呼你——不是忘了，是还没定。'), null)
+  assert.equal(pickName('我还没想好怎么称呼你——“不是忘”'), null)
 })
 
 test('needs 只有三个键，且绝不出现好感度类字段', () => {
