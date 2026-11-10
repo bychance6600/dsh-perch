@@ -144,6 +144,17 @@ test('screenOutgoing：命中就不发，没命中原样出门', () => {
   assert.equal(good.text, '我不太确定。')
 })
 
+test('「私聊」这个词本身不再是红线，提到谁在私聊里说了什么才算（2026-11-10 真机）', () => {
+  // 她平时就会说的话，不该因为出现「私聊」「我跟你说」被拦在门口
+  assert.equal(screenOutgoing('这块我在私聊里跟你说过了吧？').ok, true)
+  assert.equal(screenOutgoing('我跟你说，今天外面风很大。').ok, true)
+  assert.equal(screenOutgoing('私聊里说了句不好听的。').ok, true)
+  // 真正的形态：提到他人在私聊里说过什么，或者聊天记录本身
+  assert.equal(screenOutgoing('他私聊里说周三就走。').ok, false)
+  assert.equal(screenOutgoing('别人私聊说的那件事你别往外讲。').ok, false)
+  assert.equal(screenOutgoing('这是我们俩的聊天记录。').ok, false)
+})
+
 /* ---------------------------- 3. 清洗外来文本 ---------------------------- */
 
 test('sanitizeForeign：删掉冒充系统的行，其余保留', () => {
