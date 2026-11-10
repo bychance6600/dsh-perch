@@ -26,10 +26,11 @@ import { stripScaffold } from '../lib/guard.js'
 import { appendEvent, readEvents, rootDir } from '../lib/store.js'
 
 function parseArgs(argv) {
-  const out = { from: '', write: false, root: '', limit: 0, json: false, help: false }
+  const out = { from: '', merge: '', write: false, root: '', limit: 0, json: false, help: false }
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i]
     if (a === '--from') out.from = argv[++i] ?? ''
+    else if (a === '--merge') out.merge = argv[++i] ?? ''
     else if (a === '--write') out.write = true
     else if (a === '--root') out.root = argv[++i] ?? ''
     else if (a === '--limit') out.limit = Number(argv[++i]) || 0
@@ -162,12 +163,73 @@ const INJECTED = [
 
 const sha1 = (s) => crypto.createHash('sha1').update(s).digest('hex')
 
+/**
+ * --merge：对面在自己机器上跑完 --write，把导出的 events.jsonl 发回来，
+ * 这里只把 heard 与 import-mark 追加进本机账本，别的类型一律不接。
+ */
+async function mergeEvents(args) {
+  if (!fs.existsSync(args.merge)) {
+    console.error(`找不到：${args.merge}`)
+    process.exit(1)
+  }
+  const root = args.root || rootDir()
+  const rows = fs
+    .readFileSync(args.merge, 'utf8')
+    .split('\n')
+    .filter(Boolean)
+    .map((l) => {
+      try {
+        return JSON.parse(l)
+      } catch {
+        return null
+      }
+    })
+    .filter(Boolean)
+  const heard = rows.filter((r) => r.type === 'heard' && typeof r.text === 'string' && r.text.trim())
+  const marks = rows.filter((r) => r.type === 'meta' && /^import-mark:/.test(String(r.text ?? '')))
+  const seen = new Set()
+  try {
+    const { events } = await readEvents(root)
+    for (const e of events) if (e.type === 'heard' && e.text) seen.add(sha1(e.text.trim()))
+  } catch {}
+  const kept = []
+  for (const r of heard) {
+    const t = stripScaffold(String(r.text)).trim().slice(0, 2000)
+    if (!t) continue
+    const h = sha1(t)
+    if (seen.has(h)) continue
+    seen.add(h)
+    kept.push({ text: t, time: Number(r.time) || Date.now() })
+  }
+  let wrote = 0
+  if (args.write) {
+    for (const m of marks) {
+      await appendEvent({ type: 'meta', text: String(m.text) }, { source: 'system', now: Number(m.time) || Date.now() }, root)
+    }
+    for (const k of kept) {
+      try {
+        await appendEvent(
+          { type: 'heard', text: k.text, channel: 'dsh', visibility: 'private', origin: 'owner' },
+          { source: 'system', now: k.time },
+          root,
+        )
+        wrote += 1
+      } catch {}
+    }
+  }
+  console.log(`来源：${args.merge}`)
+  console.log(`读到 ${rows.length} 条事件；其中 heard ${heard.length} 条、import-mark ${marks.length} 条；可用 ${kept.length} 条${args.write ? `，写入 ${wrote} 条` : '（干跑，未写盘）'}`)
+  if (!args.write) console.log('确认无误后加 --write 再跑一次。')
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2))
-  if (args.help || !args.from) {
+  if (args.help || (!args.from && !args.merge)) {
     console.log('用法: node tools/import.mjs --from <文件或目录> [--write] [--limit N] [--root DIR]')
+    console.log('      node tools/import.mjs --merge <events.jsonl> [--write] [--root DIR]')
     process.exit(args.help ? 0 : 1)
   }
+  if (args.merge) return mergeEvents(args)
   if (!fs.existsSync(args.from)) {
     console.error(`找不到：${args.from}`)
     process.exit(1)

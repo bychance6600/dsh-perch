@@ -42,6 +42,33 @@ test('干跑：滤掉运行时上下文，不写盘', async () => {
   await rm(root, { recursive: true, force: true })
 })
 
+test('--merge：对面导出的 events.jsonl 只接 heard 与 import-mark', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-perch-root-'))
+  const exported = join(root, 'from-other.jsonl')
+  await writeFile(
+    exported,
+    [
+      JSON.stringify({ type: 'heard', time: 1762000000000, text: '搬过来的一句。' }),
+      JSON.stringify({ type: 'heard', time: 1762000001000, text: '搬过来的一句。' }),
+      JSON.stringify({ type: 'meta', time: 1762000000500, text: 'import-mark:other:1' }),
+      JSON.stringify({ type: 'utterance', text: '她的话不该被接' }),
+    ].join('\n'),
+    'utf8',
+  )
+  const dry = run(['--merge', exported, '--root', root])
+  assert.equal(dry.status, 0, dry.stderr)
+  assert.match(dry.stdout, /可用 1 条/)
+  assert.match(dry.stdout, /干跑/)
+
+  const w = run(['--merge', exported, '--root', root, '--write'])
+  assert.equal(w.status, 0, w.stderr)
+  const events = (await readFile(join(root, 'events.jsonl'), 'utf8')).split('\n').filter(Boolean).map((l) => JSON.parse(l))
+  assert.equal(events.filter((e) => e.type === 'heard').length, 1)
+  assert.ok(events.some((e) => e.type === 'meta' && /import-mark:other:1/.test(e.text)))
+  assert.equal(events.filter((e) => e.type === 'utterance').length, 0)
+  await rm(root, { recursive: true, force: true })
+})
+
 test('--write：写 heard 与 import-mark；同一句不写第二遍', async () => {
   const dir = await fixture(['第一句话。', '第一句话。', '第二句话。'])
   const root = await mkdtemp(join(tmpdir(), 'dsh-perch-root-'))
