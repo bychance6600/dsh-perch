@@ -2,7 +2,7 @@
  * pet-bridge.test.mjs —— v1 协议（2026-11-08，m09369）
  *
  * 不 spawn：用一对 PassThrough 假装 body 的 stdout/stdin。
- * 协议唯一来源：https://github.com/bychance6600/dsh-roost-pet/blob/main/docs/protocol.md
+ * 协议唯一来源：https://github.com/bychance6600/roost-pet/blob/main/docs/protocol.md
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'

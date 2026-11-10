@@ -79,7 +79,7 @@
 ## 备份、干净安装与恢复演练（2026-11-08，m12057）——已做
 
 - 快照：`%USERPROFILE%\Desktop\bak\roost\2026-11-08-1920`。`home\` 5,336 文件 / 1,564,361,992 字节，排除 `instance.json`（218 B，运行锁）。源目录（排除 instance）逐文件 sha256 全等：0 缺失、0 多出、0 不同；`events.jsonl` 2,027 行、sha256 `9e092a80b622aae261b2d28483ea088c04ab466d7e70e26cea659809290d7263`；`config.json` `130efe1a...`、`home.json` `48df469f...`、`people.json` `043ce701...`。根目录有 `MANIFEST.md` 与 `SHA256SUMS.txt`（5,336 行，709,378 B，`sha256sum -c` 全 OK）。
-- 干净安装：GitHub `bychance6600/dsh-roost` HEAD `ae37201` 重新 clone；`dependencies` / `devDependencies` / `peerDependencies` 都是 `{}`；干净克隆 `node --test` **1337 条 / 1333 过 / 0 红 / 4 skip**；空 profile 用自带 pnpm `add github:...` 装出 `dsh-roost 0.1.0`。
+- 干净安装：GitHub `bychance6600/roost` HEAD `ae37201` 重新 clone；`dependencies` / `devDependencies` / `peerDependencies` 都是 `{}`；干净克隆 `node --test` **1337 条 / 1333 过 / 0 红 / 4 skip**；空 profile 用自带 pnpm `add github:...` 装出 `dsh-roost 0.1.0`。
 - 恢复演练：把快照 `home\` 复制到临时目录，用干净安装出来的 `lib/index.js` 启动假宿主（关 QQ / B 站 / 抖音 / 桌宠 / 上网 / 主动唤醒）。读回 2,026 条事件 + 1 条跳过（第 763 行是已知无 id 的旧测试行），第 6 天 / 阶段 1，31 人且主人印象非空，复用 `home.json` 里的会话（没新建、没叫醒），注册 12 个自带工具、46 条观测台路由；启动前后 `events.jsonl` 字节前缀一致。
 - 真身没动：只做复制与临时副本启动，没有替换 `~/.dsh-roost`，也没有连 QQ。
 
@@ -139,7 +139,7 @@
 
 ## 桌宠 roost 侧（2026-11-08，m09369）——已接进主包
 
-- 需求：dsh-pet 只是身体，roost 是脑子。协议唯一来源是 `https://github.com/bychance6600/dsh-roost-pet/blob/main/docs/protocol.md`（v1，一行一 JSON，stdio）；身体不生成台词、不自动打招呼，聊天框原文只走 `sayToHer`。
+- 需求：dsh-pet 只是身体，roost 是脑子。协议唯一来源是 `https://github.com/bychance6600/roost-pet/blob/main/docs/protocol.md`（v1，一行一 JSON，stdio）；身体不生成台词、不自动打招呼，聊天框原文只走 `sayToHer`。
 - 代码：新增 `lib/pet/state.js`（事件→五档，`thinking/acting/waiting/error/done`，中文档位，done 停 2 秒 / error 停 5 秒回 waiting）、`lib/pet/mirror.js`（`assistantText` → 按句切、单条 ≤200、同 `id:seq` 去重、8 秒没 ack 丢弃、队列上限 20）、`lib/pet/bridge.js`（注入 `{readable,writable}`，16KB 行上限，3 秒 hello 超时，坏 JSON 不崩）、`lib/pet/tool.js`、`lib/pet/index.js`（spawn 三次失败置 dead 只记一次，退避可被 `off()` 取消）。
 - 五点口径已落：① `pet_act` 不进 `FISH_TOOLS`，只在 `petEnabled` 时由 `registerToolRestrict` 的 `extra` 追加，`selfcheck` 的 `expected` 跟 `petOn` 走；② 测试用 `test/fixtures/fake-body.mjs` 的 `PassThrough`，不真 spawn；③ `pet.enabled` / `pet.path` 进设置页「插件」、`buildConfig()` 与 `/config` 白名单；④ `/pet/status` 只回中文档位与事实，不出现 need 模型英文名；⑤ `talkSessionId` 拿不到就不挂、不刷日志。
 - 接线：`lib/index.js` 在 `registerObserve` 前 `startPet`，关闭时 push `off`；`petSendAct` 传给工具侧。默认 `pet.enabled=false`，零副作用（不 spawn、不订阅、无网络）。

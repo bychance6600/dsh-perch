@@ -131,7 +131,7 @@
 
 ## 五、装
 
-要求：**Node ≥ 22**，DSH `>=0.2.0-rc.1 <0.3.0-0`，零依赖。v0.1.0 已发布，release notes 在 [Releases](https://github.com/bychance6600/dsh-roost/releases/tag/v0.1.0)。
+要求：**Node ≥ 22**，DSH `>=0.2.0-rc.1 <0.3.0-0`，零依赖。v0.1.0 已发布，release notes 在 [Releases](https://github.com/bychance6600/roost/releases/tag/v0.1.0)。
 
 ### 手动装
 
@@ -139,7 +139,7 @@
 
 ```bash
 # 从 GitHub
-pnpm add github:bychance6600/dsh-roost
+pnpm add github:bychance6600/roost
 
 # 或装本机这份源码（开发时）
 pnpm add link:D:/path/to/dsh-roost
@@ -214,7 +214,7 @@ zip 不用解压；脚本用系统自带解压。二进制不进 git。
 
 ## 八、身体（可选）
 
-她可以不只是一段文字。身体是独立项目 **[dsh-roost-pet](https://github.com/bychance6600/dsh-roost-pet)**：透明置顶的小窗，只显示五档状态与动作，不生成台词，也不替她开口。
+她可以不只是一段文字。身体是独立项目 **[dsh-roost-pet](https://github.com/bychance6600/roost-pet)**：透明置顶的小窗，只显示五档状态与动作，不生成台词，也不替她开口。
 
 装法、构建、角色包、睡醒判据都在那个仓库的 README 里，这边不重复。主包只留三个环境参数：`pet.enabled`、`pet.path`、`pet.pack`；不装不影响任何功能。
 
@@ -273,7 +273,7 @@ douyin-profile/       抖音浏览器的登录态（开抖音时才有）
 - 社会层：四闸隔离测试屋（差一条闸零写入、四条齐只写一条、1000 条陌生人 `social` 不改 `beliefs`）。
 - 工程：备份 / 恢复演练、从 GitHub 干净 clone 能装能跑、CI 三档全绿。
 
-身体（可选）的验收在 [dsh-roost-pet](https://github.com/bychance6600/dsh-roost-pet) 自己的仓库里，这边不重复。
+身体（可选）的验收在 [dsh-roost-pet](https://github.com/bychance6600/roost-pet) 自己的仓库里，这边不重复。
 
 **设计上就留白的**
 
@@ -302,4 +302,4 @@ node --test test/<file>.test.mjs   # 单文件
 
 代码来自 [ssamurias/dsh-fish](https://github.com/ssamurias/dsh-fish)（0.8.5）与 [Britneycode/dsh-fish-soul](https://github.com/Britneycode/dsh-fish-soul)（0.12.0），经 [dsh-fish-river](https://github.com/bychance6600/dsh-fish-river) 重建。三者均为 MIT；第三方与致谢见 [NOTICE.md](NOTICE.md)。本仓库同样以 MIT 发布。
 
-桌宠 [dsh-roost-pet](https://github.com/bychance6600/dsh-roost-pet) 是独立项目，Electron 与角色素材的许可见它自己的 [NOTICE](https://github.com/bychance6600/dsh-roost-pet/blob/main/NOTICE) 与 README。
+桌宠 [dsh-roost-pet](https://github.com/bychance6600/roost-pet) 是独立项目，Electron 与角色素材的许可见它自己的 [NOTICE](https://github.com/bychance6600/roost-pet/blob/main/NOTICE) 与 README。

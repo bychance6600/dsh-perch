@@ -73,7 +73,7 @@ test('关于卡：GitHub 商标小图 + 「GitHub」文字（2026-10-25 用户�
   // 文字必须恰好是 GitHub（大小写按用户说的）
   assert.ok(/ghMark,\s*'GitHub'/.test(src), '图标后面要跟「GitHub」这几个字')
   // 链接指向仓库，新窗口打开且带 noopener
-  assert.ok(src.includes('https://github.com/bychance6600/dsh-roost'), '要指向仓库地址')
+  assert.ok(src.includes('https://github.com/bychance6600/roost'), '要指向仓库地址')
   assert.ok(src.includes("rel: 'noopener noreferrer'"), '外链必须带 noopener')
 })
 
@@ -107,7 +107,7 @@ test('页签选中态不许拿正文墨色当底色（2026-10-25 深色主题下
 
 test('反馈页只留仓库链接，私人联系方式撤了（2026-11-06，设计 §四）', async () => {
   const src = await readFile(CLIENT, 'utf8')
-  assert.ok(src.includes('github.com/bychance6600/dsh-roost'), '要指向仓库')
+  assert.ok(src.includes('github.com/bychance6600/roost'), '要指向仓库')
   assert.ok(!src.includes('1264518494'), '不再贴开发者 QQ')
   assert.ok(!src.includes('615628177'), '不再贴群号')
   assert.ok(!src.includes('feedback-qr'), '不再挂群二维码')
