@@ -28,6 +28,7 @@ import {
   openqMaterialLine,
   captureOpenq,
   openqWakeNote,
+  registerOpenqClose,
 } from '../lib/capture.js'
 import { registerObserve } from '../lib/observe.js'
 
@@ -274,4 +275,94 @@ test('今天页：多出一条「没答完的」，最多 3 条，关掉的不�
   const hands = src.indexOf("'手边'")
   assert.ok(changes > -1 && section > changes && hands > section, '「没答完的」要夹在今天变了什么和手边之间')
   assert.ok(src.includes('qs.slice(0, 3)'), '今天页最多 3 条')
+}))
+
+
+function openqTool(root) {
+  const defs = []
+  const ctx = { tools: { register(def) { defs.push(def); return () => {} } } }
+  registerOpenqClose(ctx, { root })
+  assert.equal(defs.length, 1, '要注册一个 openq_close')
+  return defs[0]
+}
+
+async function seedOpenq(root, text, ts = NOW) {
+  return appendEvent(
+    { type: 'openq', text, refs: ['ev_' + 'H'.repeat(26)], ts: new Date(ts).toISOString() },
+    { day: 1, stage: 1, source: 'system' },
+    root,
+  )
+}
+
+test('openq_close：关掉之后叫醒时不再摆这一条', () => withRoot(async (root) => {
+  const q = await seedOpenq(root, '我还不会。')
+  const tool = openqTool(root)
+  const out = await tool.execute({ id: q.id, how: 'resolved' }, {})
+  assert.equal(out.ok, true)
+
+  const text = await openqWakeNote(root, { now: NOW })
+  assert.equal(text, '', '关掉的那条不再摆出来')
+}))
+
+test('openq_close：resolved 与 dropped 都算关，事件里带 openqId / how / note', () => withRoot(async (root) => {
+  const a = await seedOpenq(root, '我还不会。')
+  const b = await seedOpenq(root, '等它自己长出来吧。', NOW + 1000)
+  const tool = openqTool(root)
+  assert.equal((await tool.execute({ id: a.id, how: 'resolved', note: '后来答上了' }, {})).ok, true)
+  assert.equal((await tool.execute({ id: b.id, how: 'dropped', note: '不打算再答' }, {})).ok, true)
+
+  const { events } = await readEvents(root)
+  const closed = events.filter((e) => e.type === 'openq-close')
+  assert.equal(closed.length, 2)
+  assert.deepEqual(closed.map((e) => e.openqId).sort(), [a.id, b.id].sort())
+  assert.deepEqual(closed.map((e) => e.how).sort(), ['dropped', 'resolved'])
+  const state = openqState(events, { now: NOW })
+  assert.equal(state.open.length, 0, '两条都关了')
+  assert.equal(state.closed.length, 2)
+  assert.ok(state.closed.some((x) => x.note === '后来答上了'))
+}))
+
+test('openq_close：note 超过 60 字截断，事件里不留更长', () => withRoot(async (root) => {
+  const q = await seedOpenq(root, '我不知道怎么开口。')
+  const tool = openqTool(root)
+  const long = '很'.repeat(80)
+  const out = await tool.execute({ id: q.id, how: 'dropped', note: long }, {})
+  assert.equal(out.ok, true)
+  const { events } = await readEvents(root)
+  const close = events.find((e) => e.type === 'openq-close')
+  assert.equal(close.note.length, 60)
+}))
+
+test('openq_close：无效 id 报错，不写事件', () => withRoot(async (root) => {
+  const tool = openqTool(root)
+  const bad = await tool.execute({ id: 'nope', how: 'resolved' }, {})
+  assert.equal(bad.ok, false)
+  assert.match(bad.note, /id/)
+
+  const missing = await tool.execute({ id: 'ev_' + 'Z'.repeat(26), how: 'resolved' }, {})
+  assert.equal(missing.ok, false)
+  assert.match(missing.note, /没有这条/)
+
+  const { events } = await readEvents(root)
+  assert.equal(events.filter((e) => e.type === 'openq-close').length, 0)
+}))
+
+test('今天页：只列开着的，最近关掉的一条在下面写 id / how / note', () => withRoot(async (root) => {
+  const a = await seedOpenq(root, '我还不会 A', NOW)
+  const b = await seedOpenq(root, '我还不会 B', NOW + 1000)
+  const c = await seedOpenq(root, '我还不会 C', NOW + 2000)
+  const tool = openqTool(root)
+  assert.equal((await tool.execute({ id: b.id, how: 'dropped', note: '不打算再答' }, {})).ok, true)
+
+  const { status, json } = await getToday(root)
+  assert.equal(status, 200)
+  assert.deepEqual(json.openq.map((x) => x.id), [a.id, c.id])
+  assert.equal(json.openqClosed.length, 1)
+  assert.equal(json.openqClosed[0].id, b.id)
+  assert.equal(json.openqClosed[0].how, 'dropped')
+  assert.equal(json.openqClosed[0].note, '不打算再答')
+
+  const src = await readFile(new URL('../lib/client.js', import.meta.url), 'utf8')
+  assert.ok(src.includes('最近关掉的'))
+  assert.ok(src.includes('todayData.openqClosed'))
 }))

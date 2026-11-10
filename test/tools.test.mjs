@@ -25,7 +25,7 @@ import { fileURLToPath } from 'node:url'
 import { tmpdir } from 'node:os'
 
 import { defineTool } from '../lib/tool.js'
-import { registerCapture } from '../lib/capture.js'
+import { registerCapture, registerOpenqClose } from '../lib/capture.js'
 import { registerLetter } from '../lib/letter.js'
 import { registerLook } from '../lib/look.js'
 import { registerRecall } from '../lib/recall.js'
@@ -67,17 +67,18 @@ test('defineTool 是恒等：不编译、不改写', () => {
   assert.equal(defineTool(spec), spec)
 })
 
-test('六个工具定义都长成宿主认的形状', () => {
+test('七个工具定义都长成宿主认的形状', () => {
   const ctx = fakeCtx()
   const deps = { root: ROOT, log: () => {} }
   registerCapture(ctx, deps)
+  registerOpenqClose(ctx, deps)
   registerLetter(ctx, deps)
   registerLook(ctx, deps)
   registerRecall(ctx, deps)
   registerHerDiary(ctx, deps)
   registerWatch(ctx, deps)
 
-  assert.equal(ctx.defs.length, 6, '我们自己的工具是 6 个（另加 read_image 是宿主的）')
+  assert.equal(ctx.defs.length, 7, '我们自己的工具是 7 个（另加 read_image 是宿主的）')
   const names = ctx.defs.map((d) => d.name)
   for (const n of names) assert.ok(FISH_TOOLS.includes(n), `${n} 不在 FISH_TOOLS 里`)
 
