@@ -4,7 +4,10 @@
 
 ### 改名
 
-- **包名 `dsh-perch` → `dsh-perch`**（2026-11-10）。npm 上的 `dsh-perch` 已被另一个独立项目占用（`tdcq9594/dsh-perch`，2026-10-26 建、AGPL-3.0），继续同名会让「一键安装」和包名解析撞车。仓库名、插件 id（`dsh-perch`）、数据目录 `~/.dsh-perch`、路由 `/dsh-perch/*` **都不变**；`lib/upgrade.js` 读依赖时同时认新旧两个包名，老 profile 不用改也能升级。
+- **包名 `dsh-roost` → `dsh-perch`**（2026-11-10）。npm 上的 `dsh-roost` 已被另一个独立项目占用（`tdcq9594/dsh-roost`，2026-10-26 建、AGPL-3.0），继续同名会让「一键安装」和包名解析撞车。
+- 仓库名、插件 id、包名、数据目录（`~/.dsh-perch`）、路由（`/dsh-perch/*`）统一为 `dsh-perch`；本地目录也从 `dsh-roost` 改成 `dsh-perch`。
+- `lib/upgrade.js` 读依赖时同时认旧名（`dsh-roost`、`dsh-roost-core`、过渡期的 `dsh-perch-core`），老 profile 不改也能升级。
+- 数据目录改名：第一次在新名下启动时，若 `~/.dsh-perch` 不存在而 `~/.dsh-roost` 存在，直接把旧目录 rename 过去；搬不动就继续用旧的。
 
 ## 0.1.0（2026-11-08）
 
