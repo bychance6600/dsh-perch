@@ -2,7 +2,7 @@
 
 ## 现在在哪
 
-**0.1.7 已发布（2026-11-10，tag `v0.1.7`）。** 0.1.0 是重建版；代码从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-perch`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过）。A 段 35 条与 B 段 19 条验收全部收口（A1 于 2026-11-07 16:12 真机通过）。
+**0.1.7 已发布（2026-11-10，tag `v0.1.7`）；当前就停在这里，v0.2 还没开始。** 0.1.0 是重建版；代码从 `dsh-fish-river`（0.1.68）复制过来，改名、删掉一半旧功能、账本已迁到 `~/.dsh-perch`。river 时代的变量名与文档尾巴已清（环境变量统一 `DSH_ROOST_*`，`install.ps1` 重写）。2026-11-07 已上真机（A11 首检通过）。A 段 35 条与 B 段 19 条验收全部收口（A1 于 2026-11-07 16:12 真机通过）。
 
 ### 发布记录（0.1.2–0.1.7）
 
@@ -15,9 +15,15 @@
 | 0.1.6 | 2026-11-10 | 「你以后就叫 X」的语序 | `845ca26` |
 | 0.1.7 | 2026-11-10 | 桥把 @ 展开成正文时漏判点名 | `577e4f0` |
 
-- 基线：`node --test --test-isolation=none` → 最近一次全量 **1375 条 / 1364 过 / 9 红**（另有 2 skip，2026-11-10 核，本机已装运行时 ffmpeg）。没装 ffmpeg 时多一条 `dylink` 的 Referer。全量约 110 秒。
-- 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
-- node 不在 PATH：用 `D:\DeepSeek Harness\resources\runtime\primary-runtime\dependencies\node\bin\node.exe`。
+- 基线：`node --test --test-isolation=none` → 2026-11-12 在 Mac 仓库实测 **1376 条 / 1364 过 / 10 红 / 2 skip**（约 87 秒，本机 `/usr/local/bin/ffmpeg` 已装）。第 10 条红是 `test/video.test.mjs` 的 `grabFrames` 帧数 `8 !== 9`，属本机 ffmpeg 抽帧差异；其余 9 条与已知环境红同名。普通全量未在 Mac 复跑。
+- 其余 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
+- 本机 macOS：node 已在 PATH（v26.13.0），不再用 D 盘绝对路径。
+
+### 2026-11-12 Mac 仓库核对
+
+- `docs/迁移指南.md` 改成 macOS 路径；实参只有 `--from` / `--merge` / `--write` / `--root` / `--limit` / `--json`，没有 `--source`；`--merge` 不再压第二次时间。
+- `docs/实现对照.md`：openq 与记忆图谱改为已实现；记忆图谱是 155 组 + 16 个游离点，不再是「654 点没聚类」。
+- `CHANGELOG.md` 的 0.1.0–0.1.7 版本段逐段对过；0.1.2 补了发布时漏记的 openq 第一阶段（识别/叫醒/挂材料）与记忆图谱 v7 的实际形态（155 组 + 16 个游离点）。其余条目原已在 0.1.0 各节，不重复记。
 
 
 ## 外部描述核对（2026-11-10，m03336）——已写
