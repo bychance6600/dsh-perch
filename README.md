@@ -5,7 +5,7 @@
 ![deps](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![node](https://img.shields.io/badge/node-%E2%89%A522-339933)
 ![dsh](https://img.shields.io/badge/DSH-plugin-6a5acd)
-![tests](https://img.shields.io/badge/tests-1364%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-1366%20passing-brightgreen)
 
 **她住的地方，不是一个助手。**
 
@@ -294,7 +294,7 @@ node --test --test-isolation=none  # 沙箱 / 受限环境（跨文件会有假�
 node --test test/<file>.test.mjs   # 单文件
 ```
 
-当前基线（2026-11-12，macOS）：**1376 条 / 1364 过 / 10 红 / 2 skip**。9 条是已知环境项（跨文件隔离互相干扰；`withFileLock` 偶发），第 10 条是 `test/video.test.mjs` 的 `grabFrames` 帧数差异（本机 ffmpeg 抽帧），单跑对应文件会绿。**不许新增红。**
+当前基线（2026-11-12，macOS）：**1376 条 / 1366 过 / 9 红 / 1 skip**。9 条是已知环境项（跨文件隔离互相干扰；`withFileLock` 偶发），单跑对应文件会绿；`grabFrames` 少一格的红已由 `216f2cb` 修掉，本机有 ffmpeg，media 那条不再 skip。**不许新增红。**
 
 零依赖是铁律：`dependencies` / `peerDependencies` / `devDependencies` 三个永远 `{}`，测试只用 `node:test`。
 
