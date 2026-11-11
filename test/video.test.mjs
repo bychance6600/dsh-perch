@@ -14,7 +14,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdtemp, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, sep } from 'node:path'
 
 import { grabFrames, sampleTimes, normalizeAt, pickSceneTimes, frameDiff, matchCues, wavePeaks, DETAIL, ensureCaFile } from '../lib/video.js'
 import { detectFfmpeg, mediaDir } from '../lib/media.js'
@@ -280,9 +280,9 @@ test('grabFrames：帧与拼图都从 stdout 拿，mp4 在本地也能跑通（�
   assert.doesNotMatch(r.path, /\\/)
   assert.match(r.path, /^.+media\/sheet-BV1ph4y1g75E-.+\.png$/)
 
-  const st = await stat(r.path.replace(/\//g, '\\'))
+  const st = await stat(r.path.split('/').join(sep))
   assert.ok(st.size > 1024, `拼图应该不是空的，实际 ${st.size} 字节`)
-  const buf = await readFile(r.path.replace(/\//g, '\\'))
+  const buf = await readFile(r.path.split('/').join(sep))
   assert.equal(buf.subarray(0, 8).toString('hex'), PNG_MAGIC.toString('hex'))
 
   // 旧实现会在 media/ 下留 tmp-* 临时帧目录；新实现不落中间文件

@@ -15,7 +15,7 @@
 | 0.1.6 | 2026-11-10 | 「你以后就叫 X」的语序 | `845ca26` |
 | 0.1.7 | 2026-11-10 | 桥把 @ 展开成正文时漏判点名 | `577e4f0` |
 
-- 基线：`node --test --test-isolation=none` → 2026-11-12 在 Mac 仓库实测 **1376 条 / 1364 过 / 10 红 / 2 skip**（约 87 秒，本机 `/usr/local/bin/ffmpeg` 已装）。第 10 条红是 `test/video.test.mjs` 的 `grabFrames` 帧数 `8 !== 9`，属本机 ffmpeg 抽帧差异；其余 9 条与已知环境红同名。普通全量未在 Mac 复跑。
+- 基线：`node --test --test-isolation=none` → 2026-11-12 在 Mac 仓库实测 **1376 条 / 1366 过 / 9 红 / 1 skip**（约 90 秒，本机 `/usr/local/bin/ffmpeg` 已装）。9 条与已知环境红同名；`video.test.mjs` 的帧数红已修（抽帧少一格时用等距时刻补齐，见 `lib/video.js`）。
 - 其余 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - 本机 macOS：node 已在 PATH（v26.13.0），不再用 D 盘绝对路径。
 
