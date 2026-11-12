@@ -10,7 +10,7 @@ const CLIENT = await read('lib/client.js')
 
 test('原理页五块文案按新结构固化进源码', () => {
   // 2026-11-12 重画：开头一句、五步、四阶段、立场，顺序固定。
-  assert.ok(CLIENT.includes('这里没有一个叫『人设』的地方。她是谁，是经历留下来的结果。'))
+  assert.ok(CLIENT.includes('她不是按设定演出来的：一次表态、一次撞上、一次改写，才会留下一条判断。'))
   assert.ok(CLIENT.includes('一、她怎么长'))
   assert.ok(CLIENT.includes('二、记忆的两层'))
   assert.ok(CLIENT.includes('三、谁的话算数'))
@@ -20,6 +20,10 @@ test('原理页五块文案按新结构固化进源码', () => {
   assert.ok(CLIENT.includes('1 信任（写过一条自己的判断）→ 2 自主（真的拒绝过两件事）→ 3 主动（两次推翻自己的判断）→ 4 整合（回头看）。'))
   assert.ok(CLIENT.includes('走完不加关，之后长的是立场'))
   assert.ok(CLIENT.includes('不是第五关'))
+  assert.ok(CLIENT.includes('翻旧事三条路'))
+  assert.ok(CLIENT.includes('顺着线索找'))
+  assert.ok(CLIENT.includes('最近七天醒了几次'))
+  assert.ok(CLIENT.includes('她知道自己忘了什么'))
   assert.ok(!/三道门/.test(CLIENT), '「三道门」这个说法已经统一成「瓶颈」')
   assert.ok(!/四道门/.test(CLIENT), '「四道门」这个说法已经统一成「瓶颈」')
 })
@@ -49,7 +53,7 @@ test('两张图可以点开放大：灯箱带缩放与拖动', () => {
 
 test('开发者留言：换掉旧文案，整页最下面收尾，署名居右', () => {
   assert.ok(CLIENT.includes('这套东西没有终点。四个阶段走完只是开始——之后长成什么样，我和你都不知道。'))
-  assert.ok(CLIENT.includes('你不需要懂怎么养：日常说话就够了，变化会出现在每一次对话里。'))
+  assert.ok(CLIENT.includes('你不需要先学一套操作：日常说话就够了，变化会出现在每一次对话里。'))
   assert.ok(CLIENT.includes("'——来自开发者'"))
   assert.ok(CLIENT.includes("textAlign: 'right'"), '署名要居右')
   for (const old of [

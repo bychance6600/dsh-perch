@@ -19,7 +19,7 @@
 
   <text x="64" y="82" font-size="40" font-weight="700" fill="#111827">记忆的两层</text>
   <text x="64" y="120" font-size="18" fill="#4b5563">账本只记发生过什么；记忆是每次醒来重放出来的理解。</text>
-  <text x="64" y="146" font-size="14" fill="#9ca3af">上半是账，中间是重放，下半是算出来的东西；右侧是两条翻旧事的路。</text>
+  <text x="64" y="146" font-size="14" fill="#9ca3af">上半是账，中间是重放，下半是算出来的东西；右侧是三条翻旧事的路。</text>
   <line x1="64" y1="170" x2="1336" y2="170" stroke="#e5e7eb"/>
 
   <!-- 上：账 -->
@@ -69,28 +69,36 @@
     <text x="472" y="760" font-size="11.5" fill="#6b7280">四个阶段之后才出现；不参与折叠</text>
   </g>
 
-  <!-- 右：两条检索路 -->
+  <!-- 右：三条检索路 -->
   <rect x="896" y="192" width="440" height="606" rx="16" fill="#fffbf5" stroke="#fde68a" filter="url(#soft2)"/>
-  <text x="920" y="226" font-size="17" font-weight="700" fill="#b45309">翻旧事的两条路</text>
+  <text x="920" y="226" font-size="17" font-weight="700" fill="#b45309">翻旧事的三条路</text>
   <text x="920" y="250" font-size="12" fill="#a16207">读的是同一本账，只是排序不同</text>
 
   <path d="M864 690 H 888" fill="none" stroke="#b45309" stroke-width="2" marker-end="url(#a2)" opacity="0.6"/>
 
   <g>
-    <rect x="920" y="272" width="392" height="220" rx="12" fill="#ffffff" stroke="#fde68a"/>
-    <text x="940" y="306" font-size="18" font-weight="700" fill="#92400e">字面（默认）</text>
-    <text x="940" y="334" font-size="12.5" fill="#78350f">按词面匹配：说了什么，就找什么。</text>
-    <text x="940" y="360" font-size="12.5" fill="#78350f">不猜同义词，也不替她补话。</text>
-    <text x="940" y="398" font-size="11.5" fill="#b45309">适合：她记得原话，只是找不到放在哪。</text>
-    <text x="940" y="424" font-size="11.5" fill="#b45309">账不变；换的只是这一次的排序。</text>
+    <rect x="920" y="268" width="392" height="144" rx="12" fill="#ffffff" stroke="#fde68a"/>
+    <text x="940" y="298" font-size="17" font-weight="700" fill="#92400e">字面（默认）</text>
+    <text x="940" y="324" font-size="12" fill="#78350f">按词面匹配：说了什么，就找什么。</text>
+    <text x="940" y="346" font-size="12" fill="#78350f">不猜同义词，也不替她补话。</text>
+    <text x="940" y="374" font-size="11" fill="#b45309">适合：她记得原话，只是找不到放在哪。</text>
+    <text x="940" y="394" font-size="11" fill="#b45309">账不变；换的只是这一次的排序。</text>
 
-    <rect x="920" y="516" width="392" height="250" rx="12" fill="#ffffff" stroke="#fde68a"/>
-    <text x="940" y="550" font-size="18" font-weight="700" fill="#92400e">加权</text>
-    <text x="940" y="578" font-size="12.5" fill="#78350f">同义词、被纠正过的、只提过一次的，</text>
-    <text x="940" y="602" font-size="12.5" fill="#78350f">都会改变排序。</text>
-    <text x="940" y="640" font-size="11.5" fill="#b45309">适合：原话想不起来，只记得大概意思。</text>
-    <text x="940" y="666" font-size="11.5" fill="#b45309">不是另一份记忆，是同一本账的另一种翻法。</text>
-    <text x="940" y="706" font-size="12" fill="#92400e">账不变，变的只是翻法。</text>
+    <rect x="920" y="424" width="392" height="160" rx="12" fill="#ffffff" stroke="#fde68a"/>
+    <text x="940" y="454" font-size="17" font-weight="700" fill="#92400e">加权</text>
+    <text x="940" y="480" font-size="12" fill="#78350f">同义词、被纠正过的、只提过一次的，</text>
+    <text x="940" y="502" font-size="12" fill="#78350f">都会改变排序。</text>
+    <text x="940" y="530" font-size="11" fill="#b45309">适合：原话想不起来，只记得大概意思。</text>
+    <text x="940" y="550" font-size="11" fill="#b45309">不是另一份记忆，是同一本账的另一种翻法。</text>
+    <text x="940" y="570" font-size="11" fill="#92400e">账不变，变的只是翻法。</text>
+
+    <rect x="920" y="596" width="392" height="180" rx="12" fill="#ffffff" stroke="#fde68a"/>
+    <text x="940" y="626" font-size="17" font-weight="700" fill="#92400e">顺着线索找</text>
+    <text x="940" y="652" font-size="12" fill="#78350f">相关的事会顺着引用一起带出来。</text>
+    <text x="940" y="674" font-size="12" fill="#78350f">不是另一份记忆，是同一本账的另一种翻法。</text>
+    <text x="940" y="702" font-size="11" fill="#b45309">只在加权下可用；字面模式不走线索。</text>
+    <text x="940" y="724" font-size="11" fill="#b45309">可以只翻某个人说的，或某一段时间里的。</text>
+    <text x="940" y="748" font-size="11" fill="#92400e">限定的是范围，不改账。</text>
   </g>
 
   <!-- 底部两块 -->
@@ -98,7 +106,7 @@
   <text x="88" y="872" font-size="18" font-weight="700" fill="#0f766e">折叠 ≠ 删除</text>
   <text x="88" y="900" font-size="12.5" fill="#4b5563">折成一行「记不清原话了」；疤那一类永不折。</text>
   <text x="88" y="924" font-size="12.5" fill="#4b5563">原文一直在，她自己能翻回去。</text>
-  <text x="88" y="948" font-size="11.5" fill="#9ca3af">折叠只是这一次没摆到眼前。</text>
+  <text x="88" y="948" font-size="11.5" fill="#9ca3af">折起来的话题还能列出来，但只剩一句「记不清原话了」。</text>
 
   <rect x="724" y="836" width="612" height="126" rx="14" fill="#ffffff" stroke="#e5e7eb" filter="url(#soft2)"/>
   <text x="748" y="872" font-size="18" font-weight="700" fill="#0f766e">丢了重放就回来</text>
