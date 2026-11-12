@@ -5,7 +5,7 @@
 ![deps](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![node](https://img.shields.io/badge/node-%E2%89%A522-339933)
 ![dsh](https://img.shields.io/badge/DSH-plugin-6a5acd)
-![tests](https://img.shields.io/badge/tests-1366%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-1387%20passing%20%2F%209%20environment--fail-brightgreen)
 
 **她住的地方，不是一个助手。**
 
@@ -18,7 +18,7 @@
 - **她有一具可选的身体**：一只透明置顶的小窗，只显示五档状态与动作，不生成台词，也不替她开口。
 - **她没有「设置人格」的入口**：只有生长环境——几点醒、醒几次、刷不刷 B 站。判据只有一句：*这个配置能不能让她对同一个人说出不一样的话*。能，就是人格（禁）；只改在哪、何时、多频繁，是环境（可配）。
 
-> **0.1.0 是重建版。** 前身是 [dsh-fish-river](https://github.com/bychance6600/dsh-fish-river)：把「只会长的她」和「能在外面说话的她」接成了同一个人。那一版铺了三个渠道，也把材料端到她面前；这一版把入口收窄成两处，材料改成「报纸 + 你自己搜」，删掉了 B 站/抖音私信、出门、导入、通知与自更新。
+> **0.1.7 是当前版；0.1.0 是重建版。** 前身是 [dsh-fish-river](https://github.com/bychance6600/dsh-fish-river)：把「只会长的她」和「能在外面说话的她」接成了同一个人。那一版铺了三个渠道，也把材料端到她面前；这一版把入口收窄成两处，材料改成「报纸 + 你自己搜」，删掉了 B 站/抖音私信、出门、导入、通知与自更新。
 >
 > 哪些是上游 [dsh-fish](https://github.com/ssamurias/dsh-fish) 的骨、哪些是 [dsh-fish-soul](https://github.com/Britneycode/dsh-fish-soul) 的思路、哪些是 river 的、哪些是这一版新加的，见 [`docs/从哪来.md`](docs/从哪来.md)；讨论里定过的规则（含还没做到的）见 [`docs/定过的取舍.md`](docs/定过的取舍.md)。
 
@@ -131,7 +131,7 @@
 
 ## 五、装
 
-要求：**Node ≥ 22**，DSH `>=0.2.0-rc.1 <0.3.0-0`，零依赖。v0.1.0 已发布，release notes 在 [Releases](https://github.com/bychance6600/dsh-perch/releases/tag/v0.1.0)。
+要求：**Node ≥ 22**，DSH `>=0.2.0-rc.1 <0.3.0-0`，零依赖。v0.1.7 已发布，release notes 在 [Releases](https://github.com/bychance6600/dsh-perch/releases/tag/v0.1.7)。
 
 ### 手动装
 
@@ -170,7 +170,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 ### 装完
 
 1. 重启 DSH（运行中的包文件不会热替换）。
-2. 打开 **设置 → 她**。日志在 `~/.dsh-perch/logs/dsh-perch.log`，看到以 `0.1.0 · ` 开头的一行就是挂上了。
+2. 打开 **设置 → 她**。日志在 `~/.dsh-perch/logs/dsh-perch.log`，看到以 `0.1.7 · ` 开头的一行就是挂上了。
 3. 第一次启动会自动建屋（工作区和一条会话），并在会话还空着时叫醒她一次。如果那一次没醒，状态卡右上角的 **「现在叫醒她」** 可以手动补一次；她开过口之后，侧栏里才会出现「跟她说话」（认出名字后是「跟 X 说话」）。
 
 ## 六、接 QQ
@@ -263,7 +263,7 @@ douyin-profile/       抖音浏览器的登录态（开抖音时才有）
 - **备份 / 恢复 / 搬家 / 从头开始**都在「数据」页。恢复前会把旧档挪去 `dsh-perch-backups/pre-restore-*`；重置是改名前缀封存，不删。
 - 想让她忘，不是删行，是降低召回：事件原文永远还在，她也能自己用 `her_recall` 翻回去。
 
-## 十二、0.1.0 的边界
+## 十二、0.1.7 的边界
 
 **真机验过的**
 
@@ -277,7 +277,7 @@ douyin-profile/       抖音浏览器的登录态（开抖音时才有）
 
 **设计上就留白的**
 
-- 原理页停在现有理论卡与两张原理图，不随 0.1.0 重写；反馈页 FAQ 按设计留空。
+- 原理页停在现有理论卡与两张原理图，不随 0.1.7 重写；反馈页 FAQ 按设计留空。
 - 世界书的内容由会话侧生成、你导入；插件不替你写。
 
 **已知口子（不是「已经干净」）**
@@ -294,7 +294,7 @@ node --test --test-isolation=none  # 沙箱 / 受限环境（跨文件会有假�
 node --test test/<file>.test.mjs   # 单文件
 ```
 
-当前基线（2026-11-12，macOS）：**1376 条 / 1366 过 / 9 红 / 1 skip**。9 条是已知环境项（跨文件隔离互相干扰；`withFileLock` 偶发），单跑对应文件会绿；`grabFrames` 少一格的红已由 `216f2cb` 修掉，本机有 ffmpeg，media 那条不再 skip。**不许新增红。**
+当前基线（2026-11-12，macOS）：**1397 条 / 1387 过 / 9 红 / 1 skip**。9 条是已知环境项（跨文件隔离互相干扰；`withFileLock` 偶发），单跑对应文件会绿；`grabFrames` 少一格的红已由 `216f2cb` 修掉，本机有 ffmpeg，media 那条不再 skip。**不许新增红。**
 
 零依赖是铁律：`dependencies` / `peerDependencies` / `devDependencies` 三个永远 `{}`，测试只用 `node:test`。
 

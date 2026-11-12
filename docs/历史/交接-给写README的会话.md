@@ -198,11 +198,11 @@ git diff --check
 
 ## 9. 参考
 
-- [README.md](../README.md)
-- [AGENTS.md](../AGENTS.md)
-- [PROGRESS.md](../PROGRESS.md)
-- [docs/约定清单.md](约定清单.md)
-- [docs/从哪来.md](从哪来.md)
-- [docs/定过的取舍.md](定过的取舍.md)
+- [README.md](../../README.md)
+- [AGENTS.md](../../AGENTS.md)
+- [PROGRESS.md](../../PROGRESS.md)
+- [docs/约定清单.md](../约定清单.md)
+- [docs/从哪来.md](../从哪来.md)
+- [docs/定过的取舍.md](../定过的取舍.md)
 - [GitHub Release v0.1.0](https://github.com/bychance6600/dsh-perch/releases/tag/v0.1.0)
 - [dsh-roost-pet](https://github.com/bychance6600/dsh-perch-pet)

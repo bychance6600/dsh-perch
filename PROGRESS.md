@@ -533,7 +533,7 @@
 **父项 25 条移植（2026-11-07，已完 A20）**
 
 - 问题：0.1.0 的代码是从 river 0.1.68 分出来的，父项 0.8.6–0.9.1 修过的一批小毛病没有全带过来；设计文档 §八列了「直接取」25 条，需要逐条对代码，能写的写，不写的记理由。
-- 逐条表在 `docs/父项移植表.md`：25 条里 14 条照取、1 条部分取（群消息加 speaker 前缀；`sanitizeForeign` 早就有）、8 条已改等价、2 条不取（新库没有换房问话；没有会把时间线挤掉的独立聊天行）。
+- 逐条表在 `docs/历史/父项移植表.md`：25 条里 14 条照取、1 条部分取（群消息加 speaker 前缀；`sanitizeForeign` 早就有）、8 条已改等价、2 条不取（新库没有换房问话；没有会把时间线挤掉的独立聊天行）。
 - 照取的：拒绝词表加「不同意/不赞成/不认同/不支持/不选/反对/否掉/否决」并带 `(?!他|她|你)` 守卫（`lib/derive.js:55`）；判断后面带本地日期与来路（`lib/persona.js:139`）；`her_recall` 的 `brief` 档（`lib/recall.js:197`）；事件计数分 real/meta/noise（`lib/eventcount.js:16`，状态条显示真实经历数）；BOM 先剥（`lib/store.js:115`）；归档后认 `live[0]`（`lib/home.js:234`）；手打答案读 `custom`（`lib/ask.js:277`）；`her_say` 每日上限真拦、成长坐标改用 `deriveSelf`（`lib/proactive.js:261-267`）；回执改「记下了」；头像临时名加随机后缀（`lib/avatar.js:103`）；主动投递前先 `isBusy`（`lib/scheduler.js:195`）；元话语拦截（`lib/proactive.js:57`）；三处 UTC 日期改本地（`lib/home.js:37/741`、`lib/say.js:265`、`lib/recall.js:169`）。
 - 已改等价：90 天退档（A12）、冷落 seen 只在开口那刻记、醒一醒用 turn/end watcher + 30 秒 fallback + 换房、换房锁、探活内联、排队叫醒、45 分钟最小间隔 + set/clear 时机、换房日期按本地日（A21）。
 - 不取：换房问话（新库 `rotateTalkSession` 不弹问，`wakeIfBlank` 本来就在新会话建好之后）；聊天行折行/「说 N」（新库没有独立聊天行，时间线已合并）。
@@ -559,7 +559,7 @@
 **保留模块接线核验（2026-11-07，已完 A33）**
 
 - 问题：0.1.0 删掉很多功能后，留下的 `backup` / `move` / `report` / `whatseen` / `talkmem` / `avatar` / `intent` / `askinchat` / `bridge` / `biliqr` / `selfcheck` / `risk` / `hostver` / `health` / `faq` 有没有真接在页上，没有逐项核过。
-- 做法：写 `docs/接线核验.md`，15 个文件 / 16 条入口逐条列「入口 + 代码位置 + 结论」。`whatseen` 占今天页与看视频历史两条，所以 16 行。
+- 做法：写 `docs/历史/接线核验.md`，15 个文件 / 16 条入口逐条列「入口 + 代码位置 + 结论」。`whatseen` 占今天页与看视频历史两条，所以 16 行。
 - 结果：都有真实入口，没有孤儿。`faq` 按 A14 不上面板（反馈页只留仓库链接与空状态），`lib/observe.js:53` 仍在 import、`/faq`（1542）与 `/faq.data`（1531）仍在注册，直链能看。
 - 无新测试；全量仍是 1241 条 / 1230 过 / 9 红 / 2 skip。
 
