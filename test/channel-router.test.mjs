@@ -636,6 +636,23 @@ test('结账：到轮数却没有屋子（无 wsId）——只记账，不换会
   assert.ok(!home.rotatedFrom, '没有屋子时不该建新会话')
 })
 
+test('每轮只记注入字符数与条数，不记正文（2026-11-12）', async () => {
+  const h = await harness({ config: baseConfig })
+  try {
+    const r = await h.router.handle(groupMsg({ text: '在吗' }))
+    assert.equal(r.sent, true)
+    const raw = await fs.readFile(path.join(h.root, 'logs', 'dsh-perch.log'), 'utf8')
+    const line = raw.split('\n').find((l) => l.includes('prompt chars='))
+    assert.ok(line, '每轮应有一行 prompt chars=')
+    assert.match(line, /prompt chars=\d+ lines=\d+/)
+    // 隐私：正文与群名一个字都不该进日志
+    assert.ok(!line.includes('在吗'), '日志里不能有正文')
+    assert.ok(!line.includes('产品群'), '日志里不能有群名')
+  } finally {
+    await fs.rm(h.root, { recursive: true, force: true })
+  }
+})
+
 test('他递来一条抖音链接：她真去看了，提示词里是那条视频的事实', async () => {
   const h = await harness({ config: baseConfig, stage: 1, ownerIds: { qq: '42' } })
   h.adapter.api = async () => ({

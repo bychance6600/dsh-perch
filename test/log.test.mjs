@@ -13,12 +13,13 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises'
-import { writeFileSync } from 'node:fs'
+import { mkdir, mkdtemp, readFile, readdir, writeFile } from 'node:fs/promises'
+import { existsSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import {
   LOG_MAX_BYTES,
+  LOG_KEEP,
   LINE_MAX,
   buildBundle,
   clearLog,
@@ -161,16 +162,27 @@ test('清空是真的清空，之后再写还能写', async () => {
   assert.deepEqual(clearLog(root).ok, true)
 })
 
-test('超过上限会轮转，旧内容进 .1 而不是被丢掉', async () => {
+test('超过 5MB 会轮转，最多保留 .1/.2/.3 三份', async () => {
   const root = await tempRoot()
+  assert.equal(LOG_MAX_BYTES, 5 * 1024 * 1024, '上限改为 5MB')
+  assert.equal(LOG_KEEP, 3, '保留三份旧日志')
   const file = logFile(root)
   // 目录由第一条日志创建，所以这里要自己先建（顺手钉住"目录不存在时 logLine 自己会建"）
   await mkdir(dirname(file), { recursive: true })
-  await writeFile(file, 'x'.repeat(LOG_MAX_BYTES + 10), 'utf8')
-  logLine('info', ['轮转之后'], root)
-  const rotated = await readFile(`${file}.1`, 'utf8')
-  assert.ok(rotated.length >= LOG_MAX_BYTES, '.1 里应是那份超限的旧日志')
-  assert.match(tailLog(root).lines.join('\n'), /轮转之后/)
+
+  // 连写四份超限旧日志：A 会被挤掉，留下的应是 D(.1) / C(.2) / B(.3)。
+  for (const tag of ['A', 'B', 'C', 'D']) {
+    await writeFile(file, tag.repeat(LOG_MAX_BYTES + 10), 'utf8')
+    logLine('info', [`轮转 ${tag}`], root)
+  }
+
+  const backups = await Promise.all([1, 2, 3].map((i) => readFile(`${file}.${i}`, 'utf8')))
+  assert.deepEqual(backups.map((t) => t[0]), ['D', 'C', 'B'], '.1 最新，.3 最老')
+  for (const t of backups) assert.ok(t.length >= LOG_MAX_BYTES, '每份旧日志都应是超过上限的那份')
+  assert.match(tailLog(root).lines.join('\n'), /轮转 D/)
+  assert.equal(existsSync(`${file}.4`), false, '不能再多出 .4')
+  const names = (await readdir(dirname(file))).filter((n) => n.startsWith('dsh-perch.log')).sort()
+  assert.deepEqual(names, ['dsh-perch.log', 'dsh-perch.log.1', 'dsh-perch.log.2', 'dsh-perch.log.3'])
 })
 
 test('makeLogger 同时写文件与转发宿主；宿主 logger 抛错也不影响写盘', async () => {

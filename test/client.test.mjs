@@ -975,6 +975,11 @@ test('数据页收口：九项都在，blockedCard 收进换家留痕（A17）',
 
   assert.ok(page.includes("'备份成一份文件'"), '备份按钮要在')
   assert.ok(page.includes("'从备份恢复'"), '恢复按钮要在')
+  // 2026-11-12：备份与恢复下面三行只读数字，用现有的 jget('/data') 拉，缺值显示「—」。
+  assert.ok(src.includes("jget('/data')"), '要拉 /data')
+  assert.ok(src.includes('账本 '), '要有账本条数')
+  assert.ok(src.includes('上次重放 '), '要有上次重放耗时')
+  assert.ok(src.includes('占用 '), '要有目录占用')
   assert.equal((page.match(/group\('记忆体检'/g) || []).length, 1, '记忆体检只留一张卡')
 })
 
