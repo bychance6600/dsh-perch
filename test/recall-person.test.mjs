@@ -60,6 +60,18 @@ test('按人翻：同会话里听到的与她自己的话都在，不串到别�
   assert.deepEqual(rows.map((r) => r.id).sort(), ['ev_A1', 'ev_A2'])
 })
 
+test('群会话是共用的：按人翻只补她自己的话，不把别人的话带进来', () => {
+  const events = [
+    ev('ev_G1', '云今天很薄', { type: 'heard', person: 'u_a', sessionId: 's_group' }),
+    ev('ev_G2', '云今天很厚', { type: 'heard', person: 'u_b', sessionId: 's_group' }),
+    ev('ev_S1', '云的边像纸', { type: 'utterance', sessionId: 's_group' }),
+    ev('ev_S2', '我改口了，云是厚的', { type: 'revise', sessionId: 's_group' }),
+  ]
+  const rows = searchEvents(events, '云', { now: NOW, personIds: ['u_a'] }).rows
+  assert.deepEqual(rows.map((r) => r.id).sort(), ['ev_G1', 'ev_S1', 'ev_S2'])
+  assert.ok(!rows.some((r) => r.id === 'ev_G2'), '同群里别人说的话不该被算进「按他翻」')
+})
+
 test('一个人都没命中时等于没传，不清空结果', () => {
   const events = [
     ev('ev_A1', '云今天很薄', { person: 'u_a', sessionId: 's_a' }),
