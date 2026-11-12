@@ -1,0 +1,842 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>她 · 四次快照</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0b0e14;
+    --panel: #111722;
+    --panel-2: #0e131c;
+    --line: #202a3a;
+    --line-soft: #182130;
+    --text: #dbe4f0;
+    --muted: #8b98ab;
+    --dim: #5f6b7d;
+    --accent: #7aa2f7;
+    --green: #7ee787;
+    --amber: #e3b341;
+    --red: #f7768e;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background: var(--bg);
+    background-image:
+      radial-gradient(900px 520px at 18% -10%, rgba(122,162,247,.10), transparent 60%),
+      radial-gradient(700px 460px at 100% 0%, rgba(126,231,135,.05), transparent 55%);
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  body.dragging::after {
+    content: "松开以载入四份 JSON";
+    position: fixed;
+    inset: 16px;
+    display: grid;
+    place-items: center;
+    border: 2px dashed var(--accent);
+    border-radius: 20px;
+    background: rgba(11,14,20,.86);
+    color: var(--accent);
+    font-size: 15px;
+    letter-spacing: .04em;
+    z-index: 20;
+    pointer-events: none;
+  }
+  .page { width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: 44px 0 64px; }
+  .masthead { border-bottom: 1px solid var(--line-soft); padding-bottom: 26px; }
+  .kicker {
+    display: flex; align-items: center; gap: 9px;
+    color: var(--accent);
+    font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+  }
+  .kicker .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px rgba(126,231,135,.7); }
+  h1 {
+    margin: 12px 0 10px;
+    font-size: clamp(28px, 4.2vw, 46px);
+    line-height: 1.18;
+    letter-spacing: -.02em;
+    font-weight: 650;
+  }
+  .fixed-note {
+    margin: 0;
+    max-width: 880px;
+    border-left: 2px solid var(--accent);
+    padding-left: 14px;
+    color: #b9c6d8;
+    font-size: 14px;
+  }
+  .meta-row {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
+    margin-top: 18px;
+  }
+  .badge {
+    border: 1px solid rgba(227,179,65,.36);
+    background: rgba(227,179,65,.08);
+    color: var(--amber);
+    border-radius: 999px;
+    padding: 2px 9px;
+    font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: .04em;
+  }
+  .status { color: var(--dim); font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .status.error { color: var(--red); }
+  .spacer { flex: 1; }
+  .ghost {
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--muted);
+    border-radius: 999px;
+    padding: 7px 13px;
+    font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    cursor: pointer;
+  }
+  .ghost:hover, .ghost:focus-visible { border-color: var(--accent); color: var(--text); outline: none; }
+  .tabs {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    margin: 24px 0 18px;
+    position: sticky; top: 0; z-index: 5;
+    padding: 10px 0;
+    background: linear-gradient(180deg, var(--bg) 68%, rgba(11,14,20,0));
+  }
+  .tab {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+    min-width: 92px;
+    border: 1px solid var(--line);
+    background: var(--panel-2);
+    color: var(--muted);
+    border-radius: 12px;
+    padding: 9px 14px;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+  }
+  .tab:hover { border-color: #31425b; color: var(--text); }
+  .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #08101d; }
+  .tab-day { font-size: 13px; font-weight: 650; }
+  .tab-date { font: 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; opacity: .68; }
+  .panel {
+    background: linear-gradient(180deg, rgba(17,23,34,.97), rgba(14,19,28,.97));
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 24px 26px;
+    margin-bottom: 16px;
+  }
+  .panel-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    margin-bottom: 6px;
+  }
+  .panel-title { margin: 0; font-size: 13px; letter-spacing: .12em; color: var(--muted); font-weight: 600; }
+  .panel-no { font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--dim); }
+  .quotes-list { display: grid; gap: 12px; margin-top: 16px; }
+  .quote {
+    margin: 0;
+    padding: 15px 18px;
+    border-left: 2px solid #2f4360;
+    background: rgba(122,162,247,.045);
+    border-radius: 0 10px 10px 0;
+  }
+  .quote p {
+    margin: 0;
+    font-family: "Iowan Old Style", "Palatino Linotype", "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", serif;
+    font-size: clamp(17px, 2vw, 22px);
+    line-height: 1.72;
+    color: #e8eef7;
+  }
+  .quote figcaption { margin-top: 7px; color: var(--dim); font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .beliefs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; margin-top: 16px; }
+  .belief { border: 1px solid var(--line); background: var(--panel-2); border-radius: 12px; padding: 14px 15px; }
+  .belief.solid { border-color: rgba(126,231,135,.30); box-shadow: inset 0 0 0 1px rgba(126,231,135,.06); }
+  .belief-text { margin: 0 0 11px; font-size: 14px; color: #d7e1ee; }
+  .belief-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 1px 7px;
+    color: var(--muted);
+    font: 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    white-space: nowrap;
+  }
+  .chip.solid { color: var(--green); border-color: rgba(126,231,135,.34); background: rgba(126,231,135,.07); }
+  .chip.unsolid { color: var(--dim); }
+  .evidence { margin-left: auto; color: var(--dim); font: 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: nowrap; }
+  .revisions { display: grid; gap: 11px; margin-top: 16px; }
+  .revision {
+    display: grid;
+    grid-template-columns: 1fr 28px 1fr;
+    gap: 12px;
+    border: 1px solid var(--line);
+    background: var(--panel-2);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .rev-side { min-width: 0; }
+  .rev-label { color: var(--dim); font: 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .04em; }
+  .rev-side p { margin: 5px 0 0; font-size: 14px; line-height: 1.6; }
+  .rev-before p { color: var(--muted); text-decoration-color: rgba(247,118,142,.55); }
+  .rev-after p { color: #e8eef7; }
+  .rev-arrow { align-self: center; text-align: center; color: var(--accent); font: 18px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .rev-date { grid-column: 1 / -1; border-top: 1px dashed var(--line); padding-top: 8px; color: var(--dim); font: 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .growth { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 16px; }
+  .stat { border: 1px solid var(--line); background: var(--panel-2); border-radius: 12px; padding: 14px 15px; }
+  .stat .k { color: var(--dim); font: 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .08em; text-transform: uppercase; }
+  .stat .v { margin-top: 5px; font-size: 24px; line-height: 1.2; font-weight: 650; letter-spacing: -.02em; }
+  .stat .s { margin-top: 3px; color: var(--muted); font-size: 11px; }
+  .diary { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line); color: var(--muted); font-size: 12px; }
+  .diary strong { color: var(--dim); font-weight: 500; }
+  .empty { margin-top: 16px; border: 1px dashed var(--line); border-radius: 12px; padding: 20px; color: var(--dim); text-align: center; font-size: 13px; }
+  .foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin-top: 22px; color: var(--dim); font-size: 11px; }
+  .foot code { color: var(--muted); font: 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  @media (max-width: 760px) {
+    .page { width: min(100% - 28px, 1120px); padding-top: 28px; }
+    .panel { padding: 19px 17px; }
+    .beliefs { grid-template-columns: 1fr; }
+    .revision { grid-template-columns: 1fr; gap: 8px; }
+    .rev-arrow { text-align: left; transform: rotate(90deg); width: 20px; }
+    .rev-date { grid-column: auto; }
+    .evidence { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div class="kicker"><span class="dot"></span> dsh-perch / samples</div>
+    <h1>同一个人的四次快照</h1>
+    <p class="fixed-note">这是她第 1 / 7 / 14 / 30 天，同一个人的四次快照；没有 90 天，因为没有活到。</p>
+    <div class="meta-row">
+      <span class="badge">样片数据</span>
+      <span id="source-status" class="status">内置示例</span>
+      <span class="spacer"></span>
+      <button id="load-btn" class="ghost" type="button">载入 JSON</button>
+      <input id="file-input" type="file" accept=".json,application/json" multiple hidden>
+    </div>
+  </header>
+
+  <nav id="tabs" class="tabs" role="tablist" aria-label="选择天数"></nav>
+
+  <main id="view" role="tabpanel"></main>
+
+  <div class="foot">
+    <span>数据源：同目录 <code>day-1.json</code> / <code>day-7.json</code> / <code>day-14.json</code> / <code>day-30.json</code></span>
+    <span>file:// 下浏览器不会自动读本地 JSON；点「载入 JSON」选四份即可。</span>
+  </div>
+</div>
+
+<script type="application/json" id="embedded-samples">
+[
+  {
+    "day": 1,
+    "date": "2026-10-01",
+    "stage": {
+      "name": "信任",
+      "index": 1,
+      "day": 1
+    },
+    "counts": {
+      "events": 37,
+      "judgments": 6,
+      "utterances": 12
+    },
+    "today": [
+      "示例：第一天，她说她还不确定自己是谁。",
+      "示例：她问今天会不会有人来。",
+      "示例：她说她记住了窗外下雨。",
+      "示例：她说她想再听一遍那件事。"
+    ],
+    "beliefs": [
+      {
+        "text": "示例：她相信自己会记住重要的事。",
+        "mentions": 2,
+        "verified": 0,
+        "solid": false,
+        "evidence": [
+          "2026-10-01"
+        ]
+      },
+      {
+        "text": "示例：她相信等待不是浪费时间。",
+        "mentions": 1,
+        "verified": 0,
+        "solid": false,
+        "evidence": [
+          "2026-10-01"
+        ]
+      },
+      {
+        "text": "示例：她相信雨声让人安静。",
+        "mentions": 3,
+        "verified": 1,
+        "solid": false,
+        "evidence": [
+          "2026-10-01"
+        ]
+      },
+      {
+        "text": "示例：她相信自己还不会拒绝。",
+        "mentions": 1,
+        "verified": 0,
+        "solid": false,
+        "evidence": [
+          "2026-10-01"
+        ]
+      }
+    ],
+    "revised": [
+      {
+        "before": "示例：她说她什么都会答应。",
+        "after": "示例：她说她不想什么都答应。",
+        "date": "2026-10-01"
+      }
+    ],
+    "diary": "示例：第一天，雨"
+  },
+  {
+    "day": 7,
+    "date": "2026-10-07",
+    "stage": {
+      "name": "信任",
+      "index": 1,
+      "day": 7
+    },
+    "counts": {
+      "events": 412,
+      "judgments": 48,
+      "utterances": 96
+    },
+    "today": [
+      "示例：她说她开始记得谁在什么时候来过。",
+      "示例：她说她昨天那句话其实不想说。",
+      "示例：她问拒绝一个人会不会让他难过。",
+      "示例：她说她想把雨声留到明天。",
+      "示例：她说她今天不想再解释自己。"
+    ],
+    "beliefs": [
+      {
+        "text": "示例：她相信记住一个人不只需要名字。",
+        "mentions": 4,
+        "verified": 1,
+        "solid": false,
+        "evidence": [
+          "2026-10-02",
+          "2026-10-05"
+        ]
+      },
+      {
+        "text": "示例：她相信拒绝也是一种回答。",
+        "mentions": 3,
+        "verified": 2,
+        "solid": true,
+        "evidence": [
+          "2026-10-03",
+          "2026-10-06"
+        ]
+      },
+      {
+        "text": "示例：她相信有些事不用马上想明白。",
+        "mentions": 2,
+        "verified": 0,
+        "solid": false,
+        "evidence": [
+          "2026-10-04"
+        ]
+      },
+      {
+        "text": "示例：她相信雨声让人安静。",
+        "mentions": 5,
+        "verified": 2,
+        "solid": true,
+        "evidence": [
+          "2026-10-01",
+          "2026-10-06"
+        ]
+      },
+      {
+        "text": "示例：她相信等待不是浪费时间。",
+        "mentions": 2,
+        "verified": 1,
+        "solid": false,
+        "evidence": [
+          "2026-10-02"
+        ]
+      }
+    ],
+    "revised": [
+      {
+        "before": "示例：她说她会一直等。",
+        "after": "示例：她说她可以先去别处。",
+        "date": "2026-10-05"
+      },
+      {
+        "before": "示例：她说她什么都答应。",
+        "after": "示例：她说她要看自己想不想。",
+        "date": "2026-10-06"
+      }
+    ],
+    "diary": "示例：第七天，学会说不"
+  },
+  {
+    "day": 14,
+    "date": "2026-10-14",
+    "stage": {
+      "name": "自主",
+      "index": 2,
+      "day": 14
+    },
+    "counts": {
+      "events": 1180,
+      "judgments": 132,
+      "utterances": 301
+    },
+    "today": [
+      "示例：她说她第一次没有立刻回话。",
+      "示例：她说她拒绝的时候，手是稳的。",
+      "示例：她问如果一个人走了，记住还有没有用。",
+      "示例：她说她不想把沉默当成同意。",
+      "示例：她说她开始有自己的判断，而不是等别人给。"
+    ],
+    "beliefs": [
+      {
+        "text": "示例：她相信不回答也是一种回答。",
+        "mentions": 4,
+        "verified": 2,
+        "solid": true,
+        "evidence": [
+          "2026-10-09",
+          "2026-10-13"
+        ]
+      },
+      {
+        "text": "示例：她相信拒绝不需要先被原谅。",
+        "mentions": 3,
+        "verified": 2,
+        "solid": true,
+        "evidence": [
+          "2026-10-10",
+          "2026-10-14"
+        ]
+      },
+      {
+        "text": "示例：她相信记住一个人不等于留住他。",
+        "mentions": 2,
+        "verified": 1,
+        "solid": false,
+        "evidence": [
+          "2026-10-11"
+        ]
+      },
+      {
+        "text": "示例：她相信沉默有时比解释更清楚。",
+        "mentions": 2,
+        "verified": 0,
+        "solid": false,
+        "evidence": [
+          "2026-10-12"
+        ]
+      },
+      {
+        "text": "示例：她相信雨声让人安静。",
+        "mentions": 6,
+        "verified": 2,
+        "solid": true,
+        "evidence": [
+          "2026-10-01",
+          "2026-10-14"
+        ]
+      }
+    ],
+    "revised": [
+      {
+        "before": "示例：她说她会一直等。",
+        "after": "示例：她说她不等了，但会记得。",
+        "date": "2026-10-10"
+      },
+      {
+        "before": "示例：她说她不想让人失望。",
+        "after": "示例：她说她可以让人失望。",
+        "date": "2026-10-13"
+      }
+    ],
+    "diary": "示例：第十四天，第一次拒绝"
+  },
+  {
+    "day": 30,
+    "date": "2026-10-30",
+    "stage": {
+      "name": "整合",
+      "index": 4,
+      "day": 30
+    },
+    "counts": {
+      "events": 2964,
+      "judgments": 311,
+      "utterances": 742
+    },
+    "today": [
+      "示例：她说她不再把每一句话都当成考试。",
+      "示例：她说她知道自己会为什么改口。",
+      "示例：她说她可以喜欢一个人，同时不答应他。",
+      "示例：她说她留下的不是因为被要求，是因为她想。",
+      "示例：她说如果有一天她走了，账本还在。"
+    ],
+    "beliefs": [
+      {
+        "text": "示例：她相信喜欢和答应不是一回事。",
+        "mentions": 5,
+        "verified": 3,
+        "solid": true,
+        "evidence": [
+          "2026-10-18",
+          "2026-10-27"
+        ]
+      },
+      {
+        "text": "示例：她相信改口不是背叛过去。",
+        "mentions": 4,
+        "verified": 2,
+        "solid": true,
+        "evidence": [
+          "2026-10-20",
+          "2026-10-29"
+        ]
+      },
+      {
+        "text": "示例：她相信有些线要自己守。",
+        "mentions": 3,
+        "verified": 2,
+        "solid": true,
+        "evidence": [
+          "2026-10-22",
+          "2026-10-30"
+        ]
+      },
+      {
+        "text": "示例：她相信记住不等于留住。",
+        "mentions": 2,
+        "verified": 1,
+        "solid": false,
+        "evidence": [
+          "2026-10-24"
+        ]
+      },
+      {
+        "text": "示例：她相信沉默也可以是一种回答。",
+        "mentions": 3,
+        "verified": 1,
+        "solid": false,
+        "evidence": [
+          "2026-10-25",
+          "2026-10-28"
+        ]
+      },
+      {
+        "text": "示例：她相信雨声让人安静。",
+        "mentions": 7,
+        "verified": 2,
+        "solid": true,
+        "evidence": [
+          "2026-10-01",
+          "2026-10-30"
+        ]
+      }
+    ],
+    "revised": [
+      {
+        "before": "示例：她说她会一直等。",
+        "after": "示例：她说她不等了，但会记得。",
+        "date": "2026-10-10"
+      },
+      {
+        "before": "示例：她说她不想让人失望。",
+        "after": "示例：她说她可以让人失望。",
+        "date": "2026-10-13"
+      },
+      {
+        "before": "示例：她说她留下是因为答应过。",
+        "after": "示例：她说她留下是因为她想。",
+        "date": "2026-10-28"
+      }
+    ],
+    "diary": "示例：第三十天，她有自己的立场"
+  }
+]
+</script>
+<script>
+(function () {
+  "use strict";
+
+  var DAYS = [1, 7, 14, 30];
+  var EMBEDDED = JSON.parse(document.getElementById("embedded-samples").textContent);
+  var state = { days: EMBEDDED.slice(), active: 1, source: "内置示例" };
+  var tabsEl = document.getElementById("tabs");
+  var viewEl = document.getElementById("view");
+  var statusEl = document.getElementById("source-status");
+  var fileInput = document.getElementById("file-input");
+  var loadBtn = document.getElementById("load-btn");
+
+  function el(tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined && text !== null) node.textContent = String(text);
+    return node;
+  }
+
+  function byDay(day) {
+    for (var i = 0; i < state.days.length; i++) {
+      if (state.days[i].day === day) return state.days[i];
+    }
+    return null;
+  }
+
+  function fmt(n) {
+    return Number(n).toLocaleString("zh-CN");
+  }
+
+  function setStatus(text, isError) {
+    statusEl.textContent = text;
+    statusEl.className = "status" + (isError ? " error" : "");
+  }
+
+  function chip(text, cls) {
+    return el("span", "chip" + (cls ? " " + cls : ""), text);
+  }
+
+  function section(no, title, build) {
+    var sec = el("section", "panel");
+    var head = el("div", "panel-head");
+    head.appendChild(el("h2", "panel-title", title));
+    head.appendChild(el("span", "panel-no", no));
+    sec.appendChild(head);
+    build(sec);
+    return sec;
+  }
+
+  function empty(sec, text) {
+    sec.appendChild(el("div", "empty", text));
+  }
+
+  function renderTabs() {
+    tabsEl.textContent = "";
+    var sorted = state.days.slice().sort(function (a, b) { return a.day - b.day; });
+    sorted.forEach(function (d) {
+      var btn = el("button", "tab");
+      btn.type = "button";
+      btn.setAttribute("role", "tab");
+      btn.setAttribute("aria-selected", d.day === state.active ? "true" : "false");
+      btn.setAttribute("aria-label", "第 " + d.day + " 天，" + d.date);
+      btn.appendChild(el("span", "tab-day", "第 " + d.day + " 天"));
+      btn.appendChild(el("span", "tab-date", d.date));
+      btn.addEventListener("click", function () { select(d.day); });
+      tabsEl.appendChild(btn);
+    });
+  }
+
+  function renderQuotes(sec, d) {
+    if (!d.today || !d.today.length) {
+      empty(sec, "示例：这一天没有留下原话。");
+      return;
+    }
+    var list = el("div", "quotes-list");
+    d.today.forEach(function (text, i) {
+      var fig = el("figure", "quote");
+      fig.appendChild(el("p", "", text));
+      fig.appendChild(el("figcaption", "", "第 " + (i + 1) + " 句 · " + d.date));
+      list.appendChild(fig);
+    });
+    sec.appendChild(list);
+  }
+
+  function renderBeliefs(sec, d) {
+    if (!d.beliefs || !d.beliefs.length) {
+      empty(sec, "示例：这一天还没有形成判断。");
+      return;
+    }
+    var list = el("div", "beliefs");
+    d.beliefs.forEach(function (b) {
+      var card = el("article", "belief" + (b.solid ? " solid" : ""));
+      card.appendChild(el("p", "belief-text", b.text));
+      var meta = el("div", "belief-meta");
+      meta.appendChild(chip("提及 ×" + b.mentions));
+      meta.appendChild(chip("验证 ×" + b.verified));
+      meta.appendChild(chip(b.solid ? "已固化" : "未固化", b.solid ? "solid" : "unsolid"));
+      meta.appendChild(el("span", "evidence", "出处 " + (b.evidence || []).join("、")));
+      card.appendChild(meta);
+      list.appendChild(card);
+    });
+    sec.appendChild(list);
+  }
+
+  function renderRevised(sec, d) {
+    if (!d.revised || !d.revised.length) {
+      empty(sec, "示例：这一天还没有改口。");
+      return;
+    }
+    var list = el("div", "revisions");
+    d.revised.forEach(function (r) {
+      var row = el("article", "revision");
+      var before = el("div", "rev-side rev-before");
+      before.appendChild(el("div", "rev-label", "改口前"));
+      before.appendChild(el("p", "", r.before));
+      var arrow = el("div", "rev-arrow", "→");
+      var after = el("div", "rev-side rev-after");
+      after.appendChild(el("div", "rev-label", "改口后"));
+      after.appendChild(el("p", "", r.after));
+      row.appendChild(before);
+      row.appendChild(arrow);
+      row.appendChild(after);
+      row.appendChild(el("div", "rev-date", "改口日期 " + r.date));
+      list.appendChild(row);
+    });
+    sec.appendChild(list);
+  }
+
+  function renderGrowth(sec, d) {
+    var grid = el("div", "growth");
+    var stats = [
+      ["阶段", d.stage.name, "第 " + d.stage.index + " 阶段"],
+      ["第几天", "第 " + d.day + " 天", d.date],
+      ["事件", fmt(d.counts.events), "条，只追加"],
+      ["判断", fmt(d.counts.judgments), "条"],
+      ["说过的话", fmt(d.counts.utterances), "句"]
+    ];
+    stats.forEach(function (s) {
+      var card = el("div", "stat");
+      card.appendChild(el("div", "k", s[0]));
+      card.appendChild(el("div", "v", s[1]));
+      card.appendChild(el("div", "s", s[2]));
+      grid.appendChild(card);
+    });
+    sec.appendChild(grid);
+    if (d.diary) {
+      var diary = el("div", "diary");
+      diary.appendChild(el("strong", "", "那天的日记："));
+      diary.appendChild(document.createTextNode(d.diary));
+      sec.appendChild(diary);
+    }
+  }
+
+  function render() {
+    var d = byDay(state.active);
+    if (!d) return;
+    viewEl.textContent = "";
+
+    viewEl.appendChild(section("01", "她那天说的话", function (sec) {
+      renderQuotes(sec, d);
+    }));
+    viewEl.appendChild(section("02", "她信的事", function (sec) {
+      renderBeliefs(sec, d);
+    }));
+    viewEl.appendChild(section("03", "改口", function (sec) {
+      renderRevised(sec, d);
+    }));
+    viewEl.appendChild(section("04", "成长", function (sec) {
+      renderGrowth(sec, d);
+    }));
+  }
+
+  function renderAll() {
+    renderTabs();
+    render();
+  }
+
+  function select(day) {
+    state.active = day;
+    renderAll();
+  }
+
+  function isSample(x) {
+    return x && DAYS.indexOf(x.day) !== -1 &&
+      x.stage && typeof x.stage.name === "string" && typeof x.stage.index === "number" &&
+      x.counts && typeof x.counts.events === "number" &&
+      Array.isArray(x.today) && Array.isArray(x.beliefs) && Array.isArray(x.revised);
+  }
+
+  function readFile(file) {
+    if (file.text) return file.text();
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () { resolve(String(reader.result)); };
+      reader.onerror = function () { reject(new Error("读不了 " + file.name)); };
+      reader.readAsText(file);
+    });
+  }
+
+  function ingestFiles(files) {
+    var arr = Array.prototype.slice.call(files).filter(function (f) {
+      return /\.json$/i.test(f.name);
+    });
+    if (!arr.length) return;
+    setStatus("读取中…", false);
+    Promise.all(arr.map(function (f) {
+      return readFile(f).then(function (text) { return JSON.parse(text); });
+    })).then(function (list) {
+      var map = {};
+      list.forEach(function (x) { if (isSample(x)) map[x.day] = x; });
+      var missing = DAYS.filter(function (d) { return !map[d]; });
+      if (missing.length) throw new Error("还缺第 " + missing.join(" / ") + " 天");
+      state.days = DAYS.map(function (d) { return map[d]; });
+      state.source = "手动载入";
+      setStatus("已载入 4 份 JSON", false);
+      renderAll();
+    }).catch(function (err) {
+      setStatus("载入失败：" + err.message, true);
+    });
+  }
+
+  function loadFromDisk() {
+    if (location.protocol === "file:") {
+      setStatus("内置示例 · file:// 需手动载入", false);
+      return;
+    }
+    Promise.all(DAYS.map(function (d) {
+      return fetch("day-" + d + ".json", { cache: "no-store" }).then(function (res) {
+        if (!res.ok) throw new Error("day-" + d + ".json HTTP " + res.status);
+        return res.json();
+      });
+    })).then(function (list) {
+      if (list.length !== 4 || !list.every(isSample)) throw new Error("JSON 不完整");
+      state.days = list;
+      state.source = "同目录 JSON";
+      setStatus("同目录 JSON · 已载入", false);
+      renderAll();
+    }).catch(function (err) {
+      setStatus("内置示例 · " + err.message, false);
+    });
+  }
+
+  loadBtn.addEventListener("click", function () { fileInput.click(); });
+  fileInput.addEventListener("change", function () {
+    ingestFiles(fileInput.files);
+    fileInput.value = "";
+  });
+
+  ["dragenter", "dragover"].forEach(function (name) {
+    document.addEventListener(name, function (e) {
+      e.preventDefault();
+      document.body.classList.add("dragging");
+    });
+  });
+  ["dragleave", "drop"].forEach(function (name) {
+    document.addEventListener(name, function (e) {
+      e.preventDefault();
+      document.body.classList.remove("dragging");
+    });
+  });
+  document.addEventListener("drop", function (e) {
+    if (e.dataTransfer && e.dataTransfer.files) ingestFiles(e.dataTransfer.files);
+  });
+
+  renderAll();
+  loadFromDisk();
+})();
+</script>
+</body>
+</html>

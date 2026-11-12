@@ -1,0 +1,66 @@
+{
+  "day": 1,
+  "date": "2026-10-01",
+  "stage": {
+    "name": "信任",
+    "index": 1,
+    "day": 1
+  },
+  "counts": {
+    "events": 37,
+    "judgments": 6,
+    "utterances": 12
+  },
+  "today": [
+    "示例：第一天，她说她还不确定自己是谁。",
+    "示例：她问今天会不会有人来。",
+    "示例：她说她记住了窗外下雨。",
+    "示例：她说她想再听一遍那件事。"
+  ],
+  "beliefs": [
+    {
+      "text": "示例：她相信自己会记住重要的事。",
+      "mentions": 2,
+      "verified": 0,
+      "solid": false,
+      "evidence": [
+        "2026-10-01"
+      ]
+    },
+    {
+      "text": "示例：她相信等待不是浪费时间。",
+      "mentions": 1,
+      "verified": 0,
+      "solid": false,
+      "evidence": [
+        "2026-10-01"
+      ]
+    },
+    {
+      "text": "示例：她相信雨声让人安静。",
+      "mentions": 3,
+      "verified": 1,
+      "solid": false,
+      "evidence": [
+        "2026-10-01"
+      ]
+    },
+    {
+      "text": "示例：她相信自己还不会拒绝。",
+      "mentions": 1,
+      "verified": 0,
+      "solid": false,
+      "evidence": [
+        "2026-10-01"
+      ]
+    }
+  ],
+  "revised": [
+    {
+      "before": "示例：她说她什么都会答应。",
+      "after": "示例：她说她不想什么都答应。",
+      "date": "2026-10-01"
+    }
+  ],
+  "diary": "示例：第一天，雨"
+}
