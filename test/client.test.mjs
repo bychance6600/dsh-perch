@@ -4,7 +4,7 @@
  * 为什么这个测试值得存在：
  *   DSH 的客户端插件是**在浏览器里**通过 window.__ModuleLoader__.load 装载的。
  *   宿主侧 node --test 根本不会执行它 —— 一个拼错的分支、一个 undefined 的解构，
- *   只有在用户点开「设置 → 鱼」时才会炸，而那时报错信息是 "entries did not activate"，
+ *   只有在用户点开「设置 → 她」时才会炸，而那时报错信息是 "entries did not activate"，
  *   完全指不出是哪一行。
  *
  *   所以这里造一个最小的 window / ModuleLoader / react 假环境，真的把 factory 跑一遍，
