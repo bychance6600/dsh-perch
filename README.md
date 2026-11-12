@@ -20,7 +20,7 @@
 
 > **0.1.7 是当前版；0.1.0 是重建版。** 前身是 [dsh-fish-river](https://github.com/bychance6600/dsh-fish-river)：把「只会长的她」和「能在外面说话的她」接成了同一个人。那一版铺了三个渠道，也把材料端到她面前；这一版把入口收窄成两处，材料改成「报纸 + 你自己搜」，删掉了 B 站/抖音私信、出门、导入、通知与自更新。
 >
-> 哪些是上游 [dsh-fish](https://github.com/ssamurias/dsh-fish) 的骨、哪些是 [dsh-fish-soul](https://github.com/Britneycode/dsh-fish-soul) 的思路、哪些是 river 的、哪些是这一版新加的，见 [`docs/从哪来.md`](docs/从哪来.md)；讨论里定过的规则（含还没做到的）见 [`docs/定过的取舍.md`](docs/定过的取舍.md)。
+> 哪些是上游 [dsh-fish](https://github.com/ssamurias/dsh-fish) 的骨、哪些是 [dsh-fish-soul](https://github.com/Britneycode/dsh-fish-soul) 的思路、哪些是 river 的、哪些是这一版新加的，见 [`docs/从哪来.md`](docs/从哪来.md)。
 
 ## 它不是什么
 
@@ -127,7 +127,7 @@
 - 会话健康：连续两次「没送进去」自动换一条新会话；住所页能看、能手动换。
 - 桌宠从主包拆成独立的 `dsh-roost-pet`，身体和角色素材都不进主仓库。
 
-逐项来源与取舍——哪些是上游 dsh-fish 的、哪些是 dsh-fish-soul 的思路、哪些是 river 的、哪些是这一版新加的——见 [`docs/从哪来.md`](docs/从哪来.md)。讨论里定过的规则（含还没做到的，如断线账、`from:`/`searched:` 两边记账）见 [`docs/定过的取舍.md`](docs/定过的取舍.md)。
+逐项来源与取舍——哪些是上游 dsh-fish 的、哪些是 dsh-fish-soul 的思路、哪些是 river 的、哪些是这一版新加的——见 [`docs/从哪来.md`](docs/从哪来.md)。
 
 ## 五、装
 
