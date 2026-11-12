@@ -57,6 +57,7 @@ export function parseArgs(argv = process.argv.slice(2), o = {}) {
     limit: DEFAULT_LIMIT,
     json: false,
     diff: false,
+    mode: 'both',
     help: false,
   }
   for (let i = 0; i < argv.length; i += 1) {
@@ -75,6 +76,10 @@ export function parseArgs(argv = process.argv.slice(2), o = {}) {
       out.limit = Number(v)
     } else if (a === '--json') {
       out.json = true
+    } else if (a === '--mode') {
+      const v = argv[++i]
+      if (!['literal', 'ranked', 'both'].includes(v)) throw fail('--mode 只认 literal / ranked / both')
+      out.mode = v
     } else if (a === '--diff') {
       out.diff = true
     } else if (a === '--help' || a === '-h') {
@@ -88,6 +93,7 @@ export function parseArgs(argv = process.argv.slice(2), o = {}) {
   const n = Number(out.limit)
   if (!Number.isFinite(n) || n < 1 || n > 20) throw fail('--limit 要在 1–20 之间（默认 8）')
   out.limit = Math.floor(n)
+  out.modes = out.mode === 'both' ? ['literal', 'ranked'] : [out.mode]
   return out
 }
 
@@ -286,9 +292,9 @@ function fmtMs(ms) {
 }
 
 /** 一条 query 的完整块（--json 不给、默认给） */
-export function renderRow(r, { show = SHOW_ROWS } = {}) {
+export function renderRow(r, { show = SHOW_ROWS, modes = ['literal', 'ranked'] } = {}) {
   const out = [`#${String(r.i).padStart(2, '0')} 「${r.q}」 期望 ${r.expect.length} 条`]
-  for (const mode of ['literal', 'ranked']) {
+  for (const mode of modes) {
     const side = r[mode]
     out.push(`  ${mode.padEnd(7)} ${side.hits}/${r.expect.length} ${fmtMs(side.ms)}`)
     for (const row of side.rows.slice(0, show)) {
@@ -303,41 +309,40 @@ export function renderRow(r, { show = SHOW_ROWS } = {}) {
  * --diff 的块：只列两档 top 有没有差别、差在哪几个 id。
  * 格式要稳定（测试盯着），所以不掺时间、不掺正文。
  */
-export function renderDiffRow(r) {
+export function renderDiffRow(r, { modes = ['literal', 'ranked'] } = {}) {
   const ids = (side) => (side.ids.length ? side.ids.join(' ') : '（空）')
   return [
     `#${String(r.i).padStart(2, '0')} 「${r.q}」`,
-    `  literal ${r.literal.hits}/${r.expect.length} ${ids(r.literal)}`,
-    `  ranked  ${r.ranked.hits}/${r.expect.length} ${ids(r.ranked)}`,
+    ...modes.map((mode) => `  ${mode.padEnd(7)} ${r[mode].hits}/${r.expect.length} ${ids(r[mode])}`),
   ].join('\n')
 }
 
 /** 末尾两行汇总 */
-export function renderSummary(bench) {
+export function renderSummary(bench, { modes = ['literal', 'ranked'] } = {}) {
   const line = (mode) => {
     const s = bench.summary[mode]
     const rate = s.hitRate === null ? '—（问卷没标 expect）' : `${(s.hitRate * 100).toFixed(0)}%`
     return `  ${mode.padEnd(7)} 命中 ${s.hits}/${bench.expected}（${rate}）  p50 ${fmtMs(s.p50)}  p95 ${fmtMs(s.p95)}`
   }
-  return [line('literal'), line('ranked')].join('\n')
+  return modes.map(line).join('\n')
 }
 
 /** 拼整张表。diff=true 时只打两档不一致的块。 */
-export function renderReport(bench, { diff = false } = {}) {
+export function renderReport(bench, { diff = false, modes = ['literal', 'ranked'] } = {}) {
   const parts = []
   const blocks = []
   bench.rows.forEach((r, idx) => {
     const item = { ...r, i: idx + 1 }
     if (diff) {
-      if (!r.sameTop) blocks.push(renderDiffRow(item))
+      if (!r.sameTop) blocks.push(renderDiffRow(item, { modes }))
     } else {
-      blocks.push(renderRow(item))
+      blocks.push(renderRow(item, { modes }))
     }
   })
   if (!blocks.length) parts.push(diff ? '两档 top 完全一致，没有可对照的行。' : '（问卷是空的）')
   else parts.push(blocks.join(diff ? '\n\n' : '\n\n'))
   parts.push('—— 汇总 ——')
-  parts.push(renderSummary(bench))
+  parts.push(renderSummary(bench, { modes }))
   return parts.join('\n')
 }
 
@@ -348,6 +353,7 @@ function usage() {
     '  --root <dir>      账本目录，默认 ~/.dsh-perch-samples',
     '  --queries <file>  问卷文件，默认 <root>/queries.jsonl',
     '  --limit <n>       每条最多取几条（1–20，默认 8），屏幕只打前 3',
+    '  --mode <which>    只跑一档：literal / ranked / both（默认 both）',
     '  --diff            只打 literal 与 ranked 结果不一致的行',
     '  --json            机器可读（完整结果）',
     '  -h, --help        这页',
@@ -377,6 +383,7 @@ async function main() {
       console.log(JSON.stringify({
         root: args.root,
         queriesPath: args.queriesPath,
+        mode: args.mode,
         events: events.length,
         ...bench,
         rows: bench.rows.map((r) => ({
@@ -389,20 +396,20 @@ async function main() {
       }, null, 2))
       return
     }
-    console.log(`召回对照：literal vs ranked`)
+    console.log(`召回对照：${args.mode === 'both' ? 'literal vs ranked' : args.mode}`)
     console.log(`账本 ${eventsPath}（${events.length} 条）· 问卷 ${args.queriesPath}（${queries.length} 条）· 每条取 top ${args.limit}`)
     if (!expand) {
       console.log('（ranked 现在只叠显著性；P3 的 lib/search-index.js 出现后会自动接上同义词扩展）')
     }
     console.log('')
     if (args.diff) {
-      console.log(renderReport(bench, { diff: true }))
+      console.log(renderReport(bench, { diff: true, modes: args.modes }))
     } else {
-      const blocks = bench.rows.map((r, idx) => renderRow({ ...r, i: idx + 1 }))
+      const blocks = bench.rows.map((r, idx) => renderRow({ ...r, i: idx + 1 }, { modes: args.modes }))
       console.log(blocks.join('\n\n'))
       console.log('')
       console.log('—— 汇总 ——')
-      console.log(renderSummary(bench))
+      console.log(renderSummary(bench, { modes: args.modes }))
     }
   } catch (e) {
     console.error(e?.userFacing ? e.message : (e?.stack || String(e)))

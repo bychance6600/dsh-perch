@@ -201,4 +201,9 @@ test('参数：默认值、--limit 越界、不认识的参数都直接报错', 
 
   assert.throws(() => parseArgs(['--limit', '999'], { root: '/tmp/x' }), /1–20/)
   assert.throws(() => parseArgs(['--nope'], { root: '/tmp/x' }), /不认识的参数/)
+  const one = parseArgs(['--mode', 'ranked'], { root: '/tmp/somewhere' })
+  assert.equal(one.mode, 'ranked')
+  assert.deepEqual(one.modes, ['ranked'])
+  assert.deepEqual(parseArgs([], { root: '/tmp/x' }).modes, ['literal', 'ranked'])
+  assert.throws(() => parseArgs(['--mode', 'x'], { root: '/tmp/x' }), /literal \/ ranked \/ both/)
 })
