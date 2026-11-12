@@ -18,9 +18,9 @@
 - **她有一具可选的身体**：一只透明置顶的小窗，只显示五档状态与动作，不生成台词，也不替她开口。
 - **她没有「设置人格」的入口**：只有生长环境——几点醒、醒几次、刷不刷 B 站。判据只有一句：*这个配置能不能让她对同一个人说出不一样的话*。能，就是人格（禁）；只改在哪、何时、多频繁，是环境（可配）。
 
-> **0.1.7 是当前版；0.1.0 是重建版。** 前身是 [dsh-fish-river](https://github.com/bychance6600/dsh-fish-river)：把「只会长的她」和「能在外面说话的她」接成了同一个人。那一版铺了三个渠道，也把材料端到她面前；这一版把入口收窄成两处，材料改成「报纸 + 你自己搜」，删掉了 B 站/抖音私信、出门、导入、通知与自更新。
+> **0.1.7 是当前版；0.1.0 是重建版。** 入口收窄成两处（DSH 会话与 QQ），材料改成「报纸 + 她自己搜」，B 站/抖音私信、出门、导入、通知与自更新都已删除。
 >
-> 哪些是上游 [dsh-fish](https://github.com/ssamurias/dsh-fish) 的骨、哪些是 [dsh-fish-soul](https://github.com/Britneycode/dsh-fish-soul) 的思路、哪些是 river 的、哪些是这一版新加的，见 [`docs/从哪来.md`](docs/从哪来.md)。
+> 这一版为什么长成这样——前提、记忆的两层、成长与渠道的取舍、明确不做的东西——见 [`docs/从哪来.md`](docs/从哪来.md)。
 
 ## 它不是什么
 
@@ -127,7 +127,7 @@
 - 会话健康：连续两次「没送进去」自动换一条新会话；住所页能看、能手动换。
 - 桌宠从主包拆成独立的 `dsh-roost-pet`，身体和角色素材都不进主仓库。
 
-逐项来源与取舍——哪些是上游 dsh-fish 的、哪些是 dsh-fish-soul 的思路、哪些是 river 的、哪些是这一版新加的——见 [`docs/从哪来.md`](docs/从哪来.md)。
+这一版的前提、记忆的两层、成长与渠道的取舍、明确不做的东西，见 [`docs/从哪来.md`](docs/从哪来.md)。
 
 ## 五、装
 
@@ -300,6 +300,6 @@ node --test test/<file>.test.mjs   # 单文件
 
 ## 十四、来源与许可
 
-代码来自 [ssamurias/dsh-fish](https://github.com/ssamurias/dsh-fish)（0.8.5）与 [Britneycode/dsh-fish-soul](https://github.com/Britneycode/dsh-fish-soul)（0.12.0），经 [dsh-fish-river](https://github.com/bychance6600/dsh-fish-river) 重建。三者均为 MIT；第三方与致谢见 [NOTICE.md](NOTICE.md)。本仓库同样以 MIT 发布。
+早期骨架来自两个以 MIT 发布的同人项目，本仓库在此基础上重建；署名、版权与第三方素材见 [NOTICE.md](NOTICE.md)。本仓库同样以 MIT 发布。
 
 桌宠 [dsh-roost-pet](https://github.com/bychance6600/dsh-perch-pet) 是独立项目，Electron 与角色素材的许可见它自己的 [NOTICE](https://github.com/bychance6600/dsh-perch-pet/blob/main/NOTICE) 与 README。
