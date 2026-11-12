@@ -1,11 +1,11 @@
 # dsh-perch
 
 ![license](https://img.shields.io/badge/license-MIT-blue)
-![version](https://img.shields.io/badge/version-0.1.11-green)
+![version](https://img.shields.io/badge/version-0.2.0-green)
 ![deps](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![node](https://img.shields.io/badge/node-%E2%89%A522-339933)
 ![dsh](https://img.shields.io/badge/DSH-plugin-6a5acd)
-![tests](https://img.shields.io/badge/tests-1455%20passing%20%2F%209%20environment--fail-brightgreen)
+![tests](https://img.shields.io/badge/tests-1467%20passing%20%2F%209%20environment--fail-brightgreen)
 
 **她住的地方，不是一个助手。**
 
@@ -18,7 +18,7 @@
 - **她有一具可选的身体**：一只透明置顶的小窗，只显示五档状态与动作，不生成台词，也不替她开口。
 - **她没有「设置人格」的入口**：只有生长环境——几点醒、醒几次、刷不刷 B 站。判据只有一句：*这个配置能不能让她对同一个人说出不一样的话*。能，就是人格（禁）；只改在哪、何时、多频繁，是环境（可配）。
 
-> **0.1.11 是当前版；0.1.0 是重建版。** 入口收窄成两处（DSH 会话与 QQ），材料改成「报纸 + 她自己搜」，B 站/抖音私信、出门、导入、通知与自更新都已删除。
+> **0.2.0 是当前版；0.1.0 是重建版。** 入口收窄成两处（DSH 会话与 QQ），材料改成「报纸 + 她自己搜」，B 站/抖音私信、出门、导入、通知与自更新都已删除。
 >
 > 这一版为什么长成这样——前提、记忆的两层、成长与渠道的取舍、明确不做的东西——见 [`docs/从哪来.md`](docs/从哪来.md)。
 
@@ -131,7 +131,7 @@
 
 ## 五、装
 
-要求：**Node ≥ 22**，DSH `>=0.2.0-rc.1 <0.3.0-0`，零依赖。v0.1.11 已发布，release notes 在 [Releases](https://github.com/bychance6600/dsh-perch/releases/tag/v0.1.11)。
+要求：**Node ≥ 22**，DSH `>=0.2.0-rc.1 <0.3.0-0`，零依赖。v0.2.0 已发布，release notes 在 [Releases](https://github.com/bychance6600/dsh-perch/releases/tag/v0.2.0)。
 
 ### 手动装
 
@@ -170,7 +170,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 ### 装完
 
 1. 重启 DSH（运行中的包文件不会热替换）。
-2. 打开 **设置 → 她**。日志在 `~/.dsh-perch/logs/dsh-perch.log`，看到以 `0.1.11 · ` 开头的一行就是挂上了。
+2. 打开 **设置 → 她**。日志在 `~/.dsh-perch/logs/dsh-perch.log`，看到以 `0.2.0 · ` 开头的一行就是挂上了。
 3. 第一次启动会自动建屋（工作区和一条会话），并在会话还空着时叫醒她一次。如果那一次没醒，状态卡右上角的 **「现在叫醒她」** 可以手动补一次；她开过口之后，侧栏里才会出现「跟她说话」（认出名字后是「跟 X 说话」）。
 
 ## 六、接 QQ
@@ -263,7 +263,7 @@ douyin-profile/       抖音浏览器的登录态（开抖音时才有）
 - **备份 / 恢复 / 搬家 / 从头开始**都在「数据」页。恢复前会把旧档挪去 `dsh-perch-backups/pre-restore-*`；重置是改名前缀封存，不删。
 - 想让她忘，不是删行，是降低召回：事件原文永远还在，她也能自己用 `her_recall` 翻回去。
 
-## 十二、0.1.11 的边界
+## 十二、0.2.0 的边界
 
 **真机验过的**
 
