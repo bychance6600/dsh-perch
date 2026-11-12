@@ -282,7 +282,7 @@ if ($DryRun) {
 } else {
   Say '  装完了。下一步：' 'White'
   Say '    1) 重启 DSH（运行中的包文件不会热替换）' 'Gray'
-  Say '    2) 设置 → 鱼 → 「渠道」页签，开 QQ 并填桥地址' 'Gray'
+  Say '    2) 设置 → 她 → 「渠道」页签，开 QQ 并填桥地址' 'Gray'
   Say "    3) 日志：$env:USERPROFILE\.dsh-roost\logs\dsh-roost.log" 'Gray'
   Say '       看到「0.1.0 · 」就是挂上了；没有就是 bundles 没写进去。' 'Gray'
 }

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * avatar.test.mjs —— 状态卡上的头像：谁用谁自己传，包里不带图
  *
  * 背景（用户 m03751，2026-10-24）：
@@ -118,7 +118,7 @@ test('路由：/avatar 同时管出图、元信息、上传与移除', () => {
 test('客户端：状态卡上有头像与换头像入口，且不再出现「没在跑」', () => {
   assert.ok(CLIENT.includes('avatarBox'), '要有头像块')
   assert.ok(CLIENT.includes("API + '/avatar'"), '图片地址走 API + /avatar')
-  assert.ok(CLIENT.includes("h('span', null, '鱼')"), '没有头像时画空圈占位')
+  assert.ok(CLIENT.includes("h('span', null, '她')"), '没有头像时画空圈占位')
   assert.ok(CLIENT.includes('换头像'), '要有换头像入口')
   assert.ok(CLIENT.includes('移除头像'), '传过之后要能移除')
   assert.ok(CLIENT.includes("jget('/avatar/info')"), '加载时读头像元信息')

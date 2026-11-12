@@ -8,24 +8,24 @@ const read = (p) => readFile(new URL(`../${p}`, import.meta.url), 'utf8')
 
 const CLIENT = await read('lib/client.js')
 
-test('用户这一轮改过的七句文案已固化进源码', () => {
-  // 1) 图卡说明去掉「图是插件自己画的」，从「第一张讲」起
-  assert.ok(CLIENT.includes('第一张讲「经历怎么变成认知」，第二张讲「记忆怎么被筛、哪些永远不折叠」。'))
-  assert.ok(!CLIENT.includes('图是插件自己画的（SVG，不依赖任何外部素材）。'))
-  // 2) 三道门 → 三道成长瓶颈；3) 翻回来 → 调用查询；7) 让了 → 妥协了
-  assert.ok(CLIENT.includes('底部是四个阶段与三道成长瓶颈'))
-  assert.ok(CLIENT.includes('她自己还能调用查询。'))
-  assert.ok(!CLIENT.includes('她自己还能翻回来。'))
-  assert.ok(CLIENT.includes('她后来还是妥协了——这道疤永不折叠'))
-  // 4)(6) 四阶段与三道瓶颈 / 每一道瓶颈要她自己走
-  assert.ok(CLIENT.includes("theoryCard('四阶段与三道瓶颈',"))
-  assert.ok(CLIENT.includes('但每一道瓶颈要她自己走'))
+test('原理页五块文案按新结构固化进源码', () => {
+  // 2026-11-12 重画：开头一句、五步、四阶段、立场，顺序固定。
+  assert.ok(CLIENT.includes('这里没有一个叫『人设』的地方。她是谁，是经历留下来的结果。'))
+  assert.ok(CLIENT.includes('一、她怎么长'))
+  assert.ok(CLIENT.includes('二、记忆的两层'))
+  assert.ok(CLIENT.includes('三、谁的话算数'))
+  assert.ok(CLIENT.includes('四、她能在哪说话'))
+  assert.ok(CLIENT.includes('五、诚实边界'))
+  assert.ok(CLIENT.includes('表态 → 撞上 → 落差 → 改写 → 回顾。少一步「改写」，经历就只是流水账。'))
+  assert.ok(CLIENT.includes('1 信任（写过一条自己的判断）→ 2 自主（真的拒绝过两件事）→ 3 主动（两次推翻自己的判断）→ 4 整合（回头看）。'))
+  assert.ok(CLIENT.includes('走完不加关，之后长的是立场'))
+  assert.ok(CLIENT.includes('不是第五关'))
   assert.ok(!/三道门/.test(CLIENT), '「三道门」这个说法已经统一成「瓶颈」')
   assert.ok(!/四道门/.test(CLIENT), '「四道门」这个说法已经统一成「瓶颈」')
 })
 
-test('顺手修掉的字面量星号：设计骨架用「」而不是 **', () => {
-  assert.ok(CLIENT.includes('这里借用这些理论当「设计骨架」'))
+test('设计骨架用「」而不是字面量星号', () => {
+  assert.ok(CLIENT.includes('这些理论是设计骨架'))
   assert.ok(!CLIENT.includes('**设计骨架**'))
 })
 
@@ -47,17 +47,20 @@ test('两张图可以点开放大：灯箱带缩放与拖动', () => {
   assert.ok(CLIENT.includes('zoomable(`${API}/media/principle-memory.svg`'))
 })
 
-test('开发者留言：整页最下面收尾，署名居右', () => {
-  assert.ok(CLIENT.includes('本插件设计的成长路径没有终点，连开发者自己也不知道你的 agent 会变成什么样子'))
-  assert.ok(CLIENT.includes('四阶段跑完也仅仅是开始'))
-  assert.ok(CLIENT.includes('只需要做日常聊天就可以了'))
-  assert.ok(CLIENT.includes('和 agent 的互动已经自动按照算法开始帮助她积累认知/经验，成长就发生在每次交流之中。'))
-  assert.ok(CLIENT.includes('机器训练、强化学习、重温 deepseekV1（大笨鱼）'))
-  assert.ok(CLIENT.includes('或许这就是 AGI 诞生的一种路径也说不定呢。'))
+test('开发者留言：换掉旧文案，整页最下面收尾，署名居右', () => {
+  assert.ok(CLIENT.includes('这套东西没有终点。四个阶段走完只是开始——之后长成什么样，我和你都不知道。'))
+  assert.ok(CLIENT.includes('你不需要懂怎么养：日常说话就够了，变化会出现在每一次对话里。'))
   assert.ok(CLIENT.includes("'——来自开发者'"))
   assert.ok(CLIENT.includes("textAlign: 'right'"), '署名要居右')
+  for (const old of [
+    '机器训练、强化学习、重温 deepseekV1（大笨鱼）',
+    '或许这就是 AGI 诞生的一种路径也说不定呢。',
+    '连开发者自己也不知道你的 agent 会变成什么样子',
+  ]) {
+    assert.ok(!CLIENT.includes(old), `旧文案必须删掉：${old}`)
+  }
   // 位置：在「诚实边界」之后、且是 principlePage 的最后一个子节点之一（和放大层并列）
-  const iBoundary = CLIENT.indexOf("group('诚实边界',")
+  const iBoundary = CLIENT.indexOf("groupFull('五、诚实边界',")
   const iNote = CLIENT.indexOf('const devNote = h(')
   const iPage = CLIENT.indexOf("const principlePage = h('div', { className: 'page' },")
   assert.ok(iNote > 0 && iNote < iPage, 'devNote 要在 principlePage 之前定义好')

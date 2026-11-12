@@ -220,11 +220,9 @@ test('原理页与原理图不再提「能力」这条线', () => {
 
 test('原理页给「立场」单独一张卡，且不再有「从计次到能力」', () => {
   const c = read('lib/client.js')
-  assert.ok(c.includes("theoryCard('立场：走完门才开始攒'"), '立场够格单独一张卡')
-  assert.ok(c.includes('一、什么时候开始：四个阶段都走完开始进行，没有尽头，也没有「通关终点」。'))
-  assert.ok(c.includes('二、什么算立场：同一种类型的事，两次表达过一样的观点；或者在这件事上出现过伤疤。'))
-  assert.ok(c.includes('三、不会被折叠：写进上下文提示词。如果遗漏，那立场也将消失。'))
-  assert.ok(c.includes("theoryCard('从计次到复现'"), '能力已删，卡片改名')
+  assert.ok(c.includes("pCard('03', '走完不加关，之后长的是立场'"), '立场够格单独一张卡')
+  assert.ok(c.includes('喜欢什么、守哪条线、绝不做哪几件。每一条都得有代价垫着，且不参与折叠。'))
+  assert.ok(c.includes('立场不是第五关。'))
   assert.ok(!c.includes("'从计次到能力'"))
 })
 
