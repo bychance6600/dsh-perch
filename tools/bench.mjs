@@ -7,6 +7,9 @@
  * 上一次是 2026-11-10 量出来 2577 条 183ms，那之前没人量，谁也不知道已经慢了。
  * 这里把它做成能跑的一行命令，CI 也跟着跑；超预算退出码非 0。
  *
+ * 5 万条按 AGENTS §19 必须走快照：这里先按 rebuild 的路径写一份 snapshot.json，
+ * 再读两次，第二次必须是 fromSnapshot 命中，且模型与 deriveSelf 全等。
+ *
  * 用法：
  *   node tools/bench.mjs              # 1 千 / 1 万（5 万要走 --big）
  *   node tools/bench.mjs --big        # 加上 5 万条（慢，本地才跑）
@@ -16,7 +19,12 @@
  * 数字用于横向比较（这次 vs 上次），不用于对外宣称「她能处理 5 万条」。
  */
 import { performance } from 'node:perf_hooks'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { isDeepStrictEqual } from 'node:util'
 import { deriveSelf } from '../lib/derive.js'
+import { readModelMeta, writeSnapshot } from '../lib/snapshot.js'
 import { searchEvents } from '../lib/recall.js'
 
 /** 预算：改这里要同时改 AGENTS §19，两边不一致时以 AGENTS 为准。 */
@@ -108,8 +116,22 @@ function median(arr) {
   return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2
 }
 
+function searchStats(events, now) {
+  const times = []
+  for (const q of QUERIES) {
+    const t = performance.now()
+    searchEvents(events, q, { now, days: 0 })
+    times.push(performance.now() - t)
+  }
+  times.sort((a, b) => a - b)
+  return {
+    searchP50: median(times),
+    searchP95: times[Math.floor(times.length * 0.95)] ?? times[times.length - 1] ?? 0,
+  }
+}
+
 /**
- * 量一组。
+ * 量一组（1 千 / 1 万：直接重放）。
  * @param {number} n
  * @returns {{n:number, replayMs:number, searchP50:number, searchP95:number, heapMB:number, events:object[]}}
  */
@@ -126,23 +148,72 @@ export function measure(n) {
     if (i === 1) replayMs = dt
   }
 
-  const times = []
-  for (const q of QUERIES) {
-    const t = performance.now()
-    searchEvents(events, q, { now, days: 0 })
-    times.push(performance.now() - t)
-  }
-  times.sort((a, b) => a - b)
-
+  const { searchP50, searchP95 } = searchStats(events, now)
   global.gc?.()
   const heapMB = process.memoryUsage().heapUsed / 1024 / 1024
-  return {
-    n,
-    replayMs,
-    searchP50: median(times),
-    searchP95: times[Math.floor(times.length * 0.95)] ?? times[times.length - 1] ?? 0,
-    heapMB,
-    events,
+  return { n, replayMs, searchP50, searchP95, heapMB, events }
+}
+
+/**
+ * 量 5 万条的快照路径（AGENTS §19：5 万条起必须走快照）。
+ *
+ * 先按 rebuild 的路径付一次 deriveSelf + writeSnapshot（冷路径，不计入预算），
+ * 然后连读两次 readModelMeta；第二次必须是 fromSnapshot，且模型与 deriveSelf 全等。
+ *
+ * @param {number} n
+ * @returns {Promise<object>}
+ */
+export async function measureSnapshot(n) {
+  const events = genEvents(n)
+  const now = Date.parse(events[events.length - 1].ts) + 3600000
+  const root = mkdtempSync(join(tmpdir(), 'fish-bench-snapshot-'))
+  try {
+    writeFileSync(
+      join(root, 'events.jsonl'),
+      events.map((e) => JSON.stringify(e)).join('\n') + '\n',
+      'utf8',
+    )
+
+    const coldT = performance.now()
+    const derived = deriveSelf(events, { now })
+    const coldMs = performance.now() - coldT
+    const written = await writeSnapshot(root, derived, events, { now })
+    if (!written.ok) throw new Error(`快照没写成：${written.reason}`)
+
+    const firstT = performance.now()
+    const first = await readModelMeta(root, { now })
+    const firstMs = performance.now() - firstT
+
+    const secondT = performance.now()
+    const second = await readModelMeta(root, { now })
+    const secondMs = performance.now() - secondT
+
+    const modelMatches = isDeepStrictEqual(second.model, derived)
+    const { searchP50, searchP95 } = searchStats(events, now)
+    global.gc?.()
+    const heapMB = process.memoryUsage().heapUsed / 1024 / 1024
+    return {
+      n,
+      // 预算看第二次读（文件已在页缓存里）；第一次读也单独列出来。
+      replayMs: secondMs,
+      replayColdMs: coldMs,
+      searchP50,
+      searchP95,
+      heapMB,
+      events,
+      snapshot: {
+        firstMs,
+        secondMs,
+        coldMs,
+        bytes: written.bytes,
+        firstFromSnapshot: first.fromSnapshot,
+        secondFromSnapshot: second.fromSnapshot,
+        secondReason: second.reason,
+        modelMatches,
+      },
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
   }
 }
 
@@ -150,7 +221,7 @@ function fmt(ms) {
   return `${ms.toFixed(0)}ms`
 }
 
-function main() {
+async function main() {
   const big = process.argv.includes('--big')
   const json = process.argv.includes('--json')
   const sizes = big ? [1000, 10000, 50000] : [1000, 10000]
@@ -158,10 +229,17 @@ function main() {
   let failed = false
 
   for (const n of sizes) {
-    const r = measure(n)
-    const budget = n === 10000 ? BUDGET_MS.replay10k : null
+    const r = n === 50000 ? await measureSnapshot(n) : measure(n)
+    const budget = n === 10000
+      ? BUDGET_MS.replay10k
+      : n === 50000
+        ? BUDGET_MS.replay50kSnapshot
+        : null
     const over = budget !== null && r.replayMs > budget
     if (over) failed = true
+    if (r.snapshot && (!r.snapshot.firstFromSnapshot || !r.snapshot.secondFromSnapshot || !r.snapshot.modelMatches)) {
+      failed = true
+    }
     rows.push({ ...r, budget, over, events: undefined })
   }
 
@@ -170,15 +248,22 @@ function main() {
   } else {
     console.log('账本重放预算（AGENTS §19）')
     console.log('')
-    console.log('  条数      重放      召回 p50   召回 p95   堆')
+    console.log('  条数      重放      召回 p50   召回 p95   堆       来源')
     for (const r of rows) {
       const mark = r.budget === null ? '     ' : r.over ? ' ✗超' : ' ✓  '
+      const source = r.snapshot
+        ? `快照 ${r.snapshot.fromSnapshot && r.snapshot.secondFromSnapshot ? '命中' : '未命中'}（第 2 次 ${fmt(r.snapshot.secondMs)} / 冷重放 ${fmt(r.snapshot.coldMs)}）`
+        : '重放'
       console.log(
-        `  ${String(r.n).padStart(6)}  ${fmt(r.replayMs).padStart(8)}  ${fmt(r.searchP50).padStart(9)}  ${fmt(r.searchP95).padStart(9)}  ${r.heapMB.toFixed(0).padStart(5)}MB${mark}`,
+        `  ${String(r.n).padStart(6)}  ${fmt(r.replayMs).padStart(8)}  ${fmt(r.searchP50).padStart(9)}  ${fmt(r.searchP95).padStart(9)}  ${r.heapMB.toFixed(0).padStart(5)}MB  ${source}${mark}`,
       )
     }
     console.log('')
     console.log(`  预算：1 万条重放 < ${BUDGET_MS.replay10k}ms；5 万条走快照后 < ${BUDGET_MS.replay50kSnapshot}ms${big ? '' : '（--big 才量 5 万）'}`)
+    if (rows.some((r) => r.snapshot)) {
+      const s = rows.find((r) => r.snapshot).snapshot
+      console.log(`  快照自检：写 ${s.bytes} B；第一次 ${s.firstFromSnapshot ? '命中' : '未命中'} ${fmt(s.firstMs)}；第二次 ${s.secondFromSnapshot ? '命中' : '未命中'} ${fmt(s.secondMs)}；模型与 deriveSelf ${s.modelMatches ? '全等' : '不等'}`)
+    }
   }
 
   process.exit(failed ? 1 : 0)

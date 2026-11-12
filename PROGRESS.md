@@ -9,7 +9,7 @@
 - v1 已上线：`0.1.7` 已发 npm（`latest` 生效）与 GitHub Release，市场 PR `#13886` 已合并。
 - 她在 PC 上：账本 2975 条；PC 送修约十天，Mac 只做开发，**不要在这台机器上加载插件**（会另写一份账本）。
 - 备份：`~/Downloads/云雀备份-20261111.zip`（1.3G，含 `.dsh-perch` 全量）。
-- 明天从这里接：**P0 性能与预算**（`tools/bench.mjs` + 5 万条快照，见 `docs/v0.2-排期.md`），其次设置页 QQ 卡的「桥状态 / 最后收发 / 上次错误」三行。
+- P0 性能与预算：5 万条快照已接（`lib/snapshot.js` + `lib/store.js` 的 `readModel` + 启动 `persist`），bench 50k 走快照 192.6ms（预算 300），冷启 5786.7ms。下一步：设置页 QQ 卡的「桥状态 / 最后收发 / 上次错误」三行。
 - 文档清理五项已交文档会话（重写 `交接.md`、改 `待办-没答完的问题.md` 状态、删两份发布说明、pet 六份搬 `dsh-roost-pet`、同步 `INDEX.md`），等回报核 diff。
 
 ### 发布记录（0.1.2–0.1.7）
@@ -23,7 +23,7 @@
 | 0.1.6 | 2026-11-10 | 「你以后就叫 X」的语序 | `845ca26` |
 | 0.1.7 | 2026-11-10 | 桥把 @ 展开成正文时漏判点名 | `577e4f0` |
 
-- 基线：`node --test --test-isolation=none` → 2026-11-12 在 Mac 仓库实测 **1376 条 / 1366 过 / 9 红 / 1 skip**（约 90 秒，本机 `/usr/local/bin/ffmpeg` 已装）。9 条与已知环境红同名；`video.test.mjs` 的帧数红已修（抽帧少一格时用等距时刻补齐，见 `lib/video.js`）。
+- 基线：`node --test --test-isolation=none` → 2026-11-12 在 Mac 仓库实测 **1391 条 / 1381 过 / 9 红 / 1 skip**（含快照新增 12 条；本机 ffmpeg 已装）。9 条与已知环境红同名；`video.test.mjs` 的帧数红已修（抽帧少一格时用等距时刻补齐，见 `lib/video.js`）。
 - 其余 9 条红都是已知环境项与跨文件隔离假红（ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去）。逐文件独立进程跑，假红那几条会绿。原先 `ops_*_own` 那条也在这里，A27 的用例用 `rememberKnownTools([])` 复位后已转绿；`--test-isolation=none` 下 `withFileLock` 偶发一条，单跑是绿的。
 - 本机 macOS：node 已在 PATH（v26.13.0），不再用 D 盘绝对路径。
 
