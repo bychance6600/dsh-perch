@@ -134,6 +134,7 @@ test('/config 白名单收下观测台提交的全部环境键（含 chat 与 me
       bili: { minIntervalMs: 900, jitterMs: 300 },
       chat: { rotateAfter: 30 },
       memory: { docBudget: 1500 },
+      recall: { mode: 'ranked', links: true },
       // channels 是 2026-11-02 合并版加的：渠道页签的开关与群白名单走的是同一条路由。
       // 历史教训同 bili——漏登记一个顶层键，整张表都存不进去，而界面只说「没存上」。
       channels: { qq: { enabled: true, wsUrl: 'ws://127.0.0.1:3001', accessToken: '', replyInGroup: false, groups: ['123', '456'] } },
@@ -159,6 +160,8 @@ test('/config 白名单收下观测台提交的全部环境键（含 chat 与 me
     assert.deepEqual(payload.config.window, ['19:00', '22:00'])
     assert.equal(payload.config.chat.rotateAfter, 30)
     assert.equal(payload.config.memory.docBudget, 1500)
+    assert.equal(payload.config.recall.mode, 'ranked', '翻旧事的翻法必须真的存进去')
+    assert.equal(payload.config.recall.links, true, '「顺着线索找」必须真的存进去')
     assert.equal(payload.config.bili.minIntervalMs, 900, '请求间隔必须真的存进去')
     assert.equal(payload.config.bili.jitterMs, 300, '请求抖动必须真的存进去')
     assert.equal(payload.config.channels.qq.enabled, true, '渠道开关必须真的存进去')
@@ -216,6 +219,20 @@ test('白名单仍然挡得住"指向她本人"的键', async () => {
   } finally {
     await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
   }
+})
+
+test('「顺着线索找」开关文案不带禁用词，且只在加权模式可点', async () => {
+  const src = await readFile(CLIENT, 'utf8')
+  const copy = [
+    "label: '顺着线索找'",
+    "hint: '相关的事会顺着引用一起带出来；关掉就只按字面排。'",
+    "'字面模式不走线索'",
+  ]
+  for (const s of copy) {
+    assert.ok(src.includes(s), `找不到开关文案：${s}`)
+    assert.doesNotMatch(s, /他|四道门|三道门|好感度/, `开关文案里有禁用词：${s}`)
+  }
+  assert.match(src, /disabled:\s*recallMode\s*!==\s*'ranked'/, '字面模式下开关必须置灰')
 })
 
 test('设置界面面向用户的文案里不出现男字旁的「他」', async () => {
