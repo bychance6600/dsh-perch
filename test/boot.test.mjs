@@ -243,6 +243,7 @@ test('图谱 v2：旧句带 status/mentions，被推翻单独成边，计数一�
     const oldNode = api.json.nodes.find((n) => n.id === oldEv.id)
     assert.ok(oldNode, '被推翻的旧句也要在图里，不能只留还在生效的')
     assert.equal(oldNode.status, 'refuted')
+    assert.equal(oldNode.supersededBy, newEv.id, '旧句要带上去哪一句的指针')
     assert.equal(oldNode.mentions, 0)
 
     const newNode = api.json.nodes.find((n) => n.id === newEv.id)
@@ -257,6 +258,42 @@ test('图谱 v2：旧句带 status/mentions，被推翻单独成边，计数一�
     assert.ok(!api.json.edges.some((e) => e.kind === 'hard'), '旧 hard 边已经退役')
     assert.ok(api.json.nodes.every((n) => ['active', 'refined', 'refuted'].includes(n.status)))
     assert.ok(api.json.nodes.every((n) => Number.isInteger(n.mentions) && n.mentions >= 0))
+
+    h.dispose?.()
+  })
+})
+
+test('图谱 v2：refined 旧句连出改口边，节点带 supersededBy', async () => {
+  await withRoot(async (root) => {
+    const { ctx, routes } = fakeCtx()
+    const h = apply(ctx, { root })
+    await new Promise((r) => setTimeout(r, 120))
+
+    const oldEv = await appendEvent({
+      type: 'utterance', source: 'tool', text: '我不喜欢猫。',
+    }, {}, root)
+    const newEv = await appendEvent({
+      type: 'revise', source: 'tool', text: '猫挺可爱的。',
+      refs: [oldEv.id], verdict: 'refined', confidence: 0.8,
+    }, {}, root)
+
+    const apiRoute = await waitFor(() => routes.find((r) => r.path === '/dsh-perch/api/memory'))
+    const api = fakeRes()
+    await apiRoute.handler({ url: '/dsh-perch/api/memory', method: 'GET' }, api)
+    assert.equal(api.code, 200)
+    assert.equal(api.json.ok, true)
+
+    const oldNode = api.json.nodes.find((n) => n.id === oldEv.id)
+    const newNode = api.json.nodes.find((n) => n.id === newEv.id)
+    assert.equal(oldNode.status, 'refined')
+    assert.equal(oldNode.supersededBy, newEv.id)
+    assert.equal(newNode.status, 'active')
+    assert.equal(api.json.stats.refined, 1, '改口数读 derive 的 facts.revises')
+
+    const revise = api.json.edges.filter((e) => e.kind === 'revise')
+    assert.equal(revise.length, 1, '改口要单独一类边')
+    assert.equal(revise[0].s, oldEv.id, '边从旧句指向新句')
+    assert.equal(revise[0].t, newEv.id)
 
     h.dispose?.()
   })
