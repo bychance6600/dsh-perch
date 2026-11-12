@@ -28,7 +28,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { performance } from 'node:perf_hooks'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { searchEvents, solidIdsOf } from '../lib/recall.js'
+import { searchEvents, solidIdsOf, tokensOf } from '../lib/recall.js'
 
 export const DEFAULT_ROOT = join(homedir(), '.dsh-perch-samples')
 export const DEFAULT_LIMIT = 8
@@ -57,6 +57,7 @@ export function parseArgs(argv = process.argv.slice(2), o = {}) {
     limit: DEFAULT_LIMIT,
     json: false,
     diff: false,
+    p5: false,
     help: false,
   }
   for (let i = 0; i < argv.length; i += 1) {
@@ -77,6 +78,8 @@ export function parseArgs(argv = process.argv.slice(2), o = {}) {
       out.json = true
     } else if (a === '--diff') {
       out.diff = true
+    } else if (a === '--p5') {
+      out.p5 = true
     } else if (a === '--help' || a === '-h') {
       out.help = true
     } else {
@@ -229,6 +232,295 @@ export function runOne(events, item, o = {}) {
   return { rows, ids, hits, ms }
 }
 
+
+/* ------------------------------------------------------------------ *
+ * P5 记忆链接（M4）的对照：literal / ranked(links 关) / ranked(links 开)
+ *
+ * 真值口径在 docs/新版本-记忆.md 的 M4：
+ *   - 对每条 belief 算 Dice，取 top-3 且 >= 0.35；
+ *   - 召回命中后，把 links 里的判断以 0.5 权重加进结果；
+ *   - links 算在独立缓存里，不进 derive 主路径。
+ *
+ * 如果 lib/links.js 已经落地（且 lib/recall.js 认得 links 开关），这里直接用产品
+ * 的实现；没落地时用下面这份**工装侧参考实现**先把三列跑通——它只在内存里算，
+ * 不写账本、不改产品，报告开头会写明这一列不是产品结果。
+ * ------------------------------------------------------------------ */
+
+/** 1 跳扩散的权重（M4 口径） */
+export const LINKS_WEIGHT = 0.5
+/** 建链接的最低 Dice（M4 口径） */
+export const LINKS_MIN_DICE = 0.35
+/** 每条最多几条链接（M4 口径） */
+export const LINKS_MAX = 3
+
+/** 参与建链接的类型：她自己的判断（belief）；听到的话不算「判断」 */
+export const LINKS_TYPES = new Set(['utterance', 'revise'])
+
+/** Dice 系数：链接的相似度口径 */
+export function diceOf(a, b) {
+  const A = new Set(a ?? [])
+  const B = new Set(b ?? [])
+  if (!A.size || !B.size) return 0
+  let inter = 0
+  for (const t of A) if (B.has(t)) inter += 1
+  // 必须共享至少一个非停用片段；没有交集就不算相关（M4 硬约束）
+  if (!inter) return 0
+  return (2 * inter) / (A.size + B.size)
+}
+
+/**
+ * 参考实现：按 M4 口径给每条判断建 links。
+ * @param {object[]} events
+ * @param {{minDice?:number, maxLinks?:number}} o
+ * @returns {Map<string,string[]>}
+ */
+export function buildLinks(events = [], o = {}) {
+  const minDice = o.minDice ?? LINKS_MIN_DICE
+  const maxLinks = o.maxLinks ?? LINKS_MAX
+  const items = []
+  for (const ev of events ?? []) {
+    if (!ev || !LINKS_TYPES.has(ev.type)) continue
+    const toks = tokensOf(ev.text)
+    if (toks.length < 2) continue
+    items.push({ id: String(ev.id ?? ''), toks, ts: Date.parse(ev.ts) || 0 })
+  }
+  // 倒排：只算「至少共享一个片段」的对。全量两两在千条账本上要好几秒，
+  // 产品要求 links 首次 < 2s，工装得先能在这个量级上跑得动。
+  const index = new Map()
+  items.forEach((it, i) => {
+    for (const t of it.toks) {
+      const arr = index.get(t)
+      if (arr) arr.push(i)
+      else index.set(t, [i])
+    }
+  })
+  const out = new Map()
+  for (let i = 0; i < items.length; i += 1) {
+    const inter = new Map()
+    for (const t of items[i].toks) {
+      for (const j of index.get(t) ?? []) {
+        if (j !== i) inter.set(j, (inter.get(j) ?? 0) + 1)
+      }
+    }
+    const cand = []
+    for (const [j, n] of inter) {
+      const d = (2 * n) / (items[i].toks.length + items[j].toks.length)
+      if (d >= minDice) cand.push({ id: items[j].id, d, ts: items[j].ts })
+    }
+    cand.sort((a, b) => b.d - a.d || b.ts - a.ts || (a.id < b.id ? -1 : 1))
+    if (cand.length) out.set(items[i].id, cand.slice(0, maxLinks).map((x) => x.id))
+  }
+  return out
+}
+
+/**
+ * 产品的 links 模块落地了没有。只看两件事：
+ *   1) lib/links.js 能 import 且导出 buildLinks；
+ *   2) lib/recall.js 的源码里出现 links（说明 searchEvents 认这个开关）。
+ * 两条都满足才走产品实现；否则用参考实现，并在报告里说清楚。
+ */
+export async function loadLinksSupport() {
+  let build = null
+  try {
+    const m = await import('../lib/links.js')
+    if (typeof m.buildLinks === 'function') build = m.buildLinks
+  } catch {
+    build = null
+  }
+  let recallKnows = false
+  try {
+    recallKnows = /links/.test(readFileSync(new URL('../lib/recall.js', import.meta.url), 'utf8'))
+  } catch {
+    recallKnows = false
+  }
+  if (build && recallKnows) return { kind: 'lib', build, recallKnows }
+  return { kind: 'reference', build: buildLinks, recallKnows }
+}
+
+function localDay(ts) {
+  const d = new Date(ts)
+  if (!Number.isFinite(d.getTime())) return ''
+  return (
+    d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0')
+  )
+}
+
+/**
+ * 参考实现的「1 跳扩散」：命中之后把 links 里的判断以 0.5 权重挂到结果后面。
+ * searchEvents 不吐分数，所以这里按「父条目在结果里的先后」挂——工装侧近似，
+ * 只用来先量「会不会变差」，不是产品的排序。
+ *
+ * @param {object[]} events
+ * @param {object[]} baseRows 基础召回（多取一些，留出被挤掉的空间）
+ * @param {Map<string,string[]>} links
+ */
+export function spreadLinkedRows(events, baseRows, links, { limit = DEFAULT_LIMIT, now = Date.now() } = {}) {
+  const byId = new Map((events ?? []).map((e) => [String(e?.id ?? ''), e]))
+  const seen = new Set()
+  const out = []
+  const toRow = (ev, ts, related) => {
+    const text = String(ev.text ?? '')
+    return {
+      id: String(ev.id ?? ''),
+      date: localDay(ts),
+      ago: Math.max(0, Math.floor((now - ts) / 86_400_000)),
+      type: String(ev.type ?? ''),
+      text: text.length > 200 ? text.slice(0, 199) + '…' : text,
+      related,
+    }
+  }
+  // 挂的位置是「紧跟在带出它的那条后面」：0.5 权重低于父条目，但仍在结果里，
+  // 不是全排在队尾（那样后取 limit 时会被整段裁掉，等于没接上）。
+  outer: for (const r of baseRows) {
+    if (!seen.has(r.id)) {
+      seen.add(r.id)
+      out.push(r)
+    }
+    if (out.length >= limit) break
+    for (const id of links.get(r.id) ?? []) {
+      if (seen.has(id)) continue
+      const ev = byId.get(id)
+      if (!ev || ev.type === 'meta') continue
+      const ts = Date.parse(ev.ts)
+      if (!Number.isFinite(ts)) continue
+      seen.add(id)
+      out.push(toRow(ev, ts, r.id))
+      if (out.length >= limit) break outer
+    }
+  }
+  return out.slice(0, limit)
+}
+
+/**
+ * 跑一条 query 的三档。
+ *
+ * @param {object[]} events
+ * @param {{q:string, expect?:string[]}} item
+ * @param {{limit?:number, now?:number, solidIds?:Set<string>|string[],
+ *          expand?:(q:string)=>string[]|null, links?:Map<string,string[]>,
+ *          linksKind?:'lib'|'reference'}} o
+ */
+export function runP5One(events, item, o = {}) {
+  const limit = o.limit ?? DEFAULT_LIMIT
+  const now = o.now ?? Date.now()
+  const solidIds = o.solidIds
+  const expect = Array.isArray(item.expect) ? item.expect : []
+  const hitsOf = (ids) => expect.filter((id) => ids.includes(id)).length
+
+  const literal = runOne(events, item, { limit, now, mode: 'literal' })
+  const linksOff = runOne(events, item, { limit, now, mode: 'ranked', solidIds, expand: o.expand })
+
+  let linksOn
+  if (o.linksKind === 'lib') {
+    const t0 = performance.now()
+    const rows = searchEvents(events, item.q, {
+      ...optionsFor('ranked', { limit, solidIds }),
+      now,
+      links: true,
+    }).rows
+    const ms = performance.now() - t0
+    const ids = rows.map((r) => String(r.id ?? ''))
+    linksOn = { rows, ids, ms, hits: hitsOf(ids) }
+  } else {
+    const t0 = performance.now()
+    // 基础召回多取一点，给扩散腾位置；扩散后再裁到 limit
+    const base = runOne(events, item, {
+      limit: Math.min(20, limit * 3),
+      now,
+      mode: 'ranked',
+      solidIds,
+      expand: o.expand,
+    })
+    const rows = spreadLinkedRows(events, base.rows, o.links ?? new Map(), { limit, now })
+    const ms = performance.now() - t0
+    const ids = rows.map((r) => String(r.id ?? ''))
+    linksOn = { rows, ids, ms, hits: hitsOf(ids) }
+  }
+
+  return {
+    q: item.q,
+    expect,
+    literal,
+    linksOff,
+    linksOn,
+    sameOffOn: JSON.stringify(linksOff.ids) === JSON.stringify(linksOn.ids),
+    top1: {
+      literal: literal.ids[0] ?? '',
+      linksOff: linksOff.ids[0] ?? '',
+      linksOn: linksOn.ids[0] ?? '',
+    },
+  }
+}
+
+/**
+ * 跑整份问卷的三列。
+ *
+ * @param {object[]} events
+ * @param {{q:string, expect?:string[]}[]} queries
+ * @param {{limit?:number, now?:number, links?:Map<string,string[]>,
+ *          linksKind?:'lib'|'reference', expand?:(q:string)=>string[]|null}} o
+ */
+export function runP5(events, queries, o = {}) {
+  const limit = o.limit ?? DEFAULT_LIMIT
+  const now = o.now ?? Date.now()
+  const solidIds = o.solidIds ?? solidIdsOf(events)
+  const linksKind = o.linksKind ?? 'reference'
+  const links = o.links ?? (linksKind === 'lib' ? new Map() : buildLinks(events))
+  const rows = queries.map((item) =>
+    runP5One(events, item, { limit, now, solidIds, expand: o.expand, links, linksKind }),
+  )
+  const expected = rows.reduce((n, r) => n + r.expect.length, 0)
+  const side = (key) => {
+    const hits = rows.reduce((n, r) => n + r[key].hits, 0)
+    const times = rows.map((r) => r[key].ms)
+    return {
+      hits,
+      hitRate: expected ? hits / expected : null,
+      p50: percentile(times, 0.5),
+      p95: percentile(times, 0.95),
+    }
+  }
+  const summary = {
+    n: rows.length,
+    expected,
+    literal: side('literal'),
+    linksOff: side('linksOff'),
+    linksOn: side('linksOn'),
+  }
+  return { n: rows.length, expected, limit, linksKind, rows, summary, regressions: findRegressions(rows) }
+}
+
+/**
+ * 「links 开不许变差」的判定：对每条 query 的每个 expect id 比位次。
+ * 只有当 expect 非空时才有意义；真账本的问卷 expect 是空的，就只列 top1 差异。
+ *
+ * @param {{q:string, expect:string[], linksOff:object, linksOn:object}[]} rows
+ * @returns {{i:number, q:string, expect:string, offPos:number, onPos:number, worse:boolean,
+ *            dropped:string[]}[]}
+ */
+export function findRegressions(rows) {
+  const out = []
+  rows.forEach((r, idx) => {
+    const expect = Array.isArray(r.expect) ? r.expect : []
+    if (!expect.length) return
+    const offIds = r.linksOff.ids
+    const onIds = r.linksOn.ids
+    for (const id of expect) {
+      // 被挤掉的其它条目；期望的那条自己由「位次 → 未命中」说，不重复列
+      const dropped = offIds.filter((x) => !onIds.includes(x) && x !== id)
+      const offPos = offIds.indexOf(id) // -1 = 没命中
+      const onPos = onIds.indexOf(id)
+      if (onPos < 0 && offPos < 0) continue
+      // 变差 = 从命中变成没命中，或位次后退
+      const worse = onPos < 0 || (offPos >= 0 && onPos > offPos)
+      if (worse) out.push({ i: idx + 1, q: r.q, expect: id, offPos, onPos, worse, dropped })
+    }
+  })
+  return out
+}
+
 /** 最近秩百分位：小样本也不至于像线性插值那样给出一个「不存在的数」 */
 export function percentile(values, p) {
   const a = values.filter((v) => Number.isFinite(v)).sort((x, y) => x - y)
@@ -341,6 +633,93 @@ export function renderReport(bench, { diff = false } = {}) {
   return parts.join('\n')
 }
 
+/* ---------------- P5 三列的渲染 ---------------- */
+
+const P5_LABELS = [
+  ['literal', 'literal'],
+  ['linksOff', 'links 关'],
+  ['linksOn', 'links 开'],
+]
+
+function fmtPos(pos) {
+  return pos < 0 ? '未命中' : String(pos + 1)
+}
+
+/** 一条 query 的三列块 */
+export function renderP5Row(r, { show = SHOW_ROWS } = {}) {
+  const out = ['#' + String(r.i).padStart(2, '0') + ' 「' + r.q + '」 期望 ' + r.expect.length + ' 条']
+  for (const [key, label] of P5_LABELS) {
+    const side = r[key]
+    out.push('  ' + label.padEnd(7) + ' ' + side.hits + '/' + r.expect.length + ' ' + fmtMs(side.ms))
+    for (const row of side.rows.slice(0, show)) {
+      const tag = row.related ? '（由 ' + row.related + ' 带出）' : ''
+      out.push('    - ' + row.id + ' · ' + row.date + ' · ' + firstChars(row.text) + tag)
+    }
+    if (!side.rows.length) out.push('    （没翻到）')
+  }
+  return out.join('\n')
+}
+
+/** 变差的那一行：query、位次（off → on）、被挤掉的 id */
+export function renderRegression(reg) {
+  return (
+    '  ! #' + String(reg.i).padStart(2, '0') + ' 「' + reg.q + '」 ' + reg.expect + ' ' +
+    '位次 ' + fmtPos(reg.offPos) + ' → ' + fmtPos(reg.onPos) + '；被挤掉 ' +
+    (reg.dropped.length ? reg.dropped.join(' ') : '（其余条目都还在）')
+  )
+}
+
+/** 三行汇总 + 判定 */
+export function renderP5Summary(bench) {
+  const lines = []
+  for (const [key, label] of P5_LABELS) {
+    const s = bench.summary[key]
+    const rate = s.hitRate === null ? '—（问卷没标 expect）' : ((s.hitRate * 100).toFixed(0) + '%')
+    lines.push('  ' + label.padEnd(7) + ' 命中 ' + s.hits + '/' + bench.expected + '（' + rate + '）  p50 ' + fmtMs(s.p50) + '  p95 ' + fmtMs(s.p95))
+  }
+  const off = bench.summary.linksOff.hits
+  const on = bench.summary.linksOn.hits
+  if (!bench.expected) {
+    lines.push('  判定：问卷没标 expect，只报数不判「变差」；top1 差异见下。')
+  } else if (bench.regressions.length) {
+    lines.push('  判定：links 开 ' + on + ' / 关 ' + off + '，有 ' + bench.regressions.length + ' 条变差（逐条见上）。')
+  } else {
+    lines.push('  判定：links 开 ' + on + ' ≥ 关 ' + off + '，没有变差。')
+  }
+  return lines.join('\n')
+}
+
+/** 三档 top1 不同的那几条 */
+export function renderP5TopDiff(bench) {
+  const diffs = []
+  bench.rows.forEach((r, idx) => {
+    const { literal, linksOff, linksOn } = r.top1
+    if (literal === linksOff && linksOff === linksOn) return
+    diffs.push(
+      '  #' + String(idx + 1).padStart(2, '0') + ' 「' + r.q + '」 literal ' + (literal || '（空）') + ' · off ' + (linksOff || '（空）') + ' · on ' + (linksOn || '（空）'),
+    )
+  })
+  if (!diffs.length) return '三档 top1 全同，没有可看的差异。'
+  return diffs.join('\n')
+}
+
+/**
+ * 整张三列表。kind=reference 时表头明说：这一列是工装侧参考实现，不是产品结果。
+ */
+export function renderP5Report(bench, { show = SHOW_ROWS } = {}) {
+  const parts = []
+  const blocks = bench.rows.map((r, idx) => renderP5Row({ ...r, i: idx + 1 }, { show }))
+  parts.push(blocks.join('\n\n'))
+  if (bench.regressions.length) {
+    parts.push('—— 变差的行 ——')
+    parts.push(bench.regressions.map(renderRegression).join('\n'))
+  }
+  parts.push('—— 汇总 ——')
+  parts.push(renderP5Summary(bench))
+  parts.push('—— 三档 top1 差异 ——')
+  parts.push(renderP5TopDiff(bench))
+  return parts.join('\n')
+}
 function usage() {
   return [
     '用法：node tools/recall-bench.mjs [选项]',
@@ -349,6 +728,7 @@ function usage() {
     '  --queries <file>  问卷文件，默认 <root>/queries.jsonl',
     '  --limit <n>       每条最多取几条（1–20，默认 8），屏幕只打前 3',
     '  --diff            只打 literal 与 ranked 结果不一致的行',
+    '  --p5              P5 三列对照：literal / ranked(links 关) / ranked(links 开)',
     '  --json            机器可读（完整结果）',
     '  -h, --help        这页',
   ].join('\n')
@@ -372,6 +752,54 @@ async function main() {
     const events = readEventsFile(eventsPath)
     const queries = readQueries(args.queriesPath)
     const expand = await loadExpander()
+    if (args.p5) {
+      const support = await loadLinksSupport()
+      const links = support.build(events)
+      const bench = runP5(events, queries, { limit: args.limit, expand, links, linksKind: support.kind })
+      if (args.json) {
+        console.log(JSON.stringify({
+          root: args.root,
+          queriesPath: args.queriesPath,
+          events: events.length,
+          linksKind: bench.linksKind,
+          links: links.size,
+          n: bench.n,
+          expected: bench.expected,
+          limit: bench.limit,
+          summary: bench.summary,
+          regressions: bench.regressions,
+          rows: bench.rows.map((r) => ({
+            q: r.q,
+            expect: r.expect,
+            top1: r.top1,
+            sameOffOn: r.sameOffOn,
+            literal: { ids: r.literal.ids, hits: r.literal.hits, ms: r.literal.ms },
+            linksOff: { ids: r.linksOff.ids, hits: r.linksOff.hits, ms: r.linksOff.ms },
+            linksOn: {
+              ids: r.linksOn.ids,
+              hits: r.linksOn.hits,
+              ms: r.linksOn.ms,
+              related: r.linksOn.rows.filter((x) => x.related).map((x) => ({ id: x.id, from: x.related })),
+            },
+          })),
+        }, null, 2))
+        return
+      }
+      console.log('P5 三列对照：literal / ranked(links 关) / ranked(links 开)')
+      console.log('账本 ' + eventsPath + '（' + events.length + ' 条）· 问卷 ' + args.queriesPath + '（' + queries.length + ' 条）· 每条取 top ' + args.limit)
+      if (support.kind === 'lib') {
+        console.log('links：产品实现（lib/links.js 已落地）· 建成 ' + links.size + ' 条')
+      } else {
+        console.log('links：还没落地，这一列用**工装侧参考实现**（Dice top-' + LINKS_MAX + ' ≥ ' + LINKS_MIN_DICE + '，1 跳 × ' + LINKS_WEIGHT + '）——只是先把三列跑通，不是产品结果')
+        console.log('      建成 ' + links.size + ' 条（只看 utterance / revise）')
+      }
+      if (!expand) {
+        console.log('（ranked 现在只叠显著性；P3 的 lib/search-index.js 出现后会自动接上同义词扩展）')
+      }
+      console.log('')
+      console.log(renderP5Report(bench))
+      return
+    }
     const bench = runBench(events, queries, { limit: args.limit, expand })
     if (args.json) {
       console.log(JSON.stringify({
