@@ -56,7 +56,7 @@ function buildEvents() {
       stage: 1,
       type: i % 3 === 0 ? 'heard' : i % 7 === 0 ? 'judgment' : 'utterance',
       source: 'system',
-      text: special.get(i) ?? `第 ${i} 条：日常里的一点小事，没什么要特别记住的。`,
+      text: special.get(i) ?? `第 ${i} 条：日常小事，没什么要特别记住。`,
       refs: [],
       verdict: null,
       confidence: 0.5,
