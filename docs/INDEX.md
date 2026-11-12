@@ -52,4 +52,4 @@
 | `docs/历史/openq-回放候选句.md` | 668 条 utterance 里捞出的候选与边界样本 | 不改 |
 | `docs/历史/父项移植表.md` | A20：从 river 25 条逐项移植的结论与代码位置 | 不改 |
 | `docs/历史/接线核验.md` | A33：15 个文件 / 16 条入口的接线核对记录 | 不改 |
-| `dsh-roost-pet/docs/dsh-pet-*.md`（6 份） | 桌宠需求/验收/施工单，已移回 [身体仓库](https://github.com/bychance6600/dsh-perch-pet/tree/main/docs) | 不改 |
+| `dsh-roost-pet/docs/dsh-pet-*.md`（6 份） | 桌宠需求/验收/施工单，已移回 [身体仓库](https://github.com/bychance6600/dsh-roost-pet/tree/main/docs) | 不改 |
