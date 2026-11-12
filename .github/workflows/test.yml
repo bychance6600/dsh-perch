@@ -69,3 +69,19 @@ jobs:
             echo "::error title=CI 测试失败::$line"
           done
           exit 1
+
+  # 路由 60 秒缓存的模块打桩要 --experimental-test-module-mocks，普通 npm test 会 skip；
+  # 单开一个 job，失败就是红，不能靠 skip 混过去。只在 ubuntu + node 24 上跑。
+  forget-cache:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - name: 路由 60 秒缓存（deriveSelf 只调一次）
+        env:
+          DSH_ACCEPTANCE_MODULE_MOCKS: '1'
+        run: node --experimental-test-module-mocks --test test/router-forget-cache.test.mjs
