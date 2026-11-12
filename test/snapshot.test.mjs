@@ -52,16 +52,26 @@ async function seeded(root, n, now = NOW) {
   return { events, model, written }
 }
 
-test('指纹由条数、最后一条 id、本地日期、阶段跨度组成', () => {
+test('指纹由条数、最后一条 id、本地日期、成长天数、阶段跨度组成', () => {
   const events = genEvents(3)
   const fp = snapshotFingerprint(events, { now: NOW })
-  assert.match(fp, /^3:ev_bench_[^:]+:\d{4}-\d{2}-\d{2}:30$/)
+  assert.match(fp, /^3:ev_bench_[^:]+:\d{4}-\d{2}-\d{2}:\d+:\d+$/)
 
   // dayKey 按本地日期算，不是 UTC。
   const late = new Date(2026, 10, 12, 23, 30, 0)
   const next = new Date(2026, 10, 13, 0, 30, 0)
   assert.match(snapshotFingerprint(events, { now: late }), /:2026-11-12:/)
   assert.match(snapshotFingerprint(events, { now: next }), /:2026-11-13:/)
+
+  // 成长日的边界是「seed 时刻 + k×24h」，不是午夜：同一天内跨过去，指纹必须变。
+  // 反例（只按自然日做指纹）会让重启后的 she.day 停在昨天。
+  const seedTs = new Date(2026, 10, 1, 9, 0, 0).toISOString()
+  const seedOnly = [{ id: 'ev_seed', type: 'seed', ts: seedTs, text: '种子' }]
+  const before = snapshotFingerprint(seedOnly, { now: new Date(2026, 10, 5, 8, 59).getTime() })
+  const after = snapshotFingerprint(seedOnly, { now: new Date(2026, 10, 5, 9, 1).getTime() })
+  assert.equal(before.split(':')[2], after.split(':')[2], '两次都是同一自然日')
+  assert.notEqual(before.split(':')[3], after.split(':')[3], '跨过 seed 时刻的日界，成长天数应不同')
+  assert.notEqual(before, after, '同一天跨过成长日边界，指纹必须不同')
 
   // stageSpanDays 与 deriveSelf 用同一个 clampInt：7–180，默认 30。
   assert.match(snapshotFingerprint(events, { now: NOW, stageSpanDays: 1 }), /:7$/)
