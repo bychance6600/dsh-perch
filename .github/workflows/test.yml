@@ -41,6 +41,11 @@ jobs:
           done
           exit 1
 
+      # 预算（AGENTS §19）：重放随条数超线性增长过一次，肉眼看不出，只有量才知道。
+      # 这里只量到 1 万条——5 万条那条要 --big，几十秒，放本地。
+      - name: 跑预算（1 万条重放 < 700ms）
+        run: node tools/bench.mjs
+
   # Windows 单独跑一轮：路径归一化、chmod 语义、ffmpeg 探测在这边和 Linux 不一样，
   # 而这些正是这个插件最容易出问题的地方。
   test-windows:
