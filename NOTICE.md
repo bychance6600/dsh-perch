@@ -2,8 +2,10 @@
 
 ## 代码
 
-- 本项目从 **[ssamurias/dsh-fish](https://github.com/ssamurias/dsh-fish) 0.8.5**（MIT）演进而来：事件流、四阶段与瓶颈、记忆显著性与固化、拒绝与疤、观测台、B 站浏览等骨架来自该项目的作者。
-- 渠道层的设计参考了 **[Britneycode/dsh-fish-soul](https://github.com/Britneycode/dsh-fish-soul) 0.12.0**（MIT）的思路（每聊一句的流水、出站筛选、按人隔离），实现是重写的，没有整块拷贝。
+本项目的设计前提与早期实现参考过若干以 **MIT** 许可发布的同人项目。经过 0.1.0 的重建，它已经是独立的一套东西；但若其中仍有沿用的片段，版权归原作者，许可仍为 MIT。
+
+随包分发的第三方源码只有一处：
+
 - `lib/vendor/uqr.mjs` 来自 **uqr@0.1.2**（MIT，Anthony Fu），作为源码随包分发，**不构成运行时依赖**——`package.json` 的三个依赖字段永远是 `{}`。
 
 ## 理论引用
