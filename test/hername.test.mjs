@@ -38,6 +38,10 @@ test('pickHerName 认得「你的名字是…」「给你起名…」「以后�
   // 2026-11-10：TZ 那边说的是这个语序，之前认不出——「你就叫」被「以后」隔开了
   assert.equal(pickHerName('你以后就叫鱼欣'), '鱼欣')
   assert.equal(pickHerName('从今天起你就叫鱼欣吧'), '鱼欣')
+  // 2026-11-12：TZ 说的是「我给你取名叫鱼欣」——中间没有「名字」二字，之前认不出，
+  // 界面上就一直叫「她」「她的家」。
+  assert.equal(pickHerName('我给你取名叫鱼欣'), '鱼欣')
+  assert.equal(pickHerName('我给你取名叫鱼欣，你没拒绝，认可了这个名字'), '鱼欣')
   assert.equal(pickHerName('我有名字了：小满。'), '小满')
 })
 
