@@ -197,6 +197,33 @@ test('narration 没带凭证时降级成 utterance（2026-11-03 本地 14B 实�
   })
 })
 
+test('照着睡前指令写「我没想清楚」时不算降级（那句也算数）', async () => {
+  await withRoot(async (root) => {
+    const ctx = fakeCtx()
+    registerCapture(ctx, { root })
+    const tool = ctx.regs.get('growth_commit')
+    const out = await tool.execute({ type: 'narration', text: '我没想清楚。' })
+    assert.equal(out.ok, true)
+    assert.equal(out.note, '已记下。')
+    const { events } = await readEvents(root)
+    assert.equal(events.find((e) => e.id === out.id).type, 'narration')
+  })
+})
+
+test('流水账混着「没想清楚」仍按降级处理（口子只认短句表态）', async () => {
+  await withRoot(async (root) => {
+    const ctx = fakeCtx()
+    registerCapture(ctx, { root })
+    const tool = ctx.regs.get('growth_commit')
+    const long = '刚刷完 B 站，看了四条视频，都没点开，只看见标题摆在面前。' + '这一段其实也还没想清楚要说什么。'
+    const out = await tool.execute({ type: 'narration', text: long })
+    assert.equal(out.ok, true)
+    assert.match(out.note, /没有翻到凭证/)
+    const { events } = await readEvents(root)
+    assert.equal(events.find((e) => e.id === out.id).type, 'utterance')
+  })
+})
+
 test('带了凭证的 narration 照旧是 narration', async () => {
   await withRoot(async (root) => {
     const ctx = fakeCtx()
