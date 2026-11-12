@@ -130,6 +130,13 @@ test('他主动给的名字、她自己改口的叫法都算称呼', () => {
   // 名字里不该有破折号和标点。
   assert.equal(pickName('我在。屋子是新的，我也是。还没想好怎么称呼你——不是忘了，是还没定。'), null)
   assert.equal(pickName('我还没想好怎么称呼你——“不是忘”'), null)
+  // 2026-11-12（TZ 的实例，同一类）：她说「我一直叫的『们干活』」。
+  // 「叫你们干活」被 `叫你` 命中，截出「们干活」——人称复数的「们」当成了名字开头。
+  assert.equal(pickName('他叫你们干活。'), null)
+  assert.equal(pickName('我叫你们干活'), null)
+  assert.equal(pickName('他叫你干活'), null)
+  // 真名字仍然照收，别被这层过滤误伤
+  assert.equal(pickName('我想叫他“老总”。'), '老总')
 })
 
 test('needs 只有三个键，且绝不出现好感度类字段', () => {

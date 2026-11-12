@@ -20,7 +20,7 @@
       06-qq-wal.jsonl       最近 40 条 QQ 收发（正文截到 120 字）
       07-stats.txt          按类型计数、改口/拒绝/叙事的条数、导入标记
 
-  不收集：头像、日记正文以外的媒体、任何密钥原文。
+  不收集：头像、日记正文以外的媒体、任何密钥原文（含 cookie / accessToken / token / password / secret / apiKey）。
 #>
 
 [CmdletBinding()]
@@ -62,7 +62,7 @@ function Write-Utf8([string]$Path, [string[]]$Lines) {
 function Redact([string]$Text) {
   $t = $Text
   # 令牌/密钥：只留结构，不留值
-  $t = [regex]::Replace($t, '("?(?:accessToken|token|password|secret|apiKey)"?\s*[:=]\s*")[^"]*(")', '$1<已抹>$2')
+  $t = [regex]::Replace($t, '("?(?:accessToken|token|password|secret|apiKey|cookie|credential)"?\s*[:=]\s*")[^"]*(")', '$1<已抹>$2')
   $t = [regex]::Replace($t, '(?i)(authorization:\s*bearer\s+)\S+', '$1<已抹>')
   # .env 形状
   $t = [regex]::Replace($t, '(?im)^(\s*[A-Z0-9_]*(?:TOKEN|KEY|SECRET)\s*=\s*).*$', '$1<已抹>')

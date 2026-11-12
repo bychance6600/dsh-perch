@@ -223,6 +223,19 @@ test('stripScaffold：真有话时保留，只去掉混进来的标记和状态�
   assert.equal(stripScaffold('我在思考你说的那句话。'), '我在思考你说的那句话。')
 })
 
+test('stripScaffold：普通工具调用标签与英文自言自语也不出门（2026-11-12 TZ 的实例）', () => {
+  // 真机：QQ 里收到三条，分别是这段英文 + 裸标签。
+  assert.equal(stripScaffold('</parameter>\n</invoke>'), '')
+  assert.equal(stripScaffold(') </parameter>\n就是这个意思。'), '就是这个意思。')
+  // 她把想说的那句包在 The reply content: “…” 里时，取引号里那句，别连脚手架一起扔
+  assert.equal(
+    stripScaffold('Whoa — the parameter came out wrong (I typo\'d the closing tag). Wait, I haven\'t actually called it yet. Let me write it properly. The reply content: "天黑了。'),
+    '天黑了。',
+  )
+  // 混在正文里的裸标签剥掉，正文留着
+  assert.equal(stripScaffold('那句我不接。\n</invoke>'), '那句我不接。')
+})
+
 test('stripScaffold：空输入不炸', () => {
   assert.equal(stripScaffold(''), '')
   assert.equal(stripScaffold(null), '')
