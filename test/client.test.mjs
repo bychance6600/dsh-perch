@@ -188,48 +188,10 @@ test('apply 注册设置节、侧栏「记忆图谱」行与 main 页面', async
 
   // 「成长」页的入口：走宿主 layout.selectPanel，跟点左栏同一套；不再开新标签。
   assert.deepEqual(services, [['layout']])
+  // 2026-11-13：图谱已经是侧栏独立页，「成长」页不再放重复入口。
   const grow = openTab(exports, react, '成长')
-  const findAnchor = (node) => {
-    if (!node || typeof node !== 'object') return null
-    if (Array.isArray(node)) { for (const n of node) { const hit = findAnchor(n); if (hit) return hit } return null }
-    if (node.type === 'a' && textOf(node).join('') === '打开记忆图谱 →') return node
-    for (const c of node.children || []) { const hit = findAnchor(c); if (hit) return hit }
-    return null
-  }
-  const link = findAnchor(grow)
-  assert.ok(link, '「成长」页要有记忆图谱入口')
-  assert.equal(link.props.target, undefined, '不能再开新标签')
-  let prevented = false
-  link.props.onClick({ preventDefault() { prevented = true } })
-  assert.equal(prevented, true)
-  assert.deepEqual(selected, ['roost-memory'])
-  assert.equal(opened.length, 0, '有 layout 服务时不该走 window.open')
-})
-
-test('拿不到 layout 服务时，记忆图谱入口退回顶层新标签', async () => {
-  const react = fakeReact()
-  const { exports, opened } = await loadClient({ react })
-  const registered = []
-  exports.apply({
-    effect: (fn) => { fn(); return () => {} },
-    slots: {
-      inject(name, fn) { fn(); return () => {} },
-      register(meta, Component) { registered.push({ meta, Component }); return () => {} },
-    },
-  })
-
-  const grow = openTab(exports, react, '成长')
-  const findAnchor = (node) => {
-    if (!node || typeof node !== 'object') return null
-    if (Array.isArray(node)) { for (const n of node) { const hit = findAnchor(n); if (hit) return hit } return null }
-    if (node.type === 'a' && textOf(node).join('') === '打开记忆图谱 →') return node
-    for (const c of node.children || []) { const hit = findAnchor(c); if (hit) return hit }
-    return null
-  }
-  const link = findAnchor(grow)
-  assert.ok(link)
-  link.props.onClick({ preventDefault() {} })
-  assert.deepEqual(opened, [['/dsh-perch/memory', '_blank', 'noopener,noreferrer']])
+  const flat = textOf(grow).join('')
+  assert.ok(!flat.includes('打开记忆图谱'), '「成长」页不该再有重复的图谱入口')
 })
 
 test('组件在"还没有数据"时也能渲染，不抛错', async () => {
