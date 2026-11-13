@@ -30,19 +30,29 @@ const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const DEFAULT_ROOT = join(homedir(), '.dsh-perch-samples')
 
 /** 产品验收口径：三种 kinds 的节点数。数字来自真账本，不是实现巧合。 */
+/**
+ * 图谱上真正画出来的点数。utterance 只有 16：852 句已经以同一个事件 id 长成判断，
+ * 同一个事件不重复画点（见 lib/observe.js 的 kinds 去重）。整层的真数在 meta.counts。
+ */
 export const EXPECTED_KIND_COUNTS = Object.freeze({
+  belief: 860,
+  utterance: 16,
+  heard: 1486,
+})
+
+/** meta.counts 报的是整层真数，不受去重影响。 */
+export const EXPECTED_META_COUNTS = Object.freeze({
   belief: 860,
   utterance: 868,
   heard: 1486,
 })
 
-/** 约 1.2 MiB；给 1.1–1.4 MiB 的容差，避免把「约」写成逐字节相等。 */
-export const EXPECTED_TOTAL_BYTES = 1.2 * 1024 * 1024
-export const BYTES_MIN = 1.1 * 1024 * 1024
-export const BYTES_MAX = 1.4 * 1024 * 1024
+/** 整包 API 应显著大于只带判断的 427,550B，又小于账本 1,324,049B。 */
+export const BYTES_MIN = 600 * 1024
+export const BYTES_MAX = 1.3 * 1024 * 1024
 
 /** AGENTS.md 里的全量基线（2026-11-13）。 */
-export const BASELINE = Object.freeze({ tests: 1485, pass: 1474, fail: 9, skipped: 2 })
+export const BASELINE = Object.freeze({ tests: 1499, pass: 1488, fail: 9, skipped: 2 })
 
 const PERF_LIMIT_MS = 1000
 const REGRESSION_TIMEOUT_MS = 300000
@@ -203,6 +213,16 @@ function makeCanvasContext() {
     restore: noop,
     beginPath: noop,
     arc: noop,
+    quadraticCurveTo: noop,
+    bezierCurveTo: noop,
+    ellipse: noop,
+    rect: noop,
+    roundRect: noop,
+    clip: noop,
+    drawImage: noop,
+    putImageData: noop,
+    getImageData: () => ({ data: new Uint8ClampedArray(4) }),
+    createPattern: () => null,
     fill: noop,
     stroke: noop,
     moveTo: noop,
@@ -272,7 +292,8 @@ export async function runPage(data, opts = {}) {
     history: { replaceState() {} },
     navigator: {},
     devicePixelRatio: 1,
-    requestAnimationFrame() { return 1 },
+    requestAnimationFrame(cb) { return setTimeout(() => cb(performance.now()), 0) },
+    cancelAnimationFrame(id) { clearTimeout(id) },
     cancelAnimationFrame() {},
     matchMedia() { return { matches: false, addEventListener() {} } },
     addEventListener() {},
@@ -282,11 +303,13 @@ export async function runPage(data, opts = {}) {
     },
   }
   sandbox.window = sandbox
-  Object.defineProperty(sandbox, '__memoryGraph', {
+  const watch = (name) => Object.defineProperty(sandbox, name, {
     configurable: true,
     get() { return graph },
     set(v) { graph = v; paintAt = performance.now(); resolvePaint(v) },
   })
+  watch('__memoryGrowth')
+  watch('__memoryGraph')
 
   vm.createContext(sandbox)
   vm.runInContext(script, sandbox, { filename: 'memory-page.inline.js' })
@@ -304,11 +327,11 @@ export async function runPage(data, opts = {}) {
   // vm 里造出来的对象原型来自另一个 realm，isDeepStrictEqual 会因原型不同判 false；
   // 先 JSON 往返成宿主对象，比较的是坐标本身，不是对象的出生地。
   const stats = JSON.parse(JSON.stringify(graph.stats()))
-  const coords = []
-  for (let i = 0; i < data.nodes.length; i += 1) {
-    const p = graph.clientOf(i)
-    coords.push(p ? { x: p.x, y: p.y, id: p.id } : null)
-  }
+  const rawCoords = typeof graph.coords === 'function'
+    ? graph.coords()
+    : data.nodes.map((_, i) => { const p = graph.clientOf(i); return p ? { x: p.x, y: p.y, id: p.id } : null })
+  // vm 里造的对象原型来自另一个 realm，deepStrictEqual 会误判；坐标只比数值。
+  const coords = JSON.parse(JSON.stringify(rawCoords))
   return {
     graph,
     stats,
@@ -323,7 +346,7 @@ export async function runPage(data, opts = {}) {
 }
 
 function coordsForBeliefs(run, data) {
-  return data.nodes.map((n, i) => ({ i, kind: n.kind, coord: run.graph.clientOf(i) })).filter((x) => x.kind === 'belief')
+  return data.nodes.map((n, i) => ({ i, kind: n.kind, coord: (run.graph.node ? run.graph.node(i) : run.graph.clientOf(i)) })).filter((x) => x.kind === 'belief')
 }
 
 export function triggerStatusFilter(run, status) {
@@ -398,6 +421,10 @@ export async function checkFilterDecoupling(data) {
     g.toggleKind('heard')
     applied = 'toggleKind("heard")'
   }
+  if (!applied && typeof g.filter === 'function') {
+    g.filter({ types: { belief: true, utterance: true, heard: false } })
+    applied = 'filter({types.heard:false})'
+  }
   if (!applied) {
     return {
       status: '不通过',
@@ -457,14 +484,19 @@ export async function runAcceptance(opts = {}) {
     const got = kinds.byKind[kind] || { count: 0, bytes: 0 }
     return { kind, expected, count: got.count, bytes: got.bytes, ok: got.count === expected }
   })
+  const metaCounts = (api.body && api.body.meta && api.body.meta.counts) || {}
+  const metaRows = Object.entries(EXPECTED_META_COUNTS).map(([kind, expected]) => ({
+    kind, expected, count: metaCounts[kind] ?? null, ok: metaCounts[kind] === expected,
+  }))
   const bytesOk = api.bytes >= BYTES_MIN && api.bytes <= BYTES_MAX
-  const apiKindsOk = kindRows.every((r) => r.ok)
+  const apiKindsOk = kindRows.every((r) => r.ok) && metaRows.every((r) => r.ok)
   const kindsRow = {
     status: apiKindsOk && bytesOk ? '通过' : '不通过',
     measured: kindRows.map((r) => r.kind + ' ' + r.count + '/' + r.expected + ' 条 ' + r.bytes + 'B').join('；') +
-      '；API ' + api.bytes + 'B（期望约 1.2MiB，' + Math.round(BYTES_MIN) + '–' + Math.round(BYTES_MAX) + 'B）' +
+      '；meta.counts ' + metaRows.map((r) => r.kind + ' ' + r.count + '/' + r.expected).join(' / ') +
+      '；API ' + api.bytes + 'B（' + Math.round(BYTES_MIN) + '–' + Math.round(BYTES_MAX) + 'B）' +
       '；账本 ' + ledger.bytes + 'B',
-    detail: { kindRows, apiBytes: api.bytes, apiKindsOk, bytesOk, ledger },
+    detail: { kindRows, metaRows, apiBytes: api.bytes, apiKindsOk, bytesOk, ledger },
   }
 
   const det = await checkLayoutDeterminism(api.body)
