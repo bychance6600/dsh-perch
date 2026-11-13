@@ -142,7 +142,9 @@ test('侧栏：旧句 → 改口 → 现话；改过但账本没留旧句也留�
 test('页面：默认收起 340px 抽屉、竖标签、三类计数、HUD 真数与补全提示', () => {
   assert.match(MEMORY_PAGE, /width:340px/)
   assert.match(MEMORY_PAGE, /translateX\(100%\)/)
-  assert.match(MEMORY_PAGE, /main\.panel-open #stage\{right:340px\}/)
+  // 抽屉覆盖在画布上（挤压 stage 会在右边留一条黑带）
+  assert.match(MEMORY_PAGE, /main\.panel-open #stage\{right:0\}/)
+  assert.match(MEMORY_PAGE, /main\.panel-open \.zoom\{right:356px\}/)
   assert.match(MEMORY_PAGE, /这一条 ◀/)
   assert.match(MEMORY_PAGE, /<aside id="panel" class="panel" aria-hidden="true">/)
   for (const kind of ['belief', 'utterance', 'heard']) {
