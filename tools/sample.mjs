@@ -28,6 +28,13 @@ const DAY_MS = 24 * 60 * 60 * 1000
 /** 只留她自己写的事件类型；`heard` 是他的话，一行都不该进样片。 */
 const HER_TYPES = new Set(['utterance', 'revise', 'reunion', 'narration', 'refusal'])
 
+/**
+ * 重建之前（旧项目 river）留下的话不进样片：主人 2026-11-13 明确要求。
+ * 判据只认字面标记，不做语义判断——漏掉比误删好，人还要再看一遍。
+ */
+const RIVER_MARK = /dsh-fish-river|大笨鱼|本鱼|图纸|重构|\briver\b/iu
+const isPerchEra = (text) => !RIVER_MARK.test(String(text ?? ''))
+
 function parseArgs(argv) {
   const out = { root: DEFAULT_ROOT, days: [1, 7, 9, 14, 30], write: false, json: false }
   for (let i = 0; i < argv.length; i += 1) {
@@ -86,6 +93,7 @@ function reviseChains(events, cutMs) {
     for (const id of refs) {
       const old = byId.get(id)
       if (!old || !HER_TYPES.has(old.type)) continue
+      if (!isPerchEra(old.text) || !isPerchEra(e.text)) continue
       out.push({ before: clip(redact(old.text)), after: clip(redact(e.text)), date: dayKey(at) })
     }
   }
@@ -104,6 +112,7 @@ export function sampleDay(events, day, seedMs) {
   const seen = new Set()
   const beliefs = (model.ranked ?? [])
     .filter((b) => herIds.has(String(b.id)))
+    .filter((b) => isPerchEra(b.text))
     .filter((b) => {
       const k = String(b.text ?? '')
       if (seen.has(k)) return false
@@ -120,7 +129,7 @@ export function sampleDay(events, day, seedMs) {
     }))
   const todayCut = cut.filter((e) => {
     const t = Date.parse(e?.ts ?? '')
-    return e?.type === 'utterance' && Number.isFinite(t) && t > cutoff - DAY_MS
+    return e?.type === 'utterance' && Number.isFinite(t) && t > cutoff - DAY_MS && isPerchEra(e.text)
   })
   const today = todayCut.slice(-TODAY_MAX).map((e) => clip(redact(e.text), 240))
   const utterances = cut.filter((e) => e?.type === 'utterance').length
