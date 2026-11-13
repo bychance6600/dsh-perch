@@ -42,16 +42,15 @@
 
 ## 看一眼
 
-设置里只有「她的一天」这十一个页签，没有性格滑条，也没有好感度数字。
+她的界面没有性格滑条，也没有好感度数字；能翻的只有她自己的账。下面两张不是效果图，是拿真账本跑出来的。
 
-<img src="docs/screenshots/today1.png" alt="今天页（上）" width="720">
-<img src="docs/screenshots/today2.png" alt="今天页（下）" width="720">
+<img src="docs/screenshots/memory-graph.png" alt="记忆图谱" width="880">
 
-<sub>今天页：一行现状、今天的时间线、今天变了什么、手边有什么。只读，不能从这里改她。</sub>
+<sub>记忆图谱：她记下的 860 条判断摊在一张图上。改口 6 处（紫虚线指向新说法）、被推翻 1 处、疤点着不退；点一下看原话。数据只读账本，不写盘。</sub>
 
-<img src="docs/screenshots/grow-top.png" alt="成长页" width="720">
+<img src="docs/screenshots/today2.png" alt="今天变了什么" width="720">
 
-<sub>成长页：四个阶段与三道瓶颈，按事件算，不按分数涨。</sub>
+<sub>今天页的一段：「今天变了什么」是从账本里算出来的，不是她填的。开口几次、新学会什么、手边还有什么，都是事实计数。</sub>
 
 <img src="media/principle-loop.svg" alt="认知是怎么长出来的" width="760">
 
