@@ -7,9 +7,11 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { createHash } from 'node:crypto'
+import { pathToFileURL } from 'node:url'
 import { create } from '../lib/channels/qq.js'
 
 const T0 = 1700000000000
@@ -751,4 +753,288 @@ test('入站账本有上限：启动时把已经 done 的行清掉', async () =>
   assert.ok(ledger(root, 'qq-wal.jsonl').length < 10)
   ctx.adapter.stop()
   rmSync(root, { recursive: true, force: true })
+})
+
+// ---- 图片：入站落盘（她要用 read_image 自己看）----
+
+/** PNG 魔数 + 若干字节：sniffMime 要至少 12 字节才判得出来。 */
+const PNG_BYTES = Uint8Array.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+])
+const PNG_BYTES_2 = Uint8Array.from([...PNG_BYTES, 0x01])
+const JPG_BYTES = Uint8Array.from([
+  0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00,
+])
+
+function sha16(bytes) {
+  return createHash('sha1').update(bytes).digest('hex').slice(0, 16)
+}
+
+function imageResponse(bytes, type = 'image/png') {
+  return new Response(bytes, { status: 200, headers: { 'content-type': type, 'content-length': String(bytes.length) } })
+}
+
+/** 等异步落盘跑完（假时钟只管适配器的定时器，这里用真 setImmediate 轮询）。 */
+async function waitFor(fn, why = '条件') {
+  for (let i = 0; i < 400; i += 1) {
+    if (fn()) return
+    await new Promise((resolve) => setTimeout(resolve, 5))
+  }
+  throw new Error(`等待超时：${why}`)
+}
+
+test('入站图片：下载到 media/qq/<sha1 前 16>.png，heard 文本末尾追加一行，文件 0600 / 目录 0700', async () => {
+  const root = tmpRoot()
+  const { adapter, messages, ws } = await started({ root, fetchImpl: async () => imageResponse(PNG_BYTES) })
+  try {
+    ws.push(group({
+      message_id: 9001,
+      user_id: 20002,
+      message: [
+        { type: 'text', data: { text: '你看这个' } },
+        { type: 'image', data: { url: 'https://example.com/pic.png', file_size: 16 } },
+      ],
+    }))
+    await waitFor(() => messages.length === 1, '入站图片落盘')
+
+    const name = `${sha16(PNG_BYTES)}.png`
+    const m = messages[0]
+    assert.equal(m.text, `你看这个\n[图片：media/qq/${name}]`, '路径是相对 root 的，read_image 才找得到')
+    assert.deepEqual(readFileSync(join(root, 'media', 'qq', name)), Buffer.from(PNG_BYTES))
+    assert.equal(statSync(join(root, 'media', 'qq', name)).mode & 0o777, 0o600, '文件只给主人/她自己读')
+    assert.equal(statSync(join(root, 'media', 'qq')).mode & 0o777, 0o700)
+    assert.deepEqual(m.images, ['https://example.com/pic.png'], 'images 仍按契约留原始 url')
+    // 事件文本里不许出现 base64（账本会被撑爆，也不是她「看见」的东西）
+    assert.equal(m.text.includes('base64'), false)
+  } finally {
+    adapter.stop()
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('入站只有图没字：text 就是那一行图片路径，不编一句话出来', async () => {
+  const root = tmpRoot()
+  const { adapter, messages, ws } = await started({ root, fetchImpl: async () => imageResponse(PNG_BYTES) })
+  try {
+    ws.push(group({ message_id: 9002, user_id: 20002, message: [{ type: 'image', data: { url: 'https://example.com/a.png' } }] }))
+    await waitFor(() => messages.length === 1, '只有图的入站')
+    assert.equal(messages[0].text, `[图片：media/qq/${sha16(PNG_BYTES)}.png]`)
+  } finally {
+    adapter.stop()
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('入站下载失败：只写日志，消息照递，正文不被污染（失败不能吞消息）', async () => {
+  const root = tmpRoot()
+  const { adapter, messages, logs, ws } = await started({
+    root,
+    fetchImpl: async () => { throw new Error('ECONNREFUSED') },
+  })
+  try {
+    ws.push(group({
+      message_id: 9003,
+      user_id: 20002,
+      message: [
+        { type: 'text', data: { text: '图挂了，字还在' } },
+        { type: 'image', data: { url: 'https://example.com/x.png' } },
+      ],
+    }))
+    await waitFor(() => messages.length === 1, '下载失败后仍递消息')
+    assert.equal(messages[0].text, '图挂了，字还在', '下载失败不许往正文里塞东西，也不许丢整条')
+    assert.ok(logs.some((l) => l.includes('图片下载失败')), '失败要在日志里留痕')
+    const dir = join(root, 'media', 'qq')
+    assert.equal(existsSync(dir) ? readdirSync(dir).length : 0, 0, '失败的图不许落盘')
+  } finally {
+    adapter.stop()
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('入站多张图按消息里的顺序各占一行', async () => {
+  const root = tmpRoot()
+  const { adapter, messages, ws } = await started({
+    root,
+    fetchImpl: async (url) => imageResponse(url.endsWith('2.png') ? PNG_BYTES_2 : PNG_BYTES),
+  })
+  try {
+    ws.push(group({
+      message_id: 9004,
+      user_id: 20002,
+      message: [
+        { type: 'image', data: { url: 'https://example.com/1.png' } },
+        { type: 'text', data: { text: '两张' } },
+        { type: 'image', data: { url: 'https://example.com/2.png' } },
+      ],
+    }))
+    await waitFor(() => messages.length === 1, '多图入站')
+    const lines = messages[0].text.split('\n')
+    // 图片行统一追加在文本末尾（与「heard 文本末尾追加一行」一致），顺序 = 消息里的顺序。
+    assert.equal(lines[0], '两张')
+    assert.equal(lines[1], `[图片：media/qq/${sha16(PNG_BYTES)}.png]`)
+    assert.equal(lines[2], `[图片：media/qq/${sha16(PNG_BYTES_2)}.png]`)
+  } finally {
+    adapter.stop()
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('入站本地绝对路径：拷贝一份进来，原文件不动', async () => {
+  const root = tmpRoot()
+  const srcDir = mkdtempSync(join(tmpdir(), 'qq-src-'))
+  const src = join(srcDir, 'photo.jpg')
+  writeFileSync(src, JPG_BYTES)
+  const { adapter, messages, ws } = await started({ root })
+  try {
+    ws.push(group({ message_id: 9005, user_id: 20002, message: [{ type: 'image', data: { file: src } }] }))
+    await waitFor(() => messages.length === 1, '本地图拷贝')
+    const name = `${sha16(JPG_BYTES)}.jpg`
+    assert.equal(messages[0].text, `[图片：media/qq/${name}]`)
+    assert.deepEqual(readFileSync(join(root, 'media', 'qq', name)), Buffer.from(JPG_BYTES))
+    assert.ok(existsSync(src), '拷贝，不是搬走桥那边给的文件')
+  } finally {
+    adapter.stop()
+    rmSync(root, { recursive: true, force: true })
+    rmSync(srcDir, { recursive: true, force: true })
+  }
+})
+
+test('入站 base64:// 与相对文件名都不当图片：不下载、不写进正文', async () => {
+  const root = tmpRoot()
+  let fetched = 0
+  const { adapter, messages, ws } = await started({
+    root,
+    fetchImpl: async () => { fetched += 1; return imageResponse(PNG_BYTES) },
+  })
+  try {
+    ws.push(group({
+      message_id: 9006,
+      user_id: 20002,
+      message: [
+        { type: 'image', data: { file: 'base64://iVBORw0KGgo=' } },
+        { type: 'image', data: { file: 'a.jpg' } },
+      ],
+    }))
+    await waitFor(() => messages.length === 1, '非图片源')
+    assert.equal(messages[0].text, '', 'base64 不许进事件文本')
+    assert.equal(fetched, 0)
+    const dir = join(root, 'media', 'qq')
+    assert.equal(existsSync(dir) ? readdirSync(dir).length : 0, 0)
+  } finally {
+    adapter.stop()
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+// ---- 图片：出站转换 ----
+
+test('出站独占一行的 [图片] → OneBot image 段；前后文字仍是 text 段，顺序不变', async () => {
+  const root = tmpRoot()
+  const qqDir = join(root, 'media', 'qq')
+  mkdirSync(qqDir, { recursive: true })
+  const abs = join(qqDir, 'look.png')
+  writeFileSync(abs, PNG_BYTES)
+  const { adapter, ws } = await started({ root })
+  try {
+    const p = adapter.send({ conversation: { kind: 'dm', id: '20002' }, text: '给你看个图。\n[图片]media/qq/look.png' })
+    const f1 = ws.lastFrame()
+    assert.deepEqual(f1.params.message, [{ type: 'text', data: { text: '给你看个图。' } }])
+    ws.push({ status: 'ok', retcode: 0, data: { message_id: 801 }, echo: f1.echo })
+    await flush()
+
+    const f2 = ws.lastFrame()
+    assert.notEqual(f2.echo, f1.echo)
+    assert.deepEqual(f2.params.message, [{ type: 'image', data: { file: pathToFileURL(realpathSync(abs)).href } }], '只走标准 image 段，file:// 本地路径')
+    ws.push({ status: 'ok', retcode: 0, data: { message_id: 802 }, echo: f2.echo })
+    assert.deepEqual(await p, { ok: true, id: '802' })
+  } finally {
+    adapter.stop()
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('出站 [图片] 不在独占一行时只是普通文字（不误把正文变图）', async () => {
+  const { adapter, ws } = await started()
+  const p = adapter.send({ conversation: { kind: 'dm', id: '20002' }, text: '[图片]只是打了这几个字' })
+  const f1 = ws.lastFrame()
+  assert.deepEqual(f1.params.message, [{ type: 'text', data: { text: '[图片]只是打了这几个字' } }])
+  ws.push({ status: 'ok', retcode: 0, data: { message_id: 803 }, echo: f1.echo })
+  assert.deepEqual(await p, { ok: true, id: '803' })
+  adapter.stop()
+})
+
+test('出站 ../../ 越界：整行拒绝、写 image-block 日志、文字照发', async () => {
+  const root = tmpRoot()
+  mkdirSync(join(root, 'media', 'qq'), { recursive: true })
+  writeFileSync(join(root, 'secret.txt'), 'top secret')
+  const { adapter, ws, logs } = await started({ root })
+  try {
+    const p = adapter.send({ conversation: { kind: 'dm', id: '20002' }, text: '这个给你。\n[图片]../secret.txt' })
+    const f1 = ws.lastFrame()
+    assert.deepEqual(f1.params.message, [{ type: 'text', data: { text: '这个给你。' } }], '越界那行替换成空行，其余照发')
+    ws.push({ status: 'ok', retcode: 0, data: { message_id: 901 }, echo: f1.echo })
+    assert.deepEqual(await p, { ok: true, id: '901' })
+    assert.equal(ws.frames.filter((f) => f.action === 'send_private_msg').length, 1, '不许把 media 外的本地文件发出去')
+    assert.ok(logs.some((l) => l.includes('image-block')), '越界要留日志')
+  } finally {
+    adapter.stop()
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('出站软链接指到 media 外：realpath 校验后拒绝', async () => {
+  const root = tmpRoot()
+  const qqDir = join(root, 'media', 'qq')
+  mkdirSync(qqDir, { recursive: true })
+  const secret = join(root, 'secret.txt')
+  writeFileSync(secret, 'top secret')
+  symlinkSync(secret, join(qqDir, 'link.png'))
+  const { adapter, ws, logs } = await started({ root })
+  try {
+    const p = adapter.send({ conversation: { kind: 'dm', id: '20002' }, text: '看看。\n[图片]media/qq/link.png' })
+    const f1 = ws.lastFrame()
+    ws.push({ status: 'ok', retcode: 0, data: { message_id: 902 }, echo: f1.echo })
+    assert.deepEqual(await p, { ok: true, id: '902' })
+    assert.equal(ws.frames.filter((f) => f.action === 'send_private_msg').length, 1)
+    assert.ok(logs.some((l) => l.includes('image-block')), '软链接逃逸也要按越界拒')
+  } finally {
+    adapter.stop()
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('出站 [图片] 指向不存在的文件：只丢这一行，其余照发，写 image-missing', async () => {
+  const root = tmpRoot()
+  mkdirSync(join(root, 'media', 'qq'), { recursive: true })
+  const { adapter, ws, logs } = await started({ root })
+  try {
+    const p = adapter.send({ conversation: { kind: 'dm', id: '20002' }, text: '在吗。\n[图片]media/qq/nope.png\n好。' })
+    const f1 = ws.lastFrame()
+    assert.deepEqual(f1.params.message, [{ type: 'text', data: { text: '在吗。' } }])
+    ws.push({ status: 'ok', retcode: 0, data: { message_id: 903 }, echo: f1.echo })
+    await flush()
+    const f2 = ws.lastFrame()
+    assert.deepEqual(f2.params.message, [{ type: 'text', data: { text: '好。' } }])
+    ws.push({ status: 'ok', retcode: 0, data: { message_id: 904 }, echo: f2.echo })
+    assert.deepEqual(await p, { ok: true, id: '904' })
+    assert.ok(logs.some((l) => l.includes('image-missing')))
+  } finally {
+    adapter.stop()
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('出站整条只有一行被拒的 [图片]：不发空消息，返回 empty', async () => {
+  const root = tmpRoot()
+  mkdirSync(join(root, 'media', 'qq'), { recursive: true })
+  const { adapter, ws } = await started({ root })
+  try {
+    const res = await adapter.send({ conversation: { kind: 'dm', id: '20002' }, text: '[图片]media/qq/nope.png' })
+    assert.equal(res.ok, false)
+    assert.equal(res.why, 'empty')
+    assert.equal(ws.frames.filter((f) => f.action === 'send_private_msg').length, 0)
+  } finally {
+    adapter.stop()
+    rmSync(root, { recursive: true, force: true })
+  }
 })
