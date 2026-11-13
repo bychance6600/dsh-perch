@@ -893,7 +893,7 @@
       if (missing.length) throw new Error("还缺第 " + missing.join(" / ") + " 天");
       state.days = DAYS.map(function (d) { return map[d]; });
       state.source = "手动载入";
-      setStatus("已载入 4 份 JSON", false);
+      setStatus("已载入 " + DAYS.length + " 份 JSON", false);
       renderAll();
     }).catch(function (err) {
       setStatus("载入失败：" + err.message, true);
@@ -911,7 +911,7 @@
         return res.json();
       });
     })).then(function (list) {
-      if (list.length !== 4 || !list.every(isSample)) throw new Error("JSON 不完整");
+      if (list.length !== DAYS.length || !list.every(isSample)) throw new Error("JSON 不完整");
       state.days = list;
       state.source = "同目录 JSON";
       setStatus("同目录 JSON · 已载入", false);
