@@ -9,7 +9,7 @@
 > - **导入别人养过的那一位**（旧 0.5.3 例外）已删除。人格入口现在没有任何用户可填的地方。
 > - **桌面通知**（`notify.js`）与 **自更新**（`update.js`/`selfupdate.js`）已删除。
 > - 数据目录是 `~/.dsh-perch`；包名 `dsh-perch`；版本从 `0.1.0` 重新起。
-> - 测试基线以 `node --test --test-isolation=none` 的实测为准（受限环境 `--test-isolation=none` 当前 1506 条 / 1500 过 / 4 条已知环境红 / 2 条 skip；正常 `node --test` 1506 / 1504 过 / 0 红），不要再引用旧数字。
+> - 测试基线以 `node --test --test-isolation=none` 的实测为准（受限环境 `--test-isolation=none` 当前 1534 条 / 1528 过 / 4 条已知环境红 / 2 条 skip；正常 `node --test` 1533 / 1531 过 / 0 红），不要再引用旧数字。
 > - 「三道门」统一叫「三道瓶颈」；「四道门」统一叫「四个阶段」。文案守门规则不变。
 
 违背下面任何一条，即使测试全绿也算改坏了：这几条守的不是代码正确性，是**这个插件还是不是它自己**。
@@ -85,7 +85,7 @@
 node --test
 ```
 
-当前基线 **1506 个**（本机 2 条 skip）：受限环境 `--test-isolation=none` 下 **4 条已知环境红**（坏 JSON、cover、`growth_commit 落库`、ULID），正常 `node --test` 下 0 红。**不许新增红**——那 4 条是跨文件隔离造成的（`withFileLock` 偶发），谁修好都欢迎，但别把「我没碰它」当理由放着。
+当前基线 **1534 个**（本机 2 条 skip）：受限环境 `--test-isolation=none` 下 **4 条已知环境红**（坏 JSON、cover、`growth_commit 落库`、ULID），正常 `node --test` 下 0 红。**不许新增红**——那 4 条是跨文件隔离造成的（`withFileLock` 偶发），谁修好都欢迎，但别把「我没碰它」当理由放着。
 
 > 2026-11-13：原来记的「9 条环境红」里有 5 条其实是测试之间串了叫醒窗口的状态（`wakewin` 的 depth 没清干净），不是真 bug；新写的用例先 `while (inWake()) leaveWake()` 再跑，那 5 条就绿了。
 
@@ -163,7 +163,7 @@ CI 也跑同一套（`.github/workflows/test.yml`，Node 22 / 24 各跑一遍，
 
 `worldbook.json` 里的是**事实**——她住哪、公司在几楼、你们养过什么猫。它可以导入、可以删，但**永远不许**变成「她是什么样的人」。
 
-- **只进提示词的「你知道的事」一节**（`lib/worldbook.js` 的 `knowledgeBlock`），按关键词取，一次最多 5 条、共 1200 字。两处都写成事实清单：渠道回复的「你知道的事」与身份文档的「我知道的事」（≤24 条、每条 ≤200 字）。
+- **只进提示词的「你知道的事」一节**（`lib/worldbook.js` 的 `knowledgeBlock`），按关键词取，一次最多 2 条、共 600 字（0.2.2 降级：用不上就不用，有就念两条）。两处都写成事实清单：渠道回复的「你知道的事」与身份文档的「我知道的事」（≤24 条、每条 ≤200 字）。
 - **不改阶段、不进 `beliefs`、不算事件**：查一条设定不是一段经历。
 - **作息归设置管**：世界书里的「作息 / 几点睡 / 一天醒几次」不当知识读，由 `lib/worldbook.js` 的 `isSettingOwned()` 挡掉；身份文档的「醒来的时候」按 `config.window` 与 `Math.min(daily.events, wakesPerDay)` 现算（`lib/selfdoc.js` 的 `wakeScheduleLine()`），停用条目不念。2026-11-07 真机上，11-03 一次性导入的旧作息压过了设置，她背成「晚八点到十一点、一天两次」；这类静态知识不能盖住用户后来改的设置。
 - **匹配靠关键词，不靠模型**：她为什么记得这条，要能一句话解释。
@@ -264,6 +264,6 @@ CI 也跑同一套（`.github/workflows/test.yml`，Node 22 / 24 各跑一遍，
 - [ ] 三个依赖字段还是 `{}`
 - [ ] 没有新增人格设置入口
 - [ ] 新输入口都过了 `guard.js`
-- [ ] `node --test --test-isolation=none` 只剩 4 条已知环境红（基线 1506 条 / 1500 过 / 2 skip；正常 `node --test` 是 0 红）
+- [ ] `node --test --test-isolation=none` 只剩 4 条已知环境红（基线 1534 条 / 1528 过 / 2 skip；正常 `node --test` 是 0 红）
 - [ ] 界面文案没有「他」「四道门」「三道门」「好感度」，也没有写死任何名字
 - [ ] 改了 `EVENT_SCHEMA_VERSION` 的话，`CHANGELOG.md` 里写了迁移说明

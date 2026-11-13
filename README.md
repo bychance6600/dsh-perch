@@ -1,11 +1,11 @@
 # dsh-perch
 
 ![license](https://img.shields.io/badge/license-MIT-blue)
-![version](https://img.shields.io/badge/version-0.2.0-green)
+![version](https://img.shields.io/badge/version-0.2.1-green)
 ![deps](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![node](https://img.shields.io/badge/node-%E2%89%A522-339933)
 ![dsh](https://img.shields.io/badge/DSH-plugin-6a5acd)
-![tests](https://img.shields.io/badge/tests-1491%20passing%20%2F%209%20environment--fail-brightgreen)
+![tests](https://img.shields.io/badge/tests-1531%20passing-brightgreen)
 
 **她住的地方，不是一个助手。**
 
