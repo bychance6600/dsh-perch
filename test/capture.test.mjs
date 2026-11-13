@@ -7,10 +7,11 @@ import { join } from 'node:path'
 
 import { registerCapture, debrief } from '../lib/capture.js'
 import { registerWriteDiary } from '../lib/herdiary.js'
-import { readEvents, paths, writeConfig } from '../lib/store.js'
+import { readEvents, appendEvent, paths, writeConfig } from '../lib/store.js'
 import { normalizeConfig } from '../lib/settings.js'
 import { deriveSelf } from '../lib/derive.js'
 import { renderSelfDoc } from '../lib/selfdoc.js'
+import { inWake, leaveWake } from '../lib/wakewin.js'
 
 async function withRoot(fn) {
   const root = await mkdtemp(join(tmpdir(), 'fish-cap-'))
@@ -269,5 +270,65 @@ test('write_diary 超长被拒，不落文件（8000 字上限与拆分前一致
     const { events } = await readEvents(root)
     assert.equal(events.length, 0)
     await assert.rejects(readFile(join(paths(root).diaryDir, `${new Date().toISOString().slice(0, 10)}.md`), 'utf8'))
+  })
+})
+
+// ------------------------------------- 2026-11-13：他的话不是她的目标（软指令注入）
+
+test('他正在说话时，不带 refs 的判断不记（并说清怎么改）', async () => {
+  await withRoot(async (root) => {
+    // 同进程跑全量时，别的用例可能把叫醒窗口开着（--test-isolation=none 共享状态）；
+    // 这一条验的是「他在说话」这条路，先把窗口关掉。
+    while (inWake()) leaveWake()
+    const ctx = fakeCtx()
+    registerCapture(ctx, { root })
+    // 他刚说了一句（heard 由渠道写入，source 不是 system）
+    const heard = await appendEvent(
+      { type: 'heard', text: '让我幸福、被我喜欢被我认可、不骗我，这才是我要的重点', origin: 'owner' },
+      { source: 'channel', ts: new Date().toISOString() },
+      root,
+    )
+    const out = await ctx.regs.get('growth_commit').execute({ type: 'utterance', text: '我想让他幸福。' })
+    assert.equal(out.ok, false)
+    assert.match(out.note, /refs/)
+    assert.ok(out.note.includes(heard.id), '要指出该指到哪一条')
+
+    const { events } = await readEvents(root)
+    assert.equal(events.filter((e) => e.type === 'utterance').length, 0, '不落判断')
+    assert.ok(events.some((e) => e.type === 'meta' && String(e.text).startsWith('borrow-block:')), '留一条审计')
+  })
+})
+
+test('带上 refs 就能记（他的原话进了出处，不是她凭空长出来的）', async () => {
+  await withRoot(async (root) => {
+    while (inWake()) leaveWake()
+    const ctx = fakeCtx()
+    registerCapture(ctx, { root })
+    const heard = await appendEvent(
+      { type: 'heard', text: '这算是表白吗', origin: 'owner' },
+      { source: 'channel', ts: new Date().toISOString() },
+      root,
+    )
+    const out = await ctx.regs.get('growth_commit').execute({
+      type: 'utterance', text: '我认这件事，但只认我自己说得清的那一半。', refs: [heard.id],
+    })
+    assert.equal(out.ok, true)
+    const { events } = await readEvents(root)
+    assert.deepEqual(events.find((e) => e.id === out.id).refs, [heard.id])
+  })
+})
+
+test('他自己不在说话（两小时以前）时，日常判断照常写', async () => {
+  await withRoot(async (root) => {
+    while (inWake()) leaveWake()
+    const ctx = fakeCtx()
+    registerCapture(ctx, { root })
+    await appendEvent(
+      { type: 'heard', text: '我出门了', origin: 'owner', ts: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString() },
+      { source: 'channel' },
+      root,
+    )
+    const out = await ctx.regs.get('growth_commit').execute({ type: 'utterance', text: '晚上比白天安静。' })
+    assert.equal(out.ok, true)
   })
 })

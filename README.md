@@ -323,7 +323,7 @@ douyin-profile/       抖音浏览器的登录态（开抖音时才有）
 **已知口子（不是「已经干净」）**
 
 - 首轮第 1 个 step 还能看见宿主工具，兜底 `guard` 会挡。
-- 9 条环境红：ULID、cover、growth_commit、坏 JSON、seen ×2、withWake、turn/end、消息没送进去；都是跨文件隔离或偶发，单跑会绿。
+- 4 条环境红：坏 JSON、cover、`growth_commit 落库`、ULID；都是跨文件隔离或偶发，单跑会绿。
 - 断线句里的秒数是墙钟时间，含桥自身的重连。
 
 ## 十四、开发与测试
@@ -334,7 +334,7 @@ node --test --test-isolation=none  # 沙箱 / 受限环境（跨文件会有假�
 node --test test/<file>.test.mjs   # 单文件
 ```
 
-当前基线（2026-11-13，macOS）：受限环境 `node --test --test-isolation=none` **1502 条 / 1491 过 / 9 红 / 2 skip**；正常环境 `node --test` **1502 条 / 1499 过 / 0 红 / 2 skip**。9 条是已知环境项（跨文件隔离互相干扰；`withFileLock` 偶发），单跑对应文件会绿；2 skip 是路由缓存用例（要 `--experimental-test-module-mocks`，CI 单开 job）与身体解压用例（只在 Windows 跑）。**不许新增红。**
+当前基线（2026-11-13，macOS）：受限环境 `node --test --test-isolation=none` **1506 条 / 1500 过 / 4 红 / 2 skip**；正常环境 `node --test` **1506 条 / 1504 过 / 0 红 / 2 skip**。4 条是已知环境项（跨文件隔离互相干扰；`withFileLock` 偶发），单跑对应文件会绿；2 skip 是路由缓存用例（要 `--experimental-test-module-mocks`，CI 单开 job）与身体解压用例（只在 Windows 跑）。**不许新增红。**
 
 零依赖是铁律：`dependencies` / `peerDependencies` / `devDependencies` 三个永远 `{}`，测试只用 `node:test`。
 

@@ -144,6 +144,16 @@ test('screenOutgoing：命中就不发，没命中原样出门', () => {
   assert.equal(good.text, '我不太确定。')
 })
 
+test('网址不是盘符路径：她带链接的回复能出门（2026-11-13 真机被吞）', () => {
+  // 17:27 与 17:41 两次「拦下一条出门的话（leak：/[A-Za-z]:[\\/]/）」都是这个原因：
+  // https:// 里的「s://」长得像 C:\ 盘符路径，于是带链接的正常回复被当成泄露。
+  assert.equal(screenOutgoing('我查到两种说法，出处是 https://example.com/a?b=1 。').ok, true)
+  assert.equal(screenOutgoing('搜到的词条：http://x.y/z 。').ok, true)
+  // 真的盘符路径仍然要拦
+  assert.equal(screenOutgoing('文件在 D:\\fish\\a.txt 。').ok, false)
+  assert.equal(screenOutgoing('在 C:/Users/TZ/ 里。').ok, false)
+})
+
 test('「私聊」这个词本身不再是红线，提到谁在私聊里说了什么才算（2026-11-10 真机）', () => {
   // 她平时就会说的话，不该因为出现「私聊」「我跟你说」被拦在门口
   assert.equal(screenOutgoing('这块我在私聊里跟你说过了吧？').ok, true)
@@ -153,6 +163,9 @@ test('「私聊」这个词本身不再是红线，提到谁在私聊里说了�
   assert.equal(screenOutgoing('他私聊里说周三就走。').ok, false)
   assert.equal(screenOutgoing('别人私聊说的那件事你别往外讲。').ok, false)
   assert.equal(screenOutgoing('这是我们俩的聊天记录。').ok, false)
+  // 2026-11-13（TZ 真机 19:47）：「在我们的对话里」是她的正常说法，不该被拦
+  assert.equal(screenOutgoing('在我们的对话里，我说过不接这种活。').ok, true)
+  assert.equal(screenOutgoing('这是我们俩的对话，别人不该看。').ok, true)
 })
 
 /* ---------------------------- 3. 清洗外来文本 ---------------------------- */
