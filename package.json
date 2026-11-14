@@ -1,6 +1,6 @@
 {
   "name": "dsh-perch",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "养一只会自己长大的她：没有人格设置，人格只能通过事件流长出来；她在 QQ 里跟人说话，自己刷 B 站看东西，记住在外面遇到的人。四阶段走完才有立场。",
   "type": "module",
   "main": "lib/index.js",

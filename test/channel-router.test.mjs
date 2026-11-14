@@ -773,3 +773,11 @@ test('router：B 站 / 抖音各自的主人 id 都能认成 owner，且不串�
   ])
   await fs.rm(h.root, { recursive: true, force: true })
 })
+
+test('buildPrompt：上一轮剪过稿纸，这一轮只提醒一次（TZ 真机 2026-11-14）', () => {
+  const msg = { channel: 'qq', kind: 'private', conversationId: 'u1', personId: 'u1', personName: '兔兔' }
+  const withNotice = buildPrompt(msg, [], { isOwner: true, echoNotice: true })
+  assert.match(withNotice, /复述了稿纸/)
+  const without = buildPrompt(msg, [], { isOwner: true, echoNotice: false })
+  assert.doesNotMatch(without, /复述了稿纸/)
+})

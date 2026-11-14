@@ -16,6 +16,7 @@ import {
   screenOutgoing,
   looksMojibake,
   stripPromptEcho,
+  stripPromptEchoInfo,
   stripScaffold,
 } from '../lib/guard.js'
 
@@ -291,4 +292,27 @@ test('stripPromptEcho：只有一种标记、不像稿纸时不动', () => {
   assert.equal(stripPromptEcho('（前面几句：）'), '（前面几句：）')
   assert.equal(stripPromptEcho(''), '')
   assert.equal(stripPromptEcho(null), '')
+})
+
+test('复述稿纸：剪掉多少字、剪的是不是渠道稿纸，都要能报出来（TZ 真机 2026-11-14）', () => {
+  const echo = [
+    '嗯。喝水去吧。',
+    '（"听我女朋友的"这句，听着倒是顺。）',
+    '',
+    '（QQ 上，跟一个人单独说话。是他本人。）',
+    '（私下说话：你怎么看就怎么说。）',
+    '（前面几句：',
+    '寻找兔子：好',
+    '）',
+    '',
+    '楼主你好，我是负责 QQ 机器人开发的工程师。',
+  ].join('\n')
+  const r = stripPromptEchoInfo(echo)
+  assert.equal(r.text, '嗯。喝水去吧。\n（"听我女朋友的"这句，听着倒是顺。）')
+  assert.ok(r.removed > 40)
+  assert.equal(r.channelMarked, true)
+
+  const plain = stripPromptEchoInfo('今天挺好。晚安。')
+  assert.equal(plain.removed, 0)
+  assert.equal(plain.channelMarked, false)
 })
