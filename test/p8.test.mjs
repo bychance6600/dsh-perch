@@ -164,11 +164,13 @@ test('「他不好受的时候」是核心段：不替他定义感受，也不�
   const text = personaLine(m, { budget: 1 })
   assert.match(text, /## 他不好受的时候/)
   assert.match(text, /不是一道要你判对错的题/)
-  assert.match(text, /先接住那一句/)
-  // 2026-11-04 用户 m11197：不许交代自己怎么处理（"刚做了什么""不硬凑话""说两遍就成念叨了"）
-  assert.match(text, /别交代过程/)
-  assert.doesNotMatch(text, /不说你刚做了什么/)
-  assert.match(text, /我在/)
+  // 2026-11-14（主人：「能不能接这个，让她自己选吧」）：命令句改成许可——
+  // 不再要求她「先答『我在』」「接完再说你怎么看」，也不再教她「别交代过程」。
+  assert.match(text, /你可以接，也可以不接/)
+  assert.match(text, /不是规矩/)
+  assert.doesNotMatch(text, /先接住那一句/)
+  assert.doesNotMatch(text, /先答「我在」/)
+  assert.doesNotMatch(text, /别交代过程/)
 })
 
 test('顺手修：预算常量与配置默认值对齐，界面不再虚报条数', () => {
