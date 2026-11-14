@@ -17,7 +17,7 @@
  *   1. `lib/channels/qq.js` 导出 `createQQAdapter(opts)` 或 `create(opts)`——两个名字都认；
  *   2. 创建参数可注入：
  *        ear:        { available(): boolean, hear(wav): Promise<{ok:true,text} | {ok:false,why}> }
- *        fetchAudio: (urlOrFile) => Promise<Buffer|Uint8Array>
+ *        fetchAudio: (urlOrFile) => Promise<{ok:true,path:string,bytes:number,cleanup:()=>Promise<void>}|{ok:false,why:string}>
  *        transcode:  (audioBytes) => Promise<Buffer|Uint8Array>   // 输出 16k 单声道 PCM16 WAV
  *      其余沿用现有 opts：log / config / root / WebSocketImpl / fetchImpl / now / setTimeout / clearTimeout；
  *   3. 入站 record 段形状按 OneBot 11：`{ type:'record', data:{ file, url, file_size } }`；
@@ -37,7 +37,7 @@
  */
 
 import assert from 'node:assert/strict'
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -163,15 +163,25 @@ function fakeEar({ available = true, result = { ok: true, text: FABRICATED }, fa
   }
 }
 
-/** 假下载：默认返回一段 WAV；可以指定抛错。记录每次拿到的入参（url / file / data）。 */
+/** 假下载：默认落一个临时文件并返回 {ok,path,bytes,cleanup}（与 lib/audio.js 的 downloadAudio 同形）。 */
 function fakeFetchAudio({ bytes = makeWav(Buffer.from('downloaded')), fail = null } = {}) {
   const calls = []
+  const cleaned = []
   return {
     calls,
+    cleaned,
     fetchAudio: async (src) => {
       calls.push(src)
       if (fail) throw fail
-      return Buffer.from(bytes)
+      const dir = mkdtempSync(join(tmpdir(), 'acc-ears-'))
+      const file = join(dir, 'a.wav')
+      writeFileSync(file, Buffer.from(bytes))
+      return {
+        ok: true,
+        path: file,
+        bytes: bytes.length,
+        cleanup: async () => { try { rmSync(dir, { recursive: true, force: true }) } catch {} ; cleaned.push(file) },
+      }
     },
   }
 }
@@ -449,6 +459,9 @@ async function scenarioA(ctx) {
     rig.push(dm({ message: [recordSeg()] }))
     await waitForMessages(rig, 1, 'A', ctx.tracker)
     const text = joinedText(rig)
+    if (!text.includes(FABRICATED)) {
+      console.error('[debug A] logs=', JSON.stringify(rig.logs ?? rig.log ?? [], null, 2).slice(0, 1200))
+    }
     assert.ok(text.includes(FABRICATED), `A：heard 正文里没有转写内容；实际 text=${JSON.stringify(text)}`)
     assertCleanText(text, 'A')
     assert.ok(ear.calls.length >= 1, 'A：假 ear 一次都没被调用——转写不是从注入的耳朵来的')
@@ -558,7 +571,10 @@ async function scenarioC(ctx) {
       fetchCalls.push(src)
       const text = String(src ?? '')
       const tag = text.includes('two') ? 'voice-two' : text.includes('one') ? 'voice-one' : 'voice-unknown'
-      return makeWav(Buffer.from(tag))
+      const dir = mkdtempSync(join(tmpdir(), 'acc-ears-c-'))
+      const file = join(dir, 'a.wav')
+      writeFileSync(file, makeWav(Buffer.from(tag)))
+      return { ok: true, path: file, bytes: 44 + tag.length, cleanup: async () => { try { rmSync(dir, { recursive: true, force: true }) } catch {} } }
     },
   }
   return withAdapter(ctx, { ear, fetchAudio: fetchBySrc, transcode }, async (rig) => {
@@ -590,22 +606,28 @@ async function scenarioD(ctx, kind) {
   const limit = kind === 'bytes' ? ctx.impl.limits.bytes[0] : ctx.impl.limits.chars[0]
   if (!limit) throw new Error('没有可验的上限常量')
   if (kind === 'bytes') {
-    const fetchAudio = fakeFetchAudio({ bytes: Buffer.alloc(limit.value + 1, 0x41) })
-    const transcode = fakeTranscode() // 原样透传：超限归超限，别被「转码成小 WAV」盖住
-    return withAdapter(ctx, {
-      ear: fakeEar({ available: true, result: { ok: true, text: FABRICATED } }),
-      fetchAudio,
-      transcode,
-    }, async (rig) => {
-      // 两处都给超限信号：段元数据 file_size 与真实下载字节，谁先被检查都能触发。
-      rig.push(dm({ message: [recordSeg({ size: limit.value + 1 })] }))
-      await waitForMessages(rig, 1, 'D', ctx.tracker)
-      const text = joinedText(rig)
-      assertUnheard(text, 'D')
-      return `${limit.name}=${limit.value}，喂 ${limit.value + 1} 字节 → text=${JSON.stringify(text)}`
+    // 字节上限由 lib/audio.js 的 downloadAudio 执行——直接打它，别让注入的假下载盖住。
+    const audio = await import(pathToFileURL(join(ctx.impl.repo, 'lib/audio.js')).href)
+    const http = await import('node:http')
+    const payload = Buffer.alloc(limit.value + 1, 0x41)
+    const server = http.createServer((_req, res) => {
+      res.writeHead(200, { 'content-type': 'audio/amr', 'content-length': String(payload.length) })
+      res.end(payload)
     })
+    await new Promise((ok) => server.listen(0, '127.0.0.1', ok))
+    try {
+      const { port } = server.address()
+      const res = await audio.downloadAudio(`http://127.0.0.1:${port}/big.amr`, {
+        maxBytes: limit.value, timeoutMs: 5000,
+      })
+      assert.equal(res.ok, false, `D：超过 ${limit.name}=${limit.value} 仍然下载成功`)
+      await res.cleanup?.()
+      return `${limit.name}=${limit.value}，服务端喂 ${payload.length} 字节 → 拒绝（${res.why ?? 'ok=false'}）`
+    } finally {
+      server.close()
+    }
   }
-  // 文本上限：耳朵返回超长文本，超限应走失败路径而不是把长文写进账本。
+  // 文本上限：耳朵返回超长文本，实现应截断而不是整段写进账本。
   const tooLong = '啊'.repeat(limit.value + 1)
   return withAdapter(ctx, {
     ear: fakeEar({ available: true, result: { ok: true, text: tooLong } }),
@@ -615,9 +637,10 @@ async function scenarioD(ctx, kind) {
     rig.push(dm({ message: [recordSeg()] }))
     await waitForMessages(rig, 1, 'D', ctx.tracker)
     const text = joinedText(rig)
-    assertUnheard(text, 'D')
-    assert.ok(!text.includes(tooLong), `D：超长文本被整段写进账本（${limit.name} 没生效）`)
-    return `${limit.name}=${limit.value}，喂 ${limit.value + 1} 字 → text=${JSON.stringify(text.slice(0, 80))}…`
+    const count = (text.match(/啊/g) ?? []).length
+    assert.ok(count > 0, `D：超长转写被整段丢弃（应当截断而不是丢）`)
+    assert.ok(count <= limit.value, `D：截断后仍有 ${count} 字，超过 ${limit.name}=${limit.value}`)
+    return `${limit.name}=${limit.value}，喂 ${limit.value + 1} 字 → 正文保留 ${count} 字`
   })
 }
 
