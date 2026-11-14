@@ -15,6 +15,10 @@ const adapter = create({
   WebSocketImpl,       // 测试注入用；缺省 globalThis.WebSocket
   fetchImpl,           // 测试注入用；缺省 globalThis.fetch
   now,                 // 测试注入用；缺省 Date.now
+  ctx,                 // 宿主上下文：QQ 语音转写用它造耳朵（createEar，见 lib/senses.js）
+  ear,                 // 测试注入用；缺省 createEar(ctx)。{ available(), hear(wav) }
+  fetchAudio,          // 测试注入用；缺省下载/读本地音频。→ { ok:true, path, cleanup } | { ok:false, why }
+  transcode,           // 测试注入用；缺省用 ffmpeg 转 16kHz 单声道 WAV。→ Buffer
 })
 
 adapter.name                     // 'qq' | 'douyin'
@@ -45,6 +49,9 @@ const off = adapter.onMessage(fn)  // → 注销函数
   personName: '昵称',
   text: '……',                 // 已去掉 @ 机器人、已 trim；空串表示只有图/表情
   images: [],                 // 图片 url 或本地路径，可为空
+  // 语音（2026-11-14）：入站语音只把转写追加进 text，不新增事件类型。
+  // 听清是「[语音] 内容（语音 N 秒）」，没听清是「[语音 N 秒：这台机器没装耳朵]」；
+  // 后者覆盖没装耳朵/下载失败/转码失败/转写为空四种，绝不猜内容。地址是临时料，已删。
   attachment: { type: 'image', size: 2048 }, // 可选：只留一条附件元数据，正文留空
   mentionedSelf: false,       // 这条有没有 @ 她（群里决定要不要听）
   replyToSelf: false,         // 这条是不是在回复她发过的消息（与 @ 同等算点名）
