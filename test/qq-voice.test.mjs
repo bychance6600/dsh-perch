@@ -186,6 +186,7 @@ function voiceMessage(over = {}) {
 }
 
 const UNHEARD_12 = '[语音 12 秒：这台机器没装耳朵]'
+const UNHEARD_FAIL_12 = '[语音 12 秒：没听清]'
 
 // ---- 1. 耳朵可用：转写追加进 heard 文本 ----
 
@@ -256,7 +257,7 @@ test('下载失败：只追加「没听清」，不转码、不转写，日志�
     ws.push(voiceMessage())
     await waitFor(() => messages.length === 1, '下载失败降级')
 
-    assert.equal(messages[0].text, UNHEARD_12)
+    assert.equal(messages[0].text, UNHEARD_FAIL_12)
     assert.equal(messages[0].text.includes('三点'), false)
     assert.deepEqual(tr.calls, [], '没下到就不转码')
     assert.equal(ear.calls.heard.length, 0)
@@ -277,7 +278,7 @@ test('转码失败：只追加「没听清」，临时文件照样清理，不�
     ws.push(voiceMessage())
     await waitFor(() => messages.length === 1, '转码失败降级')
 
-    assert.equal(messages[0].text, UNHEARD_12)
+    assert.equal(messages[0].text, UNHEARD_FAIL_12)
     assert.equal(ear.calls.heard.length, 0)
     assert.deepEqual(audio.cleaned, ['/tmp/qq-voice-silk.amr'], '转码失败也不能留临时文件')
     assert.equal(logs.join('\n').includes('语音转码失败'), true)
@@ -299,7 +300,7 @@ test('转写为空或失败：只追加「没听清」，不把空格/失败当�
     try {
       ws.push(voiceMessage())
       await waitFor(() => messages.length === 1, label)
-      assert.equal(messages[0].text, UNHEARD_12, label)
+      assert.equal(messages[0].text, UNHEARD_FAIL_12, label)
       assert.equal(messages[0].text.includes('三点'), false)
     } finally {
       adapter.stop()
@@ -411,7 +412,7 @@ test('语音段拿不到地址：记「没听清」，不去下载', async () =>
   try {
     ws.push(group({ message: [{ type: 'record', data: { file_size: 1024 } }] }))
     await waitFor(() => messages.length === 1, '无地址语音')
-    assert.equal(messages[0].text, '[语音：这台机器没装耳朵]')
+    assert.equal(messages[0].text, '[语音：没听清]')
     assert.deepEqual(audio.calls, [])
   } finally {
     adapter.stop()
@@ -429,7 +430,7 @@ test('耳朵 available() 自己抛错：适配器不抛，退化成「没听清�
   try {
     assert.doesNotThrow(() => ws.push(voiceMessage()))
     await waitFor(() => messages.length === 1, '耳朵抛错降级')
-    assert.equal(messages[0].text, UNHEARD_12)
+    assert.equal(messages[0].text, UNHEARD_FAIL_12)
     assert.deepEqual(audio.calls, [])
     assert.deepEqual(tr.calls, [])
   } finally {
