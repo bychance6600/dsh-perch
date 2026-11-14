@@ -781,3 +781,22 @@ test('buildPrompt：上一轮剪过稿纸，这一轮只提醒一次（TZ 真机
   const without = buildPrompt(msg, [], { isOwner: true, echoNotice: false })
   assert.doesNotMatch(without, /复述了稿纸/)
 })
+
+test('他说一句评价她的话：把她自己以前说过的话摆出来（1–2 条）', async () => {
+  const { looksLikeEvaluationOfHer, selfPriorOf } = await import('../lib/channels/router.js')
+  assert.equal(looksLikeEvaluationOfHer('我是不是太没有安全感了'), true)
+  assert.equal(looksLikeEvaluationOfHer('你太没安全感了'), true)
+  assert.equal(looksLikeEvaluationOfHer('你怎么总这样'), true)
+  assert.equal(looksLikeEvaluationOfHer('今天天气不错'), false)
+  assert.equal(looksLikeEvaluationOfHer('你回家了吗'), false)
+
+  const events = [
+    { id: 'ev_a', type: 'utterance', ts: new Date(Date.now() - 86400000).toISOString(), text: '我不需要谁一遍遍确认我还在。' },
+    { id: 'ev_b', type: 'utterance', ts: new Date(Date.now() - 86400000).toISOString(), text: '安全感不是问出来的。' },
+    { id: 'ev_c', type: 'heard', ts: new Date(Date.now() - 86400000).toISOString(), text: '他说：你太没安全感了。' },
+  ]
+  const rows = selfPriorOf(events, '你太没安全感了', { now: Date.now() })
+  assert.ok(rows.length >= 1 && rows.length <= 2)
+  assert.ok(rows.every((r) => r.id.startsWith('ev_')))
+  assert.equal(rows.some((r) => r.id === 'ev_c'), false) // heard 不算她说过的话
+})
