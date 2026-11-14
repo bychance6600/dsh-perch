@@ -800,3 +800,11 @@ test('他说一句评价她的话：把她自己以前说过的话摆出来（1�
   assert.ok(rows.every((r) => r.id.startsWith('ev_')))
   assert.equal(rows.some((r) => r.id === 'ev_c'), false) // heard 不算她说过的话
 })
+
+test('连着两次同一个开头：把事实摆给她，不要求她改', async () => {
+  const { repeatedOpeningOf } = await import('../lib/channels/router.js')
+  const mk = (text) => ({ id: 'x', type: 'utterance', ts: new Date().toISOString(), text })
+  assert.equal(repeatedOpeningOf([mk('我在。'), mk('我在。这个点醒着不太对。')]), '我在')
+  assert.equal(repeatedOpeningOf([mk('我在。'), mk('嗯。我听着。')]), '')
+  assert.equal(repeatedOpeningOf([mk('我在。')]), '') // 不够两次不下结论
+})
