@@ -5,7 +5,7 @@
 ![deps](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![node](https://img.shields.io/badge/node-%E2%89%A522-339933)
 ![dsh](https://img.shields.io/badge/DSH-plugin-6a5acd)
-![tests](https://img.shields.io/badge/tests-1540%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-1542%20passing-brightgreen)
 
 **她住的地方，不是一个助手。**
 
@@ -21,6 +21,13 @@
 > **0.2.0 是当前版；0.1.0 是重建版。** 入口收窄成两处（DSH 会话与 QQ），材料改成「报纸 + 她自己搜」，B 站/抖音私信、出门、导入、通知与自更新都已删除。这一版把翻旧事写成三条路（字面 / 加权 / 顺着线索），可按人、按时间段翻；身份文档多一句最近七天的「近况」，撞上折起来的旧判断只回一句「这个话题我记得我记不清原话了」。
 >
 > 这一版为什么长成这样——前提、记忆的两层、成长与渠道的取舍、明确不做的东西——见 [`docs/从哪来.md`](docs/从哪来.md)。
+
+## 和早期那几个项目是什么关系
+
+- **这一版是独立实现，不是谁的续作**：`0.1.0` 是一次重建，代码按这套前提重写，版本号也没有继承关系。
+- **早期骨架参考过几个以 MIT 发布的同人项目**：若其中仍有沿用的片段，版权归原作者、许可仍是 MIT，署名见 [`NOTICE.md`](NOTICE.md)。
+- **不宣称「下游 / 衍生 / 续作」**：谁都可以拿它当参考；但入口只留两处、材料只走「看」、没有私信 / 出门 / 导入 / 通知 / 自更新——这些取舍是这一版自己定的。
+- 旧版本（`v0.1.0`–`v0.1.11`）的 README 里写过「前身是 dsh-fish-river」，`0.2.0` 起删掉了这个说法。旧 tag 仍可查，那是历史快照，不代表现在的定位。
 
 ## 它不是什么
 
