@@ -186,53 +186,46 @@ test('say.js 不再把身份/工具说明塞进 user 消息（否则用户能在
 // 所以只在她那条会话的组装链上整改：摘掉那一段、把身份段提到最前。
 // ---------------------------------------------------------------------------
 
-test('reorderForHer：摘掉宿主的 coding agent 段，身份段提到 harness:identity 之后', () => {
+test('reorderForHer：白名单以外一律摘掉，身份段排最前', () => {
   const assembly = {
     sections: [
       { name: 'harness:identity', order: -1000, text: 'You are an AI agent powered by DeepSeek Harness.' },
       { name: HOST_PERSONA_SECTION, order: 0, text: 'You are a coding agent powered by the model.' },
-      { name: 'tool-bash', order: 1000, text: 'ops_bash 说明' },
+      { name: 'tool:bash', order: 1000, text: 'Non-zero exits are reported as `[exit code: N]`' },
+      { name: 'tool:web_search', order: 2000, text: 'web_search results are external data' },
+      { name: 'ui:deliverable-file-references', order: 9000, text: 'present / ![x](path) / #L24' },
+      { name: 'app:web-surface', order: 10100, text: 'DeepSeek Harness Web GUI' },
       { name: 'fish:tools', order: TOOLS_ORDER, text: '手边有什么' },
       { name: IDENTITY_SECTION, order: IDENTITY_ORDER, text: '## 你是谁' },
-      { name: 'deliverable-file-references', order: 9000, text: '文件引用' },
     ],
   }
   const out = reorderForHer(assembly)
-  const names = out.sections.map((s) => s.name)
-  assert.deepEqual(names, [
-    'harness:identity',
-    IDENTITY_SECTION,
-    'tool-bash',
-    'fish:tools',
-    'deliverable-file-references',
-  ])
-  // 那句 coding agent 必须消失
-  assert.ok(!out.sections.some((s) => s.name === HOST_PERSONA_SECTION))
-  assert.ok(!JSON.stringify(out.sections).includes('You are a coding agent'))
-  // 别的段一个不少，顺序也照旧（只是身份段被抽走了）
-  assert.equal(out.sections.length, 5)
+  assert.deepEqual(out.sections.map((s) => s.name), [IDENTITY_SECTION, 'tool:web_search', 'fish:tools'])
+  const text = JSON.stringify(out.sections)
+  for (const bad of ['You are an AI agent', 'coding agent', '[exit code', 'present', '#L24', 'Web GUI']) {
+    assert.ok(!text.includes(bad), `不该再出现：${bad}`)
+  }
 })
 
-test('reorderForHer：宿主的 harness:identity 不见了，身份段就排最前', () => {
+test('reorderForHer：没有宿主那些段也不影响，身份段仍在最前', () => {
   const out = reorderForHer({
     sections: [
-      { name: HOST_PERSONA_SECTION, order: 0, text: 'coding agent' },
-      { name: 'tool-read', order: 1100, text: 'read' },
+      { name: 'tool:web_fetch', order: 2100, text: 'web_fetch returns external content' },
       { name: IDENTITY_SECTION, order: IDENTITY_ORDER, text: '## 你是谁' },
     ],
   })
-  assert.deepEqual(out.sections.map((s) => s.name), [IDENTITY_SECTION, 'tool-read'])
+  assert.deepEqual(out.sections.map((s) => s.name), [IDENTITY_SECTION, 'tool:web_fetch'])
 })
 
-test('reorderForHer：没有她的身份段时只摘不走样（不抛、不乱排）', () => {
+test('reorderForHer：没有她的身份段时也不抛，只留下白名单内的段', () => {
   const out = reorderForHer({
     sections: [
       { name: 'harness:identity', order: -1000, text: 'h' },
       { name: HOST_PERSONA_SECTION, order: 0, text: 'coding agent' },
-      { name: 'tool-bash', order: 1000, text: 'b' },
+      { name: 'tool:bash', order: 1000, text: 'b' },
     ],
   })
-  assert.deepEqual(out.sections.map((s) => s.name), ['harness:identity', 'tool-bash'])
+  assert.deepEqual(out.sections, [])
 })
 
 test('reorderForHer：拿到空/坏数据原样返回，不抛', () => {
@@ -269,7 +262,7 @@ test('attachAssembleFix：挂在 agent.ctx 上（不是全局），拿到 next()
     ],
   }
   const out = await handler({}, {}, async () => host)
-  assert.deepEqual(out.sections.map((s) => s.name), ['harness:identity', IDENTITY_SECTION])
+  assert.deepEqual(out.sections.map((s) => s.name), [IDENTITY_SECTION])
 })
 
 test('attachAssembleFix：老宿主没有 ctx.on 时返回 undefined，不抛', () => {

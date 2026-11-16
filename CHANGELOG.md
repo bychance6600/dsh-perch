@@ -1,6 +1,7 @@
 # 更新日志
 
 ## 未发布（0.2.4）
+- 改：她那条会话的系统提示词改成**白名单**——只留她自己的段与 `web_search`/`web_fetch` 的说明，宿主的 `You are an AI agent`、bash 退出码、后台任务、`create_goal`、`workflow`、文件卡片（`present`/`#L24`）、checkout 与 Web GUI 段全部摘掉；启动日志打一行「保留 N 段／摘掉 M 段」。
 
 ### 改
 
