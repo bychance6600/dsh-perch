@@ -27,7 +27,7 @@ import { appendEvent } from '../lib/store.js'
 import { updateConfig } from '../lib/settings.js'
 
 async function tmpRoot() {
-  return mkdtemp(join(tmpdir(), 'fish-home-'))
+  return mkdtemp(join(tmpdir(), 'perch-home-'))
 }
 
 /** 假宿主：只有 workspaceRegistry + sessionController */
@@ -363,13 +363,13 @@ test('preset：建会话时真的提上去了，并记进 home.json', async () =
   const root = await tmpRoot()
   try {
     const { ctx, created } = fakeCtx()
-    const r = await bootstrapHome(ctx, { root, preset: 'fish-home' })
+    const r = await bootstrapHome(ctx, { root, preset: 'perch-home' })
     assert.equal(r.ok, true)
     assert.equal(created.length, 1)
-    assert.equal(created[0].agentPreset, 'fish-home', 'create 时必须带上 agentPreset')
-    assert.equal(r.preset, 'fish-home')
+    assert.equal(created[0].agentPreset, 'perch-home', 'create 时必须带上 agentPreset')
+    assert.equal(r.preset, 'perch-home')
     const h = await homeStatus(root)
-    assert.equal(h.preset, 'fish-home', 'homeStatus 要能读出实际用的是哪套组合')
+    assert.equal(h.preset, 'perch-home', 'homeStatus 要能读出实际用的是哪套组合')
   } finally { await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }) }
 })
 
@@ -378,10 +378,10 @@ test('preset：宿主不认这套组合时回落建会话，但日志要说清�
   try {
     const notes = []
     const { ctx, created } = fakeCtx({ presetReject: true })
-    const r = await bootstrapHome(ctx, { root, preset: 'fish-home', log: (m) => notes.push(m) })
+    const r = await bootstrapHome(ctx, { root, preset: 'perch-home', log: (m) => notes.push(m) })
     assert.equal(r.ok, true, '屋子还是要建起来')
     assert.equal(created.length, 2, '先试带 preset 的，再回落不带的那次')
-    assert.equal(created[0].agentPreset, 'fish-home')
+    assert.equal(created[0].agentPreset, 'perch-home')
     assert.equal(created[1].agentPreset, undefined)
     assert.equal(r.preset, '', '实际没用上就得如实记空')
     assert.ok(notes.some((n) => /没被接受/.test(n)), '必须留一条日志说明为什么放宽了')
@@ -418,11 +418,11 @@ test('preset：组合变了就另建一条会话，不复用旧模式那条（20
 test('preset：配置里写的那套会被 talkSessionId 读出来并传下去', async () => {
   const root = await tmpRoot()
   try {
-    await updateConfig({ tools: { preset: 'fish-home', allow: [] } }, root)
+    await updateConfig({ tools: { preset: 'perch-home', allow: [] } }, root)
     const { ctx, created } = fakeCtx()
     const id = await talkSessionId(ctx, { root })
     assert.ok(id)
-    assert.equal(created[0].agentPreset, 'fish-home', '配置是唯一来源，建会话要按它来')
+    assert.equal(created[0].agentPreset, 'perch-home', '配置是唯一来源，建会话要按它来')
   } finally { await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }) }
 })
 

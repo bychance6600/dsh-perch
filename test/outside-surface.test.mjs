@@ -1,7 +1,7 @@
 /**
  * outside-surface.test.mjs —— 出门在外，「手边有什么」不能念家里那份（0.7.3，用户 m00339）
  *
- * 病根在 `identity.js` 的 `fish:tools` 段：它是 `attachIdentity()` **无条件**挂的，
+ * 病根在 `identity.js` 的 `perch:tools` 段：它是 `attachIdentity()` **无条件**挂的，
  * 于是出门那条会话照样挂着。而它读的是 `restrict.js` 的模块级单例 `surfaceNow`
  * —— 值恒为**家里的白名单**（HER_TOOLS + 额外放行），只由 `registerToolRestrict` 写过一次。
  *
@@ -61,7 +61,7 @@ function sectionsAgent(cwd, { withView = true, visibleNames = [] } = {}) {
   return { agent, calls }
 }
 
-test('出门那条会话：fish:tools 段念的是那个工作区的工具，不是家里白名单', () => {
+test('出门那条会话：perch:tools 段念的是那个工作区的工具，不是家里白名单', () => {
   resetIdentityCache()
   const root = tmp()
   fs.mkdirSync(join(root, 'home'), { recursive: true })

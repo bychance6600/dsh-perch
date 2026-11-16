@@ -195,7 +195,7 @@ test('reorderForHer：黑名单里的段摘掉、她没有的工具段也摘掉�
       { name: 'tool:web_search', order: 2000, text: 'web_search results are external data' },
       { name: 'ui:deliverable-file-references', order: 9000, text: 'present / ![x](path) / #L24' },
       { name: 'app:web-surface', order: 10100, text: 'DeepSeek Harness Web GUI' },
-      { name: 'fish:tools', order: TOOLS_ORDER, text: '手边有什么' },
+      { name: 'perch:tools', order: TOOLS_ORDER, text: '手边有什么' },
       { name: IDENTITY_SECTION, order: IDENTITY_ORDER, text: '## 你是谁' },
     ],
   }
@@ -203,7 +203,7 @@ test('reorderForHer：黑名单里的段摘掉、她没有的工具段也摘掉�
   // 黑名单：harness:identity / persona-prefix / ui:deliverable 摘掉；
   // 工具段按她的工具表动态摘（tool:bash 她没这个工具，tool:web_search 有）。
   // 其余段——包括宿主的 app:web-surface——原样保留（将来新增的安全条款不能被静默丢）。
-  assert.deepEqual(out.sections.map((s) => s.name), [IDENTITY_SECTION, 'tool:web_search', 'app:web-surface', 'fish:tools'])
+  assert.deepEqual(out.sections.map((s) => s.name), [IDENTITY_SECTION, 'tool:web_search', 'app:web-surface', 'perch:tools'])
   const text = JSON.stringify(out.sections)
   for (const bad of ['You are an AI agent', 'coding agent', '[exit code', 'present', '#L24']) {
     assert.ok(!text.includes(bad), `不该再出现：${bad}`)

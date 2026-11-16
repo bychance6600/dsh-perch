@@ -481,7 +481,7 @@ test('scheduler.tick 在时间窗外不唤醒', async () => {
 // 「自动刷 B 站把她推醒了，对话框里又出现提示词」）：
 // 唤醒会作为一条 user message 留在她的会话里，用户点开就看得见。
 // 宿主没有「模型看得见、用户看不见」的通道（asar 已核实），所以正文不再进对话——
-// 它走 system prompt 的 `fish:wake` 动态段；对话里只留一句极短的触发语。
+// 它走 system prompt 的 `perch:wake` 动态段；对话里只留一句极短的触发语。
 test('唤醒消息只剩一句触发语，处境走 system prompt 段不进对话', async () => {
   await withRoot(async (root) => {
     // 关掉刷站，这两条测试才不会去打真接口（慢且不确定）。

@@ -16,7 +16,7 @@ import { join, sep } from 'node:path'
 import { noteRoot, readHomesSync, normRoot, homesFile } from '../lib/homes.js'
 
 async function tmpDir() {
-  return mkdtemp(join(tmpdir(), 'fish-homes-'))
+  return mkdtemp(join(tmpdir(), 'perch-homes-'))
 }
 
 test('第一次只是记下位置，不算换家', async () => {
