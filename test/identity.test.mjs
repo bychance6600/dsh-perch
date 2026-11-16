@@ -111,7 +111,7 @@ test('attachIdentity：挂三段——身份 + 这一次的处境（平时空）
   assert.equal(typeof tools.text, 'function', '白名单变了下一轮就要生效')
   const txt = tools.text()
   assert.match(txt, /growth_commit/, '要把真放行的工具念出来')
-  assert.match(txt, /ops_/, '要点名那些挡不掉、会混进工具表的')
+  assert.match(txt, /不是我的/, '要说明工具表里可能有不是她的')
   assert.match(txt, /这件事我做不到/, '和兜底守卫同一句话术')
 })
 

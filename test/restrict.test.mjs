@@ -361,9 +361,10 @@ test('toolSurfaceText：把放行的工具逐一点名，并说清多出来的�
   assert.match(txt, /growth_commit/)
   assert.match(txt, /her_recall/)
   assert.match(txt, /read_image/)
-  // 挡不掉的那几类要提前点名，不然她只看到 schema 里的名字
-  assert.match(txt, /ops_/)
-  assert.match(txt, /subagent/)
+  // 2026-11-17：宿主的编程 agent 说明书已整段摘掉，这句不再点名 ops_/subagent 家族
+  // （点名等于把它们教给她）；只保留「认得出、不冒充」的意思。
+  assert.match(txt, /不是我的：认得出，但不冒充/)
+  assert.doesNotMatch(txt, /ops_|subagent|workflow|team_/)
   // 越界会得到什么，必须和 guard 的原话一致
   assert.match(txt, /这件事我做不到/)
   // 不用「权限/禁止/违规」这类系统词——她该以为是自己做不到
