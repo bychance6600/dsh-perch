@@ -11,6 +11,7 @@ import {
   stanceSummary,
   STANCE_MAX,
   STANCE_PROMPT_MAX,
+  setStanceExclusions,
 } from '../lib/stance.js'
 import { personaLine } from '../lib/persona.js'
 
@@ -250,4 +251,21 @@ test('上限：内部 12 条、写进提示词 8 条', () => {
   for (let i = 0; i < 10; i++) many.push({ kind: 'never', text: `我不做第${i}种事。`, scars: 9 - i, mentions: 0, verified: 0 })
   const bullets = stanceSection(many).split(String.fromCharCode(10)).filter((x) => x.startsWith('- '))
   assert.equal(bullets.length, 8)
+})
+
+// 2026-11-17（主人 m10812）：有些很早说过的话来源不在这个项目里，
+// 主人要它们「不再被当成她现在守的线」——只排除、不删证据。
+test('立场排除名单：列进去的 id 不进候选，名单清空后照旧', () => {
+  const a = belief('我给自己划条线：可以绕，不能点头。', { id: 'ev_A', mentions: 3 })
+  const b = belief('身体是我的，这个我认，我卡的是谁在挑。', { id: 'ev_B', mentions: 3 })
+  const m = model({ beliefs: [a, b] })
+  const all = buildStances(m)
+  assert.ok(all.some((s) => s.members.includes('ev_B')), '没排除时应该能派生到它')
+  setStanceExclusions(['ev_B'])
+  try {
+    assert.ok(!buildStances(m).some((s) => s.members.includes('ev_B')), '被排除的 id 不该再出现在立场里')
+  } finally {
+    setStanceExclusions([])
+  }
+  assert.ok(buildStances(m).some((s) => s.members.includes('ev_B')), '名单清空后要恢复')
 })
