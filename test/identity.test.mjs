@@ -186,7 +186,7 @@ test('say.js 不再把身份/工具说明塞进 user 消息（否则用户能在
 // 所以只在她那条会话的组装链上整改：摘掉那一段、把身份段提到最前。
 // ---------------------------------------------------------------------------
 
-test('reorderForHer：白名单以外一律摘掉，身份段排最前', () => {
+test('reorderForHer：黑名单里的段摘掉、她没有的工具段也摘掉，身份段排最前', () => {
   const assembly = {
     sections: [
       { name: 'harness:identity', order: -1000, text: 'You are an AI agent powered by DeepSeek Harness.' },
@@ -200,11 +200,15 @@ test('reorderForHer：白名单以外一律摘掉，身份段排最前', () => {
     ],
   }
   const out = reorderForHer(assembly)
-  assert.deepEqual(out.sections.map((s) => s.name), [IDENTITY_SECTION, 'tool:web_search', 'fish:tools'])
+  // 黑名单：harness:identity / persona-prefix / ui:deliverable 摘掉；
+  // 工具段按她的工具表动态摘（tool:bash 她没这个工具，tool:web_search 有）。
+  // 其余段——包括宿主的 app:web-surface——原样保留（将来新增的安全条款不能被静默丢）。
+  assert.deepEqual(out.sections.map((s) => s.name), [IDENTITY_SECTION, 'tool:web_search', 'app:web-surface', 'fish:tools'])
   const text = JSON.stringify(out.sections)
-  for (const bad of ['You are an AI agent', 'coding agent', '[exit code', 'present', '#L24', 'Web GUI']) {
+  for (const bad of ['You are an AI agent', 'coding agent', '[exit code', 'present', '#L24']) {
     assert.ok(!text.includes(bad), `不该再出现：${bad}`)
   }
+  assert.ok(text.includes('Web GUI'), '黑名单之外的段要留着——宁可漏噪声，不能丢安全条款')
 })
 
 test('reorderForHer：没有宿主那些段也不影响，身份段仍在最前', () => {
@@ -217,7 +221,7 @@ test('reorderForHer：没有宿主那些段也不影响，身份段仍在最前'
   assert.deepEqual(out.sections.map((s) => s.name), [IDENTITY_SECTION, 'tool:web_fetch'])
 })
 
-test('reorderForHer：没有她的身份段时也不抛，只留下白名单内的段', () => {
+test('reorderForHer：没有她的身份段时也不抛，黑名单外的一律留着', () => {
   const out = reorderForHer({
     sections: [
       { name: 'harness:identity', order: -1000, text: 'h' },
