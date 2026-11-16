@@ -195,20 +195,23 @@ test('reorderForHer：黑名单里的段摘掉、她没有的工具段也摘掉�
       { name: 'tool:web_search', order: 2000, text: 'web_search results are external data' },
       { name: 'ui:deliverable-file-references', order: 9000, text: 'present / ![x](path) / #L24' },
       { name: 'app:web-surface', order: 10100, text: 'DeepSeek Harness Web GUI' },
+      { name: 'future:safety', order: 5000, text: 'SAFETY NOTICE: 将来宿主新增的安全条款' },
       { name: 'perch:tools', order: TOOLS_ORDER, text: '手边有什么' },
       { name: IDENTITY_SECTION, order: IDENTITY_ORDER, text: '## 你是谁' },
     ],
   }
   const out = reorderForHer(assembly)
-  // 黑名单：harness:identity / persona-prefix / ui:deliverable 摘掉；
+  // 黑名单：harness:identity / persona-prefix / ui:deliverable / app:web-surface 摘掉；
   // 工具段按她的工具表动态摘（tool:bash 她没这个工具，tool:web_search 有）。
-  // 其余段——包括宿主的 app:web-surface——原样保留（将来新增的安全条款不能被静默丢）。
-  assert.deepEqual(out.sections.map((s) => s.name), [IDENTITY_SECTION, 'tool:web_search', 'app:web-surface', 'perch:tools'])
+  // 其余段原样保留（将来新增的安全条款不能被静默丢）。
+  assert.deepEqual(out.sections.map((s) => s.name), [IDENTITY_SECTION, 'tool:web_search', 'future:safety', 'perch:tools'])
   const text = JSON.stringify(out.sections)
   for (const bad of ['You are an AI agent', 'coding agent', '[exit code', 'present', '#L24']) {
     assert.ok(!text.includes(bad), `不该再出现：${bad}`)
   }
-  assert.ok(text.includes('Web GUI'), '黑名单之外的段要留着——宁可漏噪声，不能丢安全条款')
+  assert.ok(!text.includes('Web GUI'), 'app:web-surface 是给开发者的，她也摘掉')
+  // 黑名单之外的段要留着：拿一段谁也不认识的，验证它不会被静默丢
+  assert.ok(text.includes('SAFETY NOTICE'), '黑名单之外的新段必须留着——宁可漏噪声，不能丢安全条款')
 })
 
 test('reorderForHer：没有宿主那些段也不影响，身份段仍在最前', () => {
