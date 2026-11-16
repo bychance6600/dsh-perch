@@ -1,15 +1,15 @@
 <#
-  dsh-roost 安装脚本（2026-11-06）
+  dsh-perch 安装脚本（2026-11-06）
 
   做四件事：
     1. 找到你的 DSH profile 目录（多个时默认 desktop，可用 -Profile 指定）
     2. 用 pnpm 把插件装进去（默认从 GitHub，也可 -LocalPath 装本地目录）
-    3. 把 "dsh-roost" 写进 profile package.json 的 dsh.profile.bundles
+    3. 把 "dsh-perch" 写进 profile package.json 的 dsh.profile.bundles
     4. 可选：顺手装 ffmpeg（-FfmpegZip 指向官方 zip，不用解压）
 
   用法：
     powershell -ExecutionPolicy Bypass -File .\install.ps1
-    powershell -ExecutionPolicy Bypass -File .\install.ps1 -LocalPath D:\fish\dsh-roost
+    powershell -ExecutionPolicy Bypass -File .\install.ps1 -LocalPath D:\fish\dsh-perch
     powershell -ExecutionPolicy Bypass -File .\install.ps1 -FfmpegZip D:\downloads\ffmpeg-9.0.2-essentials_build.zip
     powershell -ExecutionPolicy Bypass -File .\install.ps1 -DryRun     # 只看它打算做什么
 
@@ -24,13 +24,13 @@
 param(
   [string]$Profile = '',
   [string]$LocalPath = '',
-  [string]$Source = 'github:bychance6600/dsh-roost',
+  [string]$Source = 'github:bychance6600/dsh-perch',
   [string]$FfmpegZip = '',
   [switch]$DryRun
 )
 
 $ErrorActionPreference = 'Stop'
-$PackageName = 'dsh-roost'
+$PackageName = 'dsh-perch'
 $LegacyName = 'dsh-fish-river'
 $Separator = ('-' * 62)
 
@@ -128,7 +128,7 @@ function Test-InsideProfile([string]$profileDir) {
     $raw = Get-Content -LiteralPath $pkg -Raw -Encoding UTF8
     if ($raw -match [regex]::Escape($LegacyName)) {
       Say "这个 profile 里已经装着 $LegacyName（旧的那位）。同一个 app 里再挂 $PackageName，两个「她」会抢同一条 QQ 桥。" 'Yellow'
-      Say "建议：新建一个 profile（例如 $env:USERPROFILE\.dsh\profiles\roost），用 -Profile 指过去再装。" 'Yellow'
+      Say "建议：新建一个 profile（例如 $env:USERPROFILE\.dsh\profiles\perch），用 -Profile 指过去再装。" 'Yellow'
       if (-not $DryRun) {
         $answer = Read-Host '仍然装进这个 profile？输入 yes 继续，直接回车退出'
         if ($answer -ne 'yes') { Fail '已停下。换一个 profile 再来。' }
@@ -177,7 +177,7 @@ function Add-Bundle([string]$pkgPath, [string]$name) {
 }
 
 Say $Separator 'DarkGray'
-Say '  dsh-roost 安装' 'White'
+Say '  dsh-perch 安装' 'White'
 Say '  养一个会自己长大、会在 QQ 上跟你说话的她' 'DarkGray'
 Say $Separator 'DarkGray'
 
@@ -283,7 +283,7 @@ if ($DryRun) {
   Say '  装完了。下一步：' 'White'
   Say '    1) 重启 DSH（运行中的包文件不会热替换）' 'Gray'
   Say '    2) 设置 → 她 → 「渠道」页签，开 QQ 并填桥地址' 'Gray'
-  Say "    3) 日志：$env:USERPROFILE\.dsh-roost\logs\dsh-roost.log" 'Gray'
-  Say '       看到「0.1.0 · 」就是挂上了；没有就是 bundles 没写进去。' 'Gray'
+  Say "    3) 日志：$env:USERPROFILE\.dsh-perch\logs\dsh-perch.log" 'Gray'
+  Say '       看到「0.2.3 · 」就是挂上了；没有就是 bundles 没写进去。' 'Gray'
 }
 Say $Separator 'DarkGray'
