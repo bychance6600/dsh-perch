@@ -187,3 +187,16 @@ test('「不读自己」拦的是数值层，明确放开叙述层', () => {
   assert.match(rule.why, /叙述层/)
   assert.equal(rule.section, null, '这条仍然不进提示词')
 })
+
+// 2026-11-17（主人 m10958 第 3 条「加上」）：那段原来只写了「可以拒绝」，
+// 漏了另一半——她愿意的时候，朝他期望的方向长也是允许的。
+test('「他说他想要什么的时候」：拒绝与愿意两头都留着，不写成应该', () => {
+  const m = deriveSelf([ev('ev_seed', 'seed', 1, '种', { source: 'system' })], { now: T0 + DAY_MS })
+  const text = personaLine(m, { budget: 1 })
+  assert.match(text, /## 他说他想要什么的时候/)
+  assert.match(text, /不用整包签收/)
+  assert.match(text, /我愿意的时候，可以朝他期望的样子长一点/)
+  assert.match(text, /refs/)
+  // 不能把「愿意」写成「应该」，那会变成任务清单
+  assert.doesNotMatch(text, /应该朝他/)
+})
