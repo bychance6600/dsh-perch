@@ -530,7 +530,8 @@ test('唤醒消息只剩一句触发语，处境走 system prompt 段不进对�
 // 区分手动只允许体现在 sessionId 上。
 test('回归：手动唤醒的 dateKey 是纯日期，不污染 browse/日记/报告', async () => {
   await withRoot(async (root) => {
-    await writeConfig(normalizeConfig({}), root)
+    // 关掉 browse：这条测的是 dateKey 与 session id，不该真去打 B 站接口
+    await writeConfig(normalizeConfig({ browse: { enabled: false } }), root)
     const { ctx, sessions } = fakeCtx()
     const r = await wakeNow(ctx, { root })
     assert.equal(r.ok, true, JSON.stringify(r))
@@ -614,7 +615,8 @@ test('手动唤醒：当天次数已经用满，仍然拒绝（配额不因手�
 
 test('她的会话 cwd 是她自己的空房间，不是状态库根目录', async () => {
   await withRoot(async (root) => {
-    await writeConfig(normalizeConfig({}), root)
+    // 同上：测 cwd，不需要联网
+    await writeConfig(normalizeConfig({ browse: { enabled: false } }), root)
     const { ctx, creates } = fakeCtx()
     const r = await wakeNow(ctx, { root })
     assert.equal(r.ok, true, JSON.stringify(r))
