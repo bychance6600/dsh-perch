@@ -9,7 +9,7 @@
 > - **导入别人养过的那一位**（旧 0.5.3 例外）已删除。人格入口现在没有任何用户可填的地方。
 > - **桌面通知**（`notify.js`）与 **自更新**（`update.js`/`selfupdate.js`）已删除。
 > - 数据目录是 `~/.dsh-perch`；包名 `dsh-perch`；版本从 `0.1.0` 重新起。
-> - 测试基线以 `node --test --test-isolation=none` 的实测为准（2026-11-17 实测：受限环境 `--test-isolation=none` 1577 条 / 1571 过 / 4 条已知环境红 / 2 条 skip；正常 `node --test` 1577 / 1575 过 / 0 红），不要再引用旧数字。
+> - 测试基线以 `node --test --test-isolation=none` 的实测为准（2026-11-17 实测：受限环境 `--test-isolation=none` 1580 条 / 1574 过 / 4 条已知环境红 / 2 条 skip；正常 `node --test` 1580 / 1578 过 / 0 红），不要再引用旧数字。
 > - 「三道门」统一叫「三道瓶颈」；「四道门」统一叫「四个阶段」。文案守门规则不变。
 
 违背下面任何一条，即使测试全绿也算改坏了：这几条守的不是代码正确性，是**这个插件还是不是它自己**。
@@ -85,7 +85,7 @@
 node --test
 ```
 
-当前基线 **1577 个**（本机 2 条 skip；2026-11-17 实测）：受限环境 `--test-isolation=none` 下 **4 条已知环境红**（坏 JSON、cover、`growth_commit 落库`、ULID），正常 `node --test` 下 0 红。**不许新增红**——那 4 条是跨文件隔离造成的（`withFileLock` 偶发），谁修好都欢迎，但别把「我没碰它」当理由放着。
+当前基线 **1580 个**（本机 2 条 skip；2026-11-17 实测）：受限环境 `--test-isolation=none` 下 **4 条已知环境红**（坏 JSON、cover、`growth_commit 落库`、ULID），正常 `node --test` 下 0 红。**不许新增红**——那 4 条是跨文件隔离造成的（`withFileLock` 偶发），谁修好都欢迎，但别把「我没碰它」当理由放着。
 
 > 2026-11-13：原来记的「9 条环境红」里有 5 条其实是测试之间串了叫醒窗口的状态（`wakewin` 的 depth 没清干净），不是真 bug；新写的用例先 `while (inWake()) leaveWake()` 再跑，那 5 条就绿了。
 
@@ -264,6 +264,6 @@ CI 也跑同一套（`.github/workflows/test.yml`，Node 22 / 24 各跑一遍，
 - [ ] 三个依赖字段还是 `{}`
 - [ ] 没有新增人格设置入口
 - [ ] 新输入口都过了 `guard.js`
-- [ ] `node --test --test-isolation=none` 只剩 4 条已知环境红（基线 1577 条 / 1571 过 / 2 skip；正常 `node --test` 是 1577 条 / 1575 过 / 0 红）
+- [ ] `node --test --test-isolation=none` 只剩 4 条已知环境红（基线 1580 条 / 1574 过 / 2 skip；正常 `node --test` 是 1580 条 / 1578 过 / 0 红）
 - [ ] 界面文案没有「他」「四道门」「三道门」「好感度」，也没有写死任何名字
 - [ ] 改了 `EVENT_SCHEMA_VERSION` 的话，`CHANGELOG.md` 里写了迁移说明
