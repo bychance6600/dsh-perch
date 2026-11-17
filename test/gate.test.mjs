@@ -182,3 +182,20 @@ test('gate：没人跟她说过的群，不该因为「没点名」被记成 coo
 test('gate：群冷却常量是 120s', () => {
   assert.equal(GROUP_COOLDOWN_MS, 120_000)
 })
+
+test('客厅群自动算白名单：填了 rooms 就不用再填 groups', () => {
+  const config = {
+    channels: { qq: { enabled: true, replyInGroup: true, groups: [], mentionOnly: true, rooms: ['620545052'] } },
+  }
+  const r = canReply({
+    channel: 'qq', kind: 'group', conversationId: '620545052',
+    isOwner: false, stage: 1, config, mentioned: true,
+  })
+  assert.equal(r.ok, true, '客厅里被 @，即使没进 groups 也要回')
+  const other = canReply({
+    channel: 'qq', kind: 'group', conversationId: '999999',
+    isOwner: false, stage: 1, config, mentioned: true,
+  })
+  assert.equal(other.ok, false)
+  assert.equal(other.why, 'group-not-allowed')
+})
