@@ -138,6 +138,14 @@ test('gate：渠道没开、群不在白名单、阶段不够，各有各的理�
   assert.equal(canReply({ channel: 'qq', kind: 'group', conversationId: '111', isOwner: false, stage: 3, config: cfg }).why, 'group-not-mentioned')
   // 私聊不受群白名单管
   assert.equal(canReply({ channel: 'qq', kind: 'dm', isOwner: false, stage: 3, config: cfg }).ok, true)
+  // 「接着上一句说」：同一人上一句在叫她，这一句没带 @ 也算在叫她（2026-11-17 客厅）
+  assert.equal(canReply({ channel: 'qq', kind: 'group', conversationId: '111', isOwner: false, stage: 3, config: cfg }).why, 'group-not-mentioned')
+  assert.equal(canReply({ channel: 'qq', kind: 'group', conversationId: '111', isOwner: false, stage: 3, config: cfg, followUp: true }).ok, true)
+  // 刹车：AI 之间来回够数了就停，等主人开口（同一群、同一个人 @ 也不回）
+  assert.equal(canReply({ channel: 'qq', kind: 'group', conversationId: '111', isOwner: false, stage: 3, config: cfg, mentioned: true, aiStreak: 3 }).ok, true)
+  assert.equal(canReply({ channel: 'qq', kind: 'group', conversationId: '111', isOwner: false, stage: 3, config: cfg, mentioned: true, aiStreak: 4 }).why, 'ai-chain-stop')
+  // 主人自己不受这条限制
+  assert.equal(canReply({ channel: 'qq', kind: 'group', conversationId: '111', isOwner: true, stage: 3, config: cfg, mentioned: true, aiStreak: 9 }).ok, true)
 })
 
 test('gate：channeConfig 缺省 enabled=false、groups=[]', () => {

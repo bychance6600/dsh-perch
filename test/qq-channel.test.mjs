@@ -1051,6 +1051,32 @@ test('出站整条只有一行被拒的 [图片]：不发空消息，返回 empt
   }
 })
 
+test('群里点名时整句一条发出，不切气泡（后面几条收不到 @）', async () => {
+  const { mkdtempSync, writeFileSync } = await import('node:fs')
+  const { tmpdir } = await import('node:os')
+  const { join } = await import('node:path')
+  const root = mkdtempSync(join(tmpdir(), 'perch-at-one-'))
+  writeFileSync(join(root, 'people.json'), JSON.stringify({ version: 1, people: { u_1845721578: { id: 'u_1845721578', name: '雪兔子' } } }))
+  const { adapter, ws } = await started({ root })
+
+  // 三句话本来是三条气泡；因为带 @，必须并成一条——否则对方只认出第一条在叫它。
+  const p = adapter.send({ conversation: { kind: 'group', id: '30004' }, text: '@雪兔子 在吗。今天有件事。你听着就行。' })
+  const f = ws.lastFrame()
+  assert.equal(f.params.message[0].type, 'at')
+  assert.equal(f.params.message.slice(1).map((x) => x.data.text).join(''), ' 在吗。今天有件事。你听着就行。')
+  ws.push({ status: 'ok', retcode: 0, data: { message_id: 910 }, echo: f.echo })
+  await p
+  // 没有 @ 的群消息仍按句切（别把日常回复也变成一大段）：第一条只有第一句。
+  const p2 = adapter.send({ conversation: { kind: 'group', id: '30004' }, text: '第一句。第二句。' })
+  const f2 = ws.lastFrame()
+  assert.equal(f2.params.message[0].data.text, '第一句。', '没 @ 时仍是一条一句')
+  ws.push({ status: 'ok', retcode: 0, data: { message_id: 911 }, echo: f2.echo })
+  const f3 = ws.lastFrame === undefined ? null : null
+  void f3
+  await Promise.race([p2, new Promise((r) => setTimeout(r, 50))])
+  adapter.stop()
+})
+
 test('出站 @：正文 @名字 按 people.json 换成真 at 段，认不出的留文字', async () => {
   const { mkdtempSync, writeFileSync } = await import('node:fs')
   const { tmpdir } = await import('node:os')
