@@ -170,6 +170,10 @@ test('渠道默认值里没有 ownerId；老配置的旧键不被抹掉（A29）
   const old = normalizeConfig({ channels: { qq: { ownerId: '10001' }, douyin: { ownerId: '20002' } } })
   assert.equal(old.channels.qq.ownerId, '10001')
   assert.equal(old.channels.douyin.ownerId, '20002')
+  // 客厅群（2026-11-17）：和群白名单一样去重去空，空就是没有客厅。
+  const rooms = normalizeConfig({ channels: { qq: { rooms: [' 620545052 ', '620545052', '', '138273988'] } } })
+  assert.deepEqual(rooms.channels.qq.rooms, ['620545052', '138273988'])
+  assert.deepEqual(normalizeConfig({}).channels.qq.rooms, [])
 })
 
 
