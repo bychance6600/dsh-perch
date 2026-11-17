@@ -1047,3 +1047,33 @@ test('出站整条只有一行被拒的 [图片]：不发空消息，返回 empt
     rmSync(root, { recursive: true, force: true })
   }
 })
+
+test('出站 @：正文 @名字 按 people.json 换成真 at 段，认不出的留文字', async () => {
+  const { mkdtempSync, writeFileSync } = await import('node:fs')
+  const { tmpdir } = await import('node:os')
+  const { join } = await import('node:path')
+  const root = mkdtempSync(join(tmpdir(), 'perch-at-'))
+  writeFileSync(join(root, 'people.json'), JSON.stringify({ version: 1, people: { u_1845721578: { id: 'u_1845721578', name: '雪兔子' } } }))
+  const { adapter, ws } = await started({ root })
+
+  const p1 = adapter.send({ conversation: { kind: 'group', id: '30003' }, text: '@雪兔子 在吗' })
+  const f1 = ws.lastFrame()
+  assert.deepEqual(f1.params.message[0], { type: 'at', data: { qq: '1845721578' } })
+  assert.equal(f1.params.message[1].data.text, ' 在吗')
+  ws.push({ status: 'ok', retcode: 0, data: { message_id: 900 }, echo: f1.echo })
+  await p1
+
+  const p2 = adapter.send({ conversation: { kind: 'group', id: '30003' }, text: '@查无此人 在吗' })
+  const f2 = ws.lastFrame()
+  assert.equal(f2.params.message[0].type, 'text', '认不出的人不许变成 at')
+  assert.equal(f2.params.message[0].data.text, '@查无此人 在吗')
+  ws.push({ status: 'ok', retcode: 0, data: { message_id: 901 }, echo: f2.echo })
+  await p2
+
+  const p3 = adapter.send({ conversation: { kind: 'dm', id: '20002' }, text: '@雪兔子 在吗' })
+  const f3 = ws.lastFrame()
+  assert.equal(f3.params.message[0].type, 'text', '私聊不发 at 段')
+  ws.push({ status: 'ok', retcode: 0, data: { message_id: 902 }, echo: f3.echo })
+  await p3
+  adapter.stop()
+})

@@ -808,3 +808,22 @@ test('连着两次同一个开头：把事实摆给她，不要求她改', async
   assert.equal(repeatedOpeningOf([mk('我在。'), mk('嗯。我听着。')]), '')
   assert.equal(repeatedOpeningOf([mk('我在。')]), '') // 不够两次不下结论
 })
+
+test('客厅群：阶段 2 的陌生人 @ 她也回；别的群照旧挡', async () => {
+  const cfg = {
+    channels: { qq: { enabled: true, replyInGroup: true, groups: ['900', '901'], mentionOnly: true, rooms: ['900'] } },
+  }
+  const h = await harness({ stage: 2, config: cfg })
+  // 普通群 901：@ 她也不回（阶段不够）
+  const r1 = await h.router.handle(groupMsg({ conversationId: '901', mentionedSelf: true }))
+  assert.equal(r1.why, 'stage-too-early')
+  // 客厅群 900：@ 她就回
+  const r2 = await h.router.handle(groupMsg({ conversationId: '900', mentionedSelf: true }))
+  assert.equal(r2.sent, true)
+  // 客厅群没 @：照旧不开口
+  const r3 = await h.router.handle(groupMsg({ conversationId: '900', mentionedSelf: false }))
+  assert.equal(r3.sent, false)
+  // 没 @ 就是「只留背景」，不是被规则拒——她听见了，只是没开口
+  assert.equal(r3.why, 'background')
+  await fs.rm(h.root, { recursive: true, force: true })
+})
