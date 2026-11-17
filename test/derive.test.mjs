@@ -339,3 +339,199 @@ test('stability：换了渲染参数也复用同一批 trial 模型（2026-11-09
   assert.notEqual(a.score, b.score, 'shown/budget 变了要重新渲染，不能直接命中外层缓存')
   assert.ok(ms < 100, `第二次换了渲染参数只该渲染，实际又算了 ${ms.toFixed(0)}ms`)
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2026-11-17（设置页打开冻 23 秒）：consistency 支持前缀增量、相似度按事件对象记忆化。
+// 下面这组用例守的是「带缓存与不带缓存逐位相同」——比「分数差不多」严格得多：
+// 谁把求和顺序改回行优先，或者增量写成「prefix.sum + delta」再相加，=== 立刻红。
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 400 条左右的合成账本：跨 4 个阶段、夹几条 selfmod 与非 utterance、文本互不相同但
+ * 共享一些短语（相似度分布不能退化成全 0，否则测不出非平凡的分）。
+ * id 与 ts 都按 i 递增，所以 orderEvents 原样返回——这正是前缀增量成立的前提。
+ */
+function tallyLedger() {
+  const frags = ['我不喜欢', '人多的场合', '这样安静', '被叫得很亲', '自己待着', '想清楚了再说', '不太会表达', '慢慢来也']
+  const out = []
+  for (let i = 0; i < 420; i++) {
+    const rnd = mulberry(i * 31 + 11)
+    let text = frags[Math.floor(rnd() * frags.length)]
+    for (let k = 0; k < 6 + Math.floor(rnd() * 10); k++) text += CHARS[Math.floor(rnd() * CHARS.length)]
+    text += frags[Math.floor(rnd() * frags.length)]
+    // idTime 只解 id 去掉 ev_ 后的前 10 位，所以序号必须写进这前 10 位；
+    // 否则每条事件的时间键都一样，orderEvents 只靠 sort 的稳定性原样返回，
+    // 「乱序入参」那条用例就永远测不到真正的重排。
+    const id = `01J${String(i).padStart(7, '0')}${'0'.repeat(16)}`
+    const day = 1 + Math.floor(i / 8)
+    if (i % 41 === 40) {
+      out.push(ev(id, 'meta', day, `wake:${i}`))
+      continue
+    }
+    const extra = { stage: 1 + (i % 4) }
+    // 每 53 条里夹一条「想改自己」的：它必须被过滤掉。过滤口径一旦漂移，
+    // 前缀里的条数就对不上，增量与全量的 pairs 会立刻不相等。
+    if (i % 53 === 52) extra.flags = ['selfmod']
+    out.push(ev(id, 'utterance', day, text, extra))
+  }
+  return out
+}
+
+test('consistency 前缀增量与全量逐位相同（列优先求和的意义）', () => {
+  const events = tallyLedger()
+  const full = consistency(events)
+  assert.ok(full.pairs > 10000, `合成账本要能算出非平凡分数，实际 ${full.pairs} 对`)
+  assert.ok(full.score > 0 && full.score < 1, `分数要在 0 与 1 之间，实际 ${full.score}`)
+  assert.equal(full.usedPrefix, false, '没给前缀时不该声称用过前缀')
+  assert.equal(full.n, events.length)
+  assert.equal(full.lastId, events[events.length - 1].id, 'lastId 给的是原始入参末条')
+
+  // 0 / 中间 / 接近末尾 / 全量：四个切点都必须逐位相同。
+  // 用 === 而不是「差小于 1e-9」：列优先的全部意义就是让它能 ===。
+  for (const n of [0, 173, 388, events.length]) {
+    const prefix = consistency(events.slice(0, n))
+    const inc = consistency(events, { prefix })
+    assert.equal(inc.usedPrefix, true, `n=${n} 的合法前缀应该真的被用上`)
+    assert.equal(inc.pairs, full.pairs, `n=${n} 的配对条数必须与全量相同`)
+    assert.equal(inc.score, full.score, `n=${n} 的分数必须与全量逐位相同，实际 ${inc.score} vs ${full.score}`)
+    assert.equal(inc.sum, full.sum, `n=${n} 的和必须与全量逐位相同`)
+    assert.equal(inc.n, events.length)
+    assert.equal(inc.lastId, events[events.length - 1].id)
+  }
+})
+
+test('consistency 前缀不可信时回退全量：指纹、类型、范围任何一条不对都不许另算一个分', () => {
+  const events = tallyLedger().slice(0, 160)
+  const full = consistency(events)
+  const good = consistency(events.slice(0, 120))
+  assert.equal(good.n, 120)
+  assert.equal(good.usedPrefix, false)
+  const bad = [
+    null, undefined, 'oops', [], {},
+    { ...good, n: -1 },
+    { ...good, n: events.length + 1 },
+    { ...good, n: 120.5 },
+    { ...good, lastId: 'ev_other' },
+    { ...good, sum: NaN },
+    { ...good, sum: '0.5' },
+    { ...good, sum: Infinity },
+    { ...good, pairs: -1 },
+    { ...good, pairs: 1.5 },
+    { ...good, pairs: '12' },
+    // n=0 却带着非零的和：只可能是上一次的缓存对错了账本
+    { n: 0, lastId: '', sum: 1.5, pairs: 3 },
+  ]
+  for (const prefix of bad) {
+    const r = consistency(events, { prefix })
+    assert.equal(r.usedPrefix, false, `${JSON.stringify(prefix)} 不该被当成可用前缀`)
+    assert.equal(r.score, full.score, `${JSON.stringify(prefix)} 回退后必须与全量同分`)
+    assert.equal(r.pairs, full.pairs)
+    assert.equal(r.sum, full.sum)
+  }
+  // opts 本身乱传也不许抛
+  assert.equal(consistency(events, null).score, full.score)
+  assert.equal(consistency(events, { prefix: good }).usedPrefix, true)
+})
+
+test('consistency 入参乱序时拒绝使用前缀（前缀必须真的是计算顺序的前一段）', () => {
+  const events = tallyLedger().slice(0, 200)
+  const full = consistency(events)
+  const prefix = consistency(events.slice(0, 160))
+
+  // 情况一：把前 40 条挪到后面。第 160 条已经不是原来那条，lastId 这一道就挡下来了。
+  const moved = [...events.slice(40), ...events.slice(0, 40)]
+  const r1 = consistency(moved, { prefix })
+  assert.equal(r1.usedPrefix, false, '末条对不上就不该用前缀')
+
+  // 情况二：只把第 150、151 条对调。第 160 条还是原来那条（lastId 过得去），
+  // 但整个入参已不是时间升序——这时 events.slice(0,n) 与 orderEvents 的前 n 条
+  // 不是同一批，前缀不再成立，必须靠「是否已按时间升序」这一道拦住。
+  const swapped = [...events]
+  const tmp = swapped[150]
+  swapped[150] = swapped[151]
+  swapped[151] = tmp
+  const r2 = consistency(swapped, { prefix })
+  assert.equal(r2.usedPrefix, false, '顺序乱了就不该用前缀')
+
+  // 两种情况下全量重算都必须与顺序无关，且与全量逐位相同。
+  for (const r of [r1, r2]) {
+    assert.equal(r.score, full.score)
+    assert.equal(r.pairs, full.pairs)
+    assert.equal(r.sum, full.sum)
+  }
+  // 同一批事件两次调用必须一模一样
+  assert.deepEqual(consistency(events), full)
+})
+
+test('consistency 的记忆化不改变任何一对的值：与「每对现拆 bigram」的旧写法逐位相同', () => {
+  const events = tallyLedger().slice(0, 120)
+  const evs = events.filter((e) => e.type === 'utterance' && !(e.flags || []).includes('selfmod'))
+  // 参照实现①：列优先求和，但每一对都现拆 bigram（similarity 仍在导出）。
+  // 它必须与实现逐位相同——证明记忆化只省了重复拆字，没有换掉任何一个数。
+  let sumCol = 0
+  let pairs = 0
+  for (let j = 0; j < evs.length; j++) {
+    for (let i = 0; i < j; i++) {
+      if (evs[i].stage === evs[j].stage) continue
+      sumCol += similarity(evs[i].text, evs[j].text)
+      pairs++
+    }
+  }
+  const got = consistency(events)
+  assert.equal(got.pairs, pairs)
+  assert.equal(got.sum, sumCol, '记忆化前后每一对的相似度必须逐位相同')
+  assert.equal(got.score, pairs ? sumCol / pairs : 1)
+
+  // 参照实现②：改造前的行优先顺序。求和顺序不同只该差浮点舍入（1e-12 级），
+  // 配对条数完全一致——这也正是「列优先可以 ===、行优先不行」的证据。
+  let sumRow = 0
+  for (let i = 0; i < evs.length; i++) {
+    for (let j = i + 1; j < evs.length; j++) {
+      if (evs[i].stage === evs[j].stage) continue
+      sumRow += similarity(evs[i].text, evs[j].text)
+    }
+  }
+  const rowScore = pairs ? sumRow / pairs : 1
+  const roundDiff = Math.abs(rowScore - got.score)
+  assert.ok(roundDiff < 1e-12, `行列两种加法只该差 1e-12 级，实际 ${roundDiff}`)
+})
+
+test('novelty 的记忆化与剪枝不改变判定：与每对现拆 bigram 的暴力实现完全一致', () => {
+  const events = tallyLedger()
+  const now = T0 + 54 * DAY_MS
+  const brute = (list, at) => {
+    const evs = list.filter((e) => e.type === 'utterance' && !(e.flags || []).includes('selfmod'))
+    const cut = at - 7 * DAY_MS
+    const recent = evs.filter((e) => Date.parse(e.ts) >= cut)
+    const older = evs.filter((e) => Date.parse(e.ts) < cut)
+    if (!recent.length || !older.length) return { score: 0, recent: recent.length, older: older.length }
+    const fresh = recent.filter((e) => older.reduce((mx, o) => Math.max(mx, similarity(e.text, o.text)), 0) < 0.6)
+    return { score: fresh.length / recent.length, recent: recent.length, older: older.length }
+  }
+  const want = brute(events, now)
+  assert.ok(want.recent > 0 && want.older > 0, '近一周与更早都要有，否则这段根本没测到')
+  assert.deepEqual(novelty(events, now), want)
+  // 同一批对象连续两次：记忆化不许让第二次的数字变样。
+  assert.deepEqual(novelty(events, now), want)
+  // 同一批 id、但对象被换过且内容也变了：WeakMap 按对象引用记，不该串味。
+  const cloned = events.map((e) => ({ ...e, text: `${e.text}，又想了想` }))
+  assert.deepEqual(novelty(cloned, now), brute(cloned, now))
+})
+
+// 2026-11-17（Lead 复核）：剪枝上界必须用二元组「总个数」，不能拿去重个数。
+// 同一个二元组反复出现时，「哈哈哈…」这种文本去重后只有 1 个二元组，真值却可以很高
+// （「哈哈哈哈」对「哈哈哈哈哈哈」= 2*3/(3+5) = 0.75）。如果拿 size 当上界（0.25），
+// 这一对会被误剪成「新话」，分数从 0 变成 1——那是真的算错，不是浮点舍入。
+test('novelty 的剪枝不会把「同一个二元组反复出现」的相似对误判成新话', () => {
+  const now = T0 + 45 * DAY_MS
+  const events = [
+    ev('ev_old_laugh', 'utterance', 1, '哈哈哈哈哈哈', { stage: 1 }),
+    ev('ev_new_laugh', 'utterance', 40, '哈哈哈哈', { stage: 2 }),
+  ]
+  const got = novelty(events, now)
+  assert.equal(got.recent, 1)
+  assert.equal(got.older, 1)
+  // 参照实现：不剪枝、逐对现算 Dice。
+  assert.equal(similarity('哈哈哈哈', '哈哈哈哈哈哈'), 0.75, '这一对是真相似，不能被剪掉')
+  assert.equal(got.score, 0, `这对该判成「不新」；剪枝若误伤，分数会变成 1（实际 ${got.score}）`)
+})

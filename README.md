@@ -257,6 +257,7 @@ zip 不用解压；脚本用系统自带解压。二进制不进 git。
 ```
 events.jsonl          唯一可信源，只追加
 state.json            派生品，随时可由 rebuild() 重算
+cache/                设置页「状态」那几个体检值的缓存，可以删；有上限，14 天没用会自己删掉
 config.json           环境参数（不含人格）
 owner.json            主人 id、各渠道身份 id、登录 cookie，0600
 home.json             这间屋子的账：wsId / sessionId / preset / carry / wokeFor
@@ -341,7 +342,7 @@ node --test --test-isolation=none  # 沙箱 / 受限环境（跨文件会有假�
 node --test test/<file>.test.mjs   # 单文件
 ```
 
-当前基线（2026-11-16，macOS，Node 22）：正常环境 `node --test` **1544 条 / 1542 过 / 0 红 / 2 skip**；受限环境 `node --test --test-isolation=none` **1544 条 / 1538 过 / 4 红 / 2 skip**。4 条是已知环境项（跨文件隔离互相干扰；`withFileLock` 偶发），单跑对应文件会绿；2 skip 是路由缓存用例（要 `--experimental-test-module-mocks`，CI 单开 job）与身体解压用例（只在 Windows 跑）。**不许新增红。**
+当前基线（2026-11-17，macOS，Node 26）：正常环境 `node --test` **1577 条 / 1575 过 / 0 红 / 2 skip**；受限环境 `node --test --test-isolation=none` **1577 条 / 1571 过 / 4 红 / 2 skip**。4 条是已知环境项（跨文件隔离互相干扰；`withFileLock` 偶发），单跑对应文件会绿；2 skip 是路由缓存用例（要 `--experimental-test-module-mocks`，CI 单开 job）与身体解压用例（只在 Windows 跑）。**不许新增红。**
 
 零依赖是铁律：`dependencies` / `peerDependencies` / `devDependencies` 三个永远 `{}`，测试只用 `node:test`。
 

@@ -339,6 +339,15 @@ test('桥把 @ 展开成正文「@昵称」时也算点名，并把前缀剥掉'
   adapter.stop()
 })
 
+test('@ 别人的前缀不能被当成在叫她（2026-11-17 真机踩到）', async () => {
+  const { adapter, messages, ws } = await started()
+  ws.push(group({ message_id: 610, user_id: 20002, message: [{ type: 'at', data: { qq: '30003', name: '雪兔子' } }, { type: 'text', data: { text: ' 在吗兔子' } }] }))
+  assert.equal(messages.length, 1)
+  assert.equal(messages[0].mentionedSelf, false, '@ 别人不算点名')
+  assert.equal(messages[0].text, '@雪兔子 在吗兔子', '别人的 @ 留在正文里，她才知道不是冲她来的')
+  adapter.stop()
+})
+
 test('图片最多收 4 张', async () => {
   const { adapter, messages, ws } = await started()
   const segs = Array.from({ length: 6 }, (_, i) => ({ type: 'image', data: { url: `https://example.com/${i}.png` } }))
