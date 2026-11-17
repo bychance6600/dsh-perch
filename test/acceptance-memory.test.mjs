@@ -8,7 +8,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 
 import {
   countKinds,
@@ -59,7 +59,8 @@ test('parseArgs：默认根目录与 --skip-regression', () => {
   assert.equal(a.skipRegression, false)
   assert.ok(a.root.endsWith('.dsh-perch-samples'))
   const b = parseArgs(['--root', '/tmp/x', '--json', '--skip-regression'])
-  assert.equal(b.root, '/tmp/x')
+  // Windows 上 path.resolve('/tmp/x') 会变成 'D:\tmp\x'，别拿字面量比。
+  assert.equal(b.root, resolve('/tmp/x'))
   assert.equal(b.json, true)
   assert.equal(b.skipRegression, true)
   assert.throws(() => parseArgs(['--nope']), /不认识的参数/)

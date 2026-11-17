@@ -15,7 +15,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 
 import {
   parseArgs,
@@ -191,7 +191,7 @@ test('问卷坏行带行号，空问卷也报错', () => {
 test('参数：默认值、--limit 越界、不认识的参数都直接报错', () => {
   const d = parseArgs([], { root: '/tmp/somewhere' })
   assert.equal(d.limit, DEFAULT_LIMIT)
-  assert.equal(d.queriesPath, join('/tmp/somewhere', 'queries.jsonl'))
+  assert.equal(d.queriesPath, join(resolve('/tmp/somewhere'), 'queries.jsonl'))
   assert.equal(d.json, false)
 
   const j = parseArgs(['--json', '--diff', '--limit', '3'], { root: '/tmp/somewhere' })

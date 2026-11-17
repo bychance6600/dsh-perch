@@ -97,8 +97,11 @@ test('200 / 1200 / 3000 条：快照模型与 deriveSelf 全等', async () => {
       assert.deepStrictEqual(direct, model)
 
       // 0600：快照里有她的全部模型，不能给同机其他用户顺手读。
-      const mode = statSync(join(root, 'snapshot.json')).mode & 0o777
-      assert.equal(mode, 0o600)
+      // Windows 没有 POSIX 权限位，这一条只在类 Unix 上验。
+      if (process.platform !== 'win32') {
+        const mode = statSync(join(root, 'snapshot.json')).mode & 0o777
+        assert.equal(mode, 0o600)
+      }
     })
   }
 })

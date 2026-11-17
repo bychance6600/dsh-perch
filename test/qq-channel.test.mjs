@@ -810,8 +810,11 @@ test('入站图片：下载到 media/qq/<sha1 前 16>.png，heard 文本末尾�
     const m = messages[0]
     assert.equal(m.text, `你看这个\n[图片：media/qq/${name}]`, '路径是相对 root 的，read_image 才找得到')
     assert.deepEqual(readFileSync(join(root, 'media', 'qq', name)), Buffer.from(PNG_BYTES))
-    assert.equal(statSync(join(root, 'media', 'qq', name)).mode & 0o777, 0o600, '文件只给主人/她自己读')
-    assert.equal(statSync(join(root, 'media', 'qq')).mode & 0o777, 0o700)
+    // Windows 没有 POSIX 权限位（mode 恒为 0666/0777），这两条只在类 Unix 上验。
+    if (process.platform !== 'win32') {
+      assert.equal(statSync(join(root, 'media', 'qq', name)).mode & 0o777, 0o600, '文件只给主人/她自己读')
+      assert.equal(statSync(join(root, 'media', 'qq')).mode & 0o777, 0o700)
+    }
     assert.deepEqual(m.images, ['https://example.com/pic.png'], 'images 仍按契约留原始 url')
     // 事件文本里不许出现 base64（账本会被撑爆，也不是她「看见」的东西）
     assert.equal(m.text.includes('base64'), false)
