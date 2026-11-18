@@ -167,6 +167,23 @@ test('gate：一个群一天 20 条封顶，别的群不受影响', () => {
   assert.equal(other.ok, true)
 })
 
+test('gate：客厅群不按每天条数计数；别的群按配置的 groupDailyMax', () => {
+  const many = Array.from({ length: 40 }, (_, i) => ({ at: NOW - i * 60_000, kind: 'group', conversationId: '999' }))
+  // 客厅群：40 条也不封顶
+  const roomCfg = { channels: { qq: { enabled: true, replyInGroup: true, groups: [], rooms: ['999'], mentionOnly: true } } }
+  const room = canReply({ ...base, config: roomCfg, kind: 'group', conversationId: '999', isOwner: false, mentioned: true, recentReplies: many })
+  assert.equal(room.ok, true)
+  // 普通群：配置成 5 条就 5 条封顶
+  const many777 = many.map((r) => ({ ...r, conversationId: '777' }))
+  const smallCfg = { channels: { qq: { enabled: true, replyInGroup: true, groups: ['777'], mentionOnly: true, groupDailyMax: 5 } } }
+  const small = canReply({ ...base, config: smallCfg, kind: 'group', conversationId: '777', isOwner: false, mentioned: true, recentReplies: many777 })
+  assert.equal(small.why, 'daily-limit')
+  // 配置成 0 = 不限
+  const zeroCfg = { channels: { qq: { enabled: true, replyInGroup: true, groups: ['777'], mentionOnly: true, groupDailyMax: 0 } } }
+  const zero = canReply({ ...base, config: zeroCfg, kind: 'group', conversationId: '777', isOwner: false, mentioned: true, recentReplies: many777 })
+  assert.equal(zero.ok, true)
+})
+
 test('gate：被回复也算点名（回复她那条 = 在跟她说话）', () => {
   const r = canReply({ ...base, kind: 'group', conversationId: '999', isOwner: false, replyToSelf: true, lastReplyAt: NOW - 1000 })
   assert.equal(r.ok, true)
