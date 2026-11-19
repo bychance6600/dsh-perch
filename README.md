@@ -5,7 +5,7 @@
 ![deps](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![node](https://img.shields.io/badge/node-%E2%89%A522-339933)
 ![dsh](https://img.shields.io/badge/DSH-plugin-6a5acd)
-![tests](https://img.shields.io/badge/tests-1582%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-1585%20passing-brightgreen)
 
 **她住的地方，不是一个助手。**
 
@@ -342,7 +342,7 @@ node --test --test-isolation=none  # 沙箱 / 受限环境（跨文件会有假�
 node --test test/<file>.test.mjs   # 单文件
 ```
 
-当前基线（2026-11-17，macOS，Node 26）：正常环境 `node --test` **1580 条 / 1578 过 / 0 红 / 2 skip**；受限环境 `node --test --test-isolation=none` **1580 条 / 1574 过 / 4 红 / 2 skip**。4 条是已知环境项（跨文件隔离互相干扰；`withFileLock` 偶发），单跑对应文件会绿；2 skip 是路由缓存用例（要 `--experimental-test-module-mocks`，CI 单开 job）与身体解压用例（只在 Windows 跑）。**不许新增红。**
+当前基线（2026-11-17，macOS，Node 26）：正常环境 `node --test` **1587 条 / 1585 过 / 0 红 / 2 skip**；受限环境 `node --test --test-isolation=none` **1587 条 / 1581 过 / 4 红 / 2 skip**。4 条是已知环境项（跨文件隔离互相干扰；`withFileLock` 偶发），单跑对应文件会绿；2 skip 是路由缓存用例（要 `--experimental-test-module-mocks`，CI 单开 job）与身体解压用例（只在 Windows 跑）。**不许新增红。**
 
 零依赖是铁律：`dependencies` / `peerDependencies` / `devDependencies` 三个永远 `{}`，测试只用 `node:test`。
 

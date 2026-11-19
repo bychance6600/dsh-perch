@@ -9,7 +9,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import {
+import { redactForSend,
   looksLikeRewriting,
   looksLikeSecret,
   sanitizeForeign,
@@ -322,4 +322,12 @@ test('复述稿纸：剪掉多少字、剪的是不是渠道稿纸，都要能�
 test('工具汇报口吻：她把自己的工具调用写成了话说（issue #1）', () => {
   assert.equal(looksLikeToolTalk('好的，我已经记下了自己的回应：在呢。这句话已经通过 her_say 记录在案，并引用了最近几天的三条事件作为材料。现在轮到你了——你想怎么回应？'), true)
   assert.equal(looksLikeToolTalk('在呢。刚搬进新屋子，纸上的东西都还在。'), false)
+})
+
+test('出门前去识别：链接与 uid/mid 编号抹掉，句子留着', () => {
+  const got = redactForSend('你看这个 https://example.com/a?mid=123456 就是这个意思。')
+  assert.equal(got, '你看这个 （链接略） 就是这个意思。')
+  assert.equal(redactForSend('uid: 123456 那条').includes('123456'), false)
+  // 真凭据不在这一步松手：它仍会被 screenOutgoing 拦下
+  assert.equal(screenOutgoing('cookie: abcdef').ok, false)
 })

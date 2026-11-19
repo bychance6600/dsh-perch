@@ -36,13 +36,17 @@ function fakeHost(reply) {
       // 这样「第一次只吐脚手架、第二次说人话」也能在这里演出来。
       const raw = Array.isArray(reply) ? reply[Math.min(calls.length - 1, reply.length - 1)] : reply
       const text = typeof raw === 'string' ? raw : raw?.text
+      // `{ texts: [a, b] }`：同一轮里先后吐两条 assistant/message（调工具前后各一句）。
+      const list = Array.isArray(raw?.texts) ? raw.texts : [text]
       setImmediate(() => {
         for (const h of handlers) {
           if (h.name !== 'session/event') continue
           const session = { header: { id: req.sessionId } }
-          h.fn(session, {
-            type: 'assistant/message',
-            data: { message: { id: `m${calls.length}`, content: [{ type: 'text', text }] } },
+          list.forEach((t, i) => {
+            h.fn(session, {
+              type: 'assistant/message',
+              data: { message: { id: `m${calls.length}-${i}`, content: [{ type: 'text', text: t }] } },
+            })
           })
           h.fn(session, { type: 'turn/end', data: {} })
         }
@@ -833,5 +837,28 @@ test('客厅群：阶段 2 的陌生人 @ 她也回；别的群照旧挡', async
   assert.equal(r3.sent, false)
   // 没 @ 就是「只留背景」，不是被规则拒——她听见了，只是没开口
   assert.equal(r3.why, 'background')
+  await fs.rm(h.root, { recursive: true, force: true })
+})
+
+test('一轮里先想后说：只发最后那句，不把心里的搜罗一起发出去', async () => {
+  const h = await harness({ config: baseConfig, reply: { texts: ['我搜一下。', '查到了：今年是暖冬。'] } })
+  const r = await h.router.handle(groupMsg())
+  assert.equal(r.sent, true)
+  assert.equal(h.adapter.sent.length, 1)
+  const got = h.adapter.sent[0]
+  const body = Array.isArray(got.segments) ? got.segments.filter((x) => x.type === 'text').map((x) => x.text).join('') : String(got.text ?? '')
+  assert.ok(body.includes('查到了'), body)
+  assert.ok(!body.includes('我搜一下'), `不该带上调工具前那句：${body}`)
+  await fs.rm(h.root, { recursive: true, force: true })
+})
+
+test('搜回来的话带链接和编号：抹掉之后照发，不是整条吞掉', async () => {
+  const h = await harness({ config: baseConfig, reply: '你看这个 https://example.com/a?mid=123456 就是这个意思。' })
+  const r = await h.router.handle(groupMsg())
+  assert.equal(r.sent, true, String(r.why))
+  const got = h.adapter.sent[0]
+  const body = Array.isArray(got.segments) ? got.segments.filter((x) => x.type === 'text').map((x) => x.text).join('') : String(got.text ?? '')
+  assert.ok(body.includes('就是这个意思'), body)
+  assert.ok(!body.includes('mid='), `不该把编号发出去：${body}`)
   await fs.rm(h.root, { recursive: true, force: true })
 })
