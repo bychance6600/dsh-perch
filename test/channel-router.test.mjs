@@ -862,3 +862,17 @@ test('搜回来的话带链接和编号：抹掉之后照发，不是整条吞�
   assert.ok(!body.includes('mid='), `不该把编号发出去：${body}`)
   await fs.rm(h.root, { recursive: true, force: true })
 })
+
+test('前面几句按各自的说话人标名字，不是全算到当前这个人头上', async () => {
+  const { buildPrompt } = await import('../lib/channels/router.js')
+  const msg = groupMsg({ personName: '果子' })
+  const lines = [
+    { role: 'heard', text: '哈基米哈基米', name: '打狗头' },
+    { role: 'heard', text: '你被他们绕进去了', name: '果子' },
+    { role: 'her', text: '我不接这个。', name: '果子' },
+  ]
+  const prompt = buildPrompt(msg, lines, { isOwner: true })
+  assert.ok(prompt.includes('打狗头：哈基米哈基米'), prompt)
+  assert.ok(!prompt.includes('果子：哈基米哈基米'), prompt)
+  assert.ok(prompt.includes('你：我不接这个'), prompt)
+})
