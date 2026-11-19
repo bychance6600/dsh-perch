@@ -6,7 +6,7 @@
  *   而那一刻没人会记得再跑一次单测。所以每一条都要在平时钉死。
  */
 
-import { test } from 'node:test'
+import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
@@ -18,6 +18,7 @@ import {
   stripPromptEcho,
   stripPromptEchoInfo,
   stripScaffold,
+  looksLikeToolTalk,
 } from '../lib/guard.js'
 
 /* ---------------------------- 4. 解码坏了 ---------------------------- */
@@ -315,4 +316,10 @@ test('复述稿纸：剪掉多少字、剪的是不是渠道稿纸，都要能�
   const plain = stripPromptEchoInfo('今天挺好。晚安。')
   assert.equal(plain.removed, 0)
   assert.equal(plain.channelMarked, false)
+})
+
+
+test('工具汇报口吻：她把自己的工具调用写成了话说（issue #1）', () => {
+  assert.equal(looksLikeToolTalk('好的，我已经记下了自己的回应：在呢。这句话已经通过 her_say 记录在案，并引用了最近几天的三条事件作为材料。现在轮到你了——你想怎么回应？'), true)
+  assert.equal(looksLikeToolTalk('在呢。刚搬进新屋子，纸上的东西都还在。'), false)
 })
