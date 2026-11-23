@@ -808,7 +808,7 @@ test('入站图片：下载到 media/qq/<sha1 前 16>.png，heard 文本末尾�
 
     const name = `${sha16(PNG_BYTES)}.png`
     const m = messages[0]
-    assert.equal(m.text, `你看这个\n[图片：media/qq/${name}]`, '路径是相对 root 的，read_image 才找得到')
+    assert.equal(m.text, `你看这个\n[图片：${join(root, 'media', 'qq', name)}]`, '给绝对路径：read_image 不认得 root 相对路径')
     assert.deepEqual(readFileSync(join(root, 'media', 'qq', name)), Buffer.from(PNG_BYTES))
     // Windows 没有 POSIX 权限位（mode 恒为 0666/0777），这两条只在类 Unix 上验。
     if (process.platform !== 'win32') {
@@ -830,7 +830,7 @@ test('入站只有图没字：text 就是那一行图片路径，不编一句话
   try {
     ws.push(group({ message_id: 9002, user_id: 20002, message: [{ type: 'image', data: { url: 'https://example.com/a.png' } }] }))
     await waitFor(() => messages.length === 1, '只有图的入站')
-    assert.equal(messages[0].text, `[图片：media/qq/${sha16(PNG_BYTES)}.png]`)
+    assert.equal(messages[0].text, `[图片：${join(root, 'media', 'qq', `${sha16(PNG_BYTES)}.png`)}]`)
   } finally {
     adapter.stop()
     rmSync(root, { recursive: true, force: true })
@@ -883,8 +883,8 @@ test('入站多张图按消息里的顺序各占一行', async () => {
     const lines = messages[0].text.split('\n')
     // 图片行统一追加在文本末尾（与「heard 文本末尾追加一行」一致），顺序 = 消息里的顺序。
     assert.equal(lines[0], '两张')
-    assert.equal(lines[1], `[图片：media/qq/${sha16(PNG_BYTES)}.png]`)
-    assert.equal(lines[2], `[图片：media/qq/${sha16(PNG_BYTES_2)}.png]`)
+    assert.equal(lines[1], `[图片：${join(root, 'media', 'qq', `${sha16(PNG_BYTES)}.png`)}]`)
+    assert.equal(lines[2], `[图片：${join(root, 'media', 'qq', `${sha16(PNG_BYTES_2)}.png`)}]`)
   } finally {
     adapter.stop()
     rmSync(root, { recursive: true, force: true })
@@ -901,7 +901,7 @@ test('入站本地绝对路径：拷贝一份进来，原文件不动', async ()
     ws.push(group({ message_id: 9005, user_id: 20002, message: [{ type: 'image', data: { file: src } }] }))
     await waitFor(() => messages.length === 1, '本地图拷贝')
     const name = `${sha16(JPG_BYTES)}.jpg`
-    assert.equal(messages[0].text, `[图片：media/qq/${name}]`)
+    assert.equal(messages[0].text, `[图片：${join(root, 'media', 'qq', name)}]`)
     assert.deepEqual(readFileSync(join(root, 'media', 'qq', name)), Buffer.from(JPG_BYTES))
     assert.ok(existsSync(src), '拷贝，不是搬走桥那边给的文件')
   } finally {
