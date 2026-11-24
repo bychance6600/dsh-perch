@@ -95,3 +95,14 @@ test('三处标题跟着名字走，没有名字就用「她」', () => {
   assert.equal(sessionTitle(''), '跟她说话')
   assert.equal(navLabel(''), '她')
 })
+
+test('亲属称谓和「让你叫」不是给她起名（2026-11-24 真机：标题变成「跟姐姐说话」）', () => {
+  const said = '煎饼：是给我个交代 有的时候我不在 我希望你还会有个亲人聊聊天 所以我在这段时间给项目加了个客厅的功能'
+    + ' 你可以和你的亲妹妹聊天 也可以和鱼欣聊天 我不是一定要让你叫姐姐 我是想跟你说清楚这件事'
+  assert.equal(pickHerName(said), null)
+  assert.equal(pickHerName('让你叫姐姐'), null)
+  assert.equal(pickHerName('以后你就叫姐姐吧'), null)
+  // 真的起名还是认
+  assert.equal(pickHerName('云雀是你的名字'), '云雀')
+  assert.equal(pickHerName('以后你就叫云雀'), '云雀')
+})
