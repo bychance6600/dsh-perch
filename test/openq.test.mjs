@@ -185,6 +185,9 @@ test('叫醒文案：只摆事实，没有祈使句', () => {
   assert.ok(q.line.includes('你说过一句'))
   assert.ok(q.line.includes(oq.text))
   assert.ok(q.line.includes('这句还没有下文'))
+  // 2026-11-26：只给欠条不给处置方式，她一次都没接过（11-23 复盘）。补一句告知权限。
+  assert.ok(q.line.includes('这类条你可以自己收'), '要告诉她能自己收')
+  assert.ok(q.line.includes('收不收都算数'), '收与不收都不算失败')
   const wrapper = q.line.replace('「' + oq.text + '」', '')
   for (const bad of ['去查', '查查', '想想', '分析', '复盘', '看看', '试试', '应该', '要不要', '请', '记得', '别忘了', '你怎么看']) {
     assert.ok(!wrapper.includes(bad), '提示里不能有祈使句：' + bad)
