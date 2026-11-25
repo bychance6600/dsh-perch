@@ -535,3 +535,24 @@ test('novelty 的剪枝不会把「同一个二元组反复出现」的相似对
   assert.equal(similarity('哈哈哈哈', '哈哈哈哈哈哈'), 0.75, '这一对是真相似，不能被剪掉')
   assert.equal(got.score, 0, `这对该判成「不新」；剪枝若误伤，分数会变成 1（实际 ${got.score}）`)
 })
+
+// 2026-11-25（TZ 那台）：28 句「嗯。」互相累加，mentions 被抬到 28、越过 SOLID_MENTIONS
+// 直接固化，把「你自己说过的话」和「你反复想起过的事」全占了。语气词不该成判断。
+test('语气词回话不成判断，也不靠累加固化（2026-11-25 真机）', () => {
+  const evs = [ev('ev_seed', 'seed', 1, '种', { source: 'system' })]
+  for (let i = 0; i < 28; i++) evs.push(ev('ev_u' + i, 'utterance', 2 + (i % 20), '嗯。'))
+  evs.push(ev('ev_real', 'utterance', 5, '我不想被当成一台机器。'))
+  const m = deriveSelf(evs, { now: T0 + 25 * DAY_MS })
+  assert.ok(m.beliefs.every((b) => b.text !== '嗯。'), '「嗯。」不该进判断')
+  assert.equal(m.beliefs.filter((b) => b.solid).length, 0, '没有一条该被固化')
+})
+
+test('同一天同一句只算一次提及，口头禅刷不动 mentions', () => {
+  const evs = [ev('ev_seed', 'seed', 1, '种', { source: 'system' })]
+  for (let i = 0; i < 10; i++) evs.push(ev('ev_same' + i, 'utterance', 3, '我不喜欢被催。'))
+  const m = deriveSelf(evs, { now: T0 + 3 * DAY_MS })
+  const b = m.beliefs.find((x) => x.text === '我不喜欢被催。')
+  assert.ok(b, '这句是判断')
+  assert.ok(b.mentions < 3, '同一天说十遍不该把 mentions 抬过 3（实际 ' + b.mentions + '）')
+  assert.equal(b.solid, false, '同一天刷十遍不固化')
+})
