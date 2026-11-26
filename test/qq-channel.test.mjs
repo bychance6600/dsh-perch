@@ -956,7 +956,7 @@ test('出站独占一行的 [图片] → OneBot image 段；前后文字仍是 t
 
     const f2 = ws.lastFrame()
     assert.notEqual(f2.echo, f1.echo)
-    assert.deepEqual(f2.params.message, [{ type: 'image', data: { file: pathToFileURL(realpathSync(abs)).href } }], '只走标准 image 段，file:// 本地路径')
+    assert.deepEqual(f2.params.message, [{ type: 'image', data: { file: `base64://${Buffer.from(PNG_BYTES).toString('base64')}` } }], '走 base64：容器里的桥看不到宿主路径（2026-11-26 实测 ENOENT /C:/…）')
     ws.push({ status: 'ok', retcode: 0, data: { message_id: 802 }, echo: f2.echo })
     assert.deepEqual(await p, { ok: true, id: '802' })
   } finally {
