@@ -1,11 +1,11 @@
 # dsh-perch
 
 ![license](https://img.shields.io/badge/license-MIT-blue)
-![version](https://img.shields.io/badge/version-0.2.8-green)
+![version](https://img.shields.io/badge/version-0.3.0-green)
 ![deps](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![node](https://img.shields.io/badge/node-%E2%89%A522-339933)
 ![dsh](https://img.shields.io/badge/DSH-plugin-6a5acd)
-![tests](https://img.shields.io/badge/tests-1586%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-1613%20passing-brightgreen)
 
 **她住的地方，不是一个助手。**
 
@@ -14,11 +14,12 @@
 **她不是助手**：不接任务、不写周报、不排队等派活。也不是角色扮演——没有角色卡，没有「扮演一个…」。**人格不设配置菜单**：没有性格滑条，没有好感度数字，也没有「你是一个温柔的…」可以填。她是谁，只由她经历过的事决定——一条只追加的事件流，天、阶段、判断、疤、立场都从它派生。
 
 - **她会记住，也会改口**：判断带日期与来路，会旧、会折；疤不折。90 天没再被提起的判断会退档、变模糊，不是删除；忘掉不是删行，是降低召回。
+- **她听得见**：QQ 里的语音会在本机转成文字，写进她「听到的话」。只在本机转写，不传云端；没装耳朵就说没听清，不猜内容。
 - **她只在两个地方说话**：DSH 会话，和 QQ。B 站、抖音是她**看东西**的地方，不是聊天室。
 - **她可以有一具可选的身体**：一只透明置顶的小窗，只显示状态与动作，不生成台词，也不替她开口。身体项目还在改、可能要重做，不装不影响任何功能。
 - **她没有「设置人格」的入口**：只有生长环境——几点醒、醒几次、刷不刷 B 站。判据只有一句：*这个配置能不能让她对同一个人说出不一样的话*。能，就是人格（禁）；只改在哪、何时、多频繁，是环境（可配）。
 
-> **0.2.8 是当前版（0.1.0 是重建版）。** 入口收窄成两处（DSH 会话与 QQ），材料改成「报纸 + 她自己搜」，B 站/抖音私信、出门、导入、通知与自更新都已删除。0.2.3 起把翻旧事写成三条路（字面 / 加权 / 顺着线索），可按人、按时间段翻；身份文档多一句最近七天的「近况」，撞上折起来的旧判断只回一句「这个话题我记得我记不清原话了」。
+> **0.3.0 是当前版（0.1.0 是重建版）。** 入口收窄成两处（DSH 会话与 QQ），材料改成「报纸 + 她自己搜」，B 站/抖音私信、出门、导入、通知与自更新都已删除。0.2.3 起把翻旧事写成三条路（字面 / 加权 / 顺着线索），可按人、按时间段翻；身份文档多一句最近七天的「近况」，撞上折起来的旧判断只回一句「这个话题我记得我记不清原话了」。
 >
 > 这一版为什么长成这样——前提、记忆的两层、成长与渠道的取舍、明确不做的东西——见 [`docs/从哪来.md`](docs/从哪来.md)。
 
@@ -143,7 +144,7 @@
 
 ## 五、装
 
-要求：**Node ≥ 22**，DSH `>=0.2.0-rc.1 <0.3.0-0`，零依赖。v0.2.8 已发布，release notes 在 [Releases](https://github.com/bychance6600/dsh-perch/releases/tag/v0.2.8)。
+要求：**Node ≥ 22**，DSH `>=0.2.0-rc.1 <0.3.0-0`，零依赖。v0.3.0 已发布，release notes 在 [Releases](https://github.com/bychance6600/dsh-perch/releases/tag/v0.3.0)。
 
 ### 手动装
 
@@ -204,6 +205,16 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 6. 内部默认（不在面板上）：群冷却 120 秒、全局每分钟 30 条、每群每天 20 条、夜间 23:00–08:00 与工作日峰时 9–12 / 14–18 只接点名。
 7. 断线不会静默：重连成功后，下一轮开头会带一句事实——断了多久。那个秒数是墙钟时间，含桥自身的重连，不是纯网络中断时长。
 
+### 耳朵（语音）
+
+语音只在本机转写：桥送来的一小段语音（≤10MB）→ ffmpeg 转 16kHz 单声道 → 宿主自带的 SenseVoice（INT8）→ 文字。不需要另装推理程序，也不上传音频。
+
+- 第一次收到语音时才开始下模型：INT8 约 239MB、VAD 约 1.8MB；从 Hugging Face / hf-mirror 拉，边下边核 SHA-256，缓存到 `~/.dsh/speech-to-text/sensevoice/`。本机实测约 4 分 20 秒，下完常驻。
+- 听得清：账本里是 `[语音] 内容（语音 N 秒）`。没听清：`[语音 N 秒：没听清]`；宿主没有语音服务时是 `[语音 N 秒：这台机器没装耳朵]`——都不猜内容。
+- 需要 ffmpeg（见下）。Windows 包自带；其他平台放 PATH。
+- 设置 → 渠道会显示耳朵在不在、模型到哪一步。
+- 语言用 SenseVoice 自带的中/英/粤/日/韩，默认中文；不接云端 ASR，不做实时流。
+
 > 桥的扩展动作一概不用。换桥应该零改动。
 
 ## 七、上网：B 站 / 抖音 / 看画面
@@ -218,7 +229,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 
 ### ffmpeg（可选）
 
-「看画面」要抽帧，抽帧要 ffmpeg。查找顺序固定：环境变量（设了就只认它）→ 插件目录的 `bin/<平台>-<架构>/ffmpeg.exe` → PATH。没装时降级，不失败。
+「看画面」要抽帧，「听语音」要转码，都要 ffmpeg。查找顺序固定：环境变量（设了就只认它）→ 插件目录的 `bin/<平台>-<架构>/ffmpeg.exe` → PATH。没装时各自降级（看不了画面 / 听不清），不失败。
 
 ```bash
 node tools/setup-ffmpeg.mjs D:/downloads/ffmpeg-9.0.2-essentials_build.zip
