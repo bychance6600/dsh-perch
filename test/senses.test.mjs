@@ -71,3 +71,75 @@ test('降级文案与听清文案的写法', () => {
   assert.equal(heardNote('他说明天回来', 12), '[语音] 他说明天回来（语音 12 秒）')
   assert.equal(heardNote('他说明天回来', 0), '[语音] 他说明天回来')
 })
+
+test('准备模型：未准备时先让宿主 prepare，好了再转写', async () => {
+  let prepared = 0
+  let phase = 'unprepared'
+  const svc = {
+    snapshot: () => ({
+      providers: [{ id: 'sensevoice-local', preparation: { phase, steps: [] } }],
+      selection: { providerId: 'sensevoice-local' },
+    }),
+    prepare: (id) => {
+      prepared += 1
+      if (id !== 'sensevoice-local') throw new Error('错的 provider')
+      phase = 'downloading'
+      setTimeout(() => { phase = 'ready' }, 20)
+    },
+    resolve: () => ({}),
+    transcribe: async () => ({ text: '准备好了' }),
+  }
+  const ctx = { get: (k) => (k === 'speechToText' ? svc : null) }
+  const ear = createEar(ctx, { timeoutMs: 5000 })
+  const r = await ear.hear(Buffer.from([1, 2, 3]))
+  assert.equal(r.ok, true)
+  assert.equal(r.text, '准备好了')
+  assert.equal(prepared, 1)
+})
+
+test('宿主的 prepare 偶尔会被静默吞掉（inspect 占着槽）：轮询时补一次，别空等 15 分钟', async () => {
+  let phase = 'unprepared'
+  let prepared = 0
+  let attempts = 0
+  const svc = {
+    snapshot: () => ({
+      providers: [{ id: 'sensevoice-local', preparation: { phase, steps: [] } }],
+      selection: { providerId: 'sensevoice-local' },
+    }),
+    prepare: () => {
+      attempts += 1
+      // 宿主的真实行为：inspect 的 preparing 槽还没释放时，prepare() 静默无效、不抛。
+      if (attempts === 1) return
+      prepared += 1
+      phase = 'downloading'
+      setTimeout(() => { phase = 'ready' }, 20)
+    },
+    resolve: () => ({}),
+    transcribe: async () => ({ text: '还是听见了' }),
+  }
+  const ctx = { get: (k) => (k === 'speechToText' ? svc : null) }
+  const ear = createEar(ctx, { timeoutMs: 5000 })
+  const r = await ear.hear(Buffer.from([1]))
+  assert.equal(r.ok, true)
+  assert.equal(r.text, '还是听见了')
+  assert.equal(prepared, 1)
+  assert.ok(attempts >= 2, `prepare 被吞掉后要再补一次（实际 ${attempts} 次）`)
+})
+
+test('准备失败：把失败原因带回来，不假装听清了', async () => {
+  const svc = {
+    snapshot: () => ({
+      providers: [{ id: 'sensevoice-local', preparation: { phase: 'failed', steps: [{ status: 'failed', message: '下载没成功' }] } }],
+      selection: { providerId: 'sensevoice-local' },
+    }),
+    prepare: () => { throw new Error('不该走到这里') },
+    resolve: () => ({}),
+    transcribe: async () => ({ text: '' }),
+  }
+  const ctx = { get: (k) => (k === 'speechToText' ? svc : null) }
+  const ear = createEar(ctx, { timeoutMs: 2000 })
+  const r = await ear.hear(Buffer.from([1]))
+  assert.equal(r.ok, false)
+  assert.equal(r.why, 'failed')
+  assert.match(String(r.error), /下载没成功/)
+})

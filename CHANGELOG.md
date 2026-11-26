@@ -1,3 +1,33 @@
+## 0.3.0（2026-11-26）听得见
+
+主题：**听得见**——QQ 里的语音，她真的能听懂；只在本机转写，内容不上传云端。
+
+验收口径：Windows 桌面版上，QQ 私聊或群里收到一条 3–5 秒中文语音，账本里出现 `[语音] …（语音 N 秒）`，下一轮她接得住这句话；没装、下载失败、转码失败、转写为空时只出现 `[语音 N 秒：这台机器没装耳朵]` 或 `[语音 N 秒：没听清]`，不编内容。首次使用允许等模型下载（INT8 239MB + VAD 1.8MB），下完后同一条语音约 1 秒转写。
+
+### 加
+
+- **QQ 入站语音**：桥送来的 `record` 段 → 下载（≤10MB / 15 秒超时）→ ffmpeg 转 16kHz 单声道 → 规整成宿主只认的最简 RIFF WAV → 本地 SenseVoice 转写 → 写进 `heard` 的 `[语音] 内容（语音 N 秒）`。一条消息最多 4 段、单段最多 800 字、整条最多 2000 字。
+- **零配置**：插件自己的 `cordis.patch.yml` 带两条宿主语音服务的 insert（`speech-to-text` + `speech-to-text-sensevoice`），装了 dsh-perch 就有耳朵；宿主已经启用同 id 服务时重复 insert 无警告、不冲突。旧宿主没有这两个包时只记 warning，照常启动，语音降级成「没装耳朵」。
+- **首次下载**：模型与 VAD 由宿主从 Hugging Face / hf-mirror 自动下载，边下边核 SHA-256，然后缓存到 `~/.dsh/speech-to-text/sensevoice/`；本机实测 4 分 20 秒，之后常驻。模型到哪一步在设置页可见。
+- **设置页耳朵状态**：渠道页多一行「耳朵：在（sensevoice-local · 模型就绪/下载中/检查模型/还没下载/准备失败）」，或「耳朵：不在（这台机器没装语音服务）」。
+- **验收工装**：`tools/acceptance-ears.mjs`（A 正常 / B 失败矩阵 / C 顺序 / D 上限 / E 不污染，12 项）与 `tools/fake-bridge.mjs` 假桥，不连真 QQ 也能跑完。
+
+### 修
+
+- **模型准备的竞态**：宿主启动时的 `inspect()` 和 `prepare()` 共用同一个槽，inspect 还没结束时 prepare 会被静默吞掉（不下载也不报错）。现在 `lib/senses.js` 在 checking 时等它结束，看到 unprepared 再补一次，并有回归测试。
+
+### 实测（2026-11-26，Windows 11 / DSH 0.2.2-rc.5 / NapCat 4.18.42）
+
+- 真机 QQ 私聊语音是 **AMR-NB 8kHz、3.4 秒**（不是 silk），ffmpeg 9.0.2 直接解码；NapCat 的 `get_record out_format:'wav'` 也能转，但本期用不上。
+- 同一条：ffmpeg 转码 25ms（下载另计），宿主服务转写 998ms → 「语音测试。」；worker 直连 80ms。
+- 全量测试 1615 条 / 1613 过 / 1 红（Windows 符号链接 `EPERM`，已知环境红，0.2.8 同样）/ 1 skip；验收工装 12/12、0 失败。
+
+### 升级须知
+
+- 配置不变，账本与数据格式不变；升级后第一次收到语音才会开始下模型，不必提前准备。
+- 旧宿主（没有 `@deepseek-ai/dsh-experimental-speech-to-text*` 两个包的版本）启动时会多一条 `entry did not activate` 的 warning；不影响其他功能，语音显示「这台机器没装耳朵」。
+- 语音只走本机：不接云端 ASR，不上传音频，也不把转写原文写进日志。
+
 ## 0.2.8（2026-11-26）
 
 修一个把「嗯」供成判断的排序 bug（TZ 那边报「记忆全被嗯替代」）。
