@@ -135,6 +135,26 @@ test('host：材料层起不来时如实报错，不说自己起来了', async (
   }
 })
 
+test('host：耳朵状态只报事实（服务在不在、模型到哪一步）', async () => {
+  const base = { on() { return () => {} } }
+  const off = startChannels({ ctx: base, root: 'C:/no-such-root', config: { channels: {} }, log: () => {} })
+  assert.deepEqual((await off.status()).ears, { ok: false, why: '宿主没有 speechToText 服务' })
+
+  const svc = {
+    snapshot: () => ({
+      selection: { providerId: 'sensevoice-local' },
+      providers: [{ id: 'sensevoice-local', preparation: { phase: 'downloading' } }],
+    }),
+  }
+  const on = startChannels({
+    ctx: { ...base, get: (name) => (name === 'speechToText' ? svc : null) },
+    root: 'C:/no-such-root',
+    config: { channels: {} },
+    log: () => {},
+  })
+  assert.deepEqual((await on.status()).ears, { ok: true, provider: 'sensevoice-local', phase: 'downloading' })
+})
+
 test('渠道层把 adapters 露出来：刷站要借它的登录态', async () => {
   const { startChannels } = await import('../lib/channels/host.js')
   const r = startChannels({ ctx: { on() { return () => {} } }, root: 'C:/no-such-root', config: { channels: {} }, log: () => {} })
