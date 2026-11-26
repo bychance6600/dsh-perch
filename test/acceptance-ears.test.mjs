@@ -40,6 +40,7 @@ test('验收工装：实现检测不会把「没有管线」当成「有管线�
 })
 
 test('验收工装：读的是这个 worktree 里的 lib/channels/qq.js', () => {
-  assert.equal(impl.qqPath.endsWith('/lib/channels/qq.js'), true)
+  // Windows 的 path.sep 是反斜杠：先归一化再比，别把平台差异算成工装坏了。
+  assert.equal(impl.qqPath.replaceAll('\\', '/').endsWith('/lib/channels/qq.js'), true)
   assert.equal(impl.qqSourcePresent, true, `读不到 ${impl.qqPath}：${impl.qqError}`)
 })

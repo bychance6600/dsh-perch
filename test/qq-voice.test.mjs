@@ -467,7 +467,8 @@ test('图片 + 语音同一条：先追加图片路径，再追加语音转写',
     await waitFor(() => messages.length === 1, '图片+语音')
 
     const name = `${createHash('sha1').update(PNG_BYTES).digest('hex').slice(0, 16)}.png`
-    assert.equal(messages[0].text, `你看\n[图片：media/qq/${name}]\n[语音] 我看到了（语音 4 秒）`)
+    // 2026-11-23 起入站图片写绝对路径（read_image 按 DSH home 解相对路径会找不到）。
+    assert.equal(messages[0].text, `你看\n[图片：${join(root, 'media', 'qq', name)}]\n[语音] 我看到了（语音 4 秒）`)
     assert.equal(existsSync(join(root, 'media', 'qq', name)), true)
   } finally {
     adapter.stop()
@@ -487,7 +488,8 @@ test('downloadAudio：下载到 0600 临时文件，cleanup 删掉；超上限�
   assert.equal(res.ok, true)
   try {
     assert.equal(existsSync(res.path), true)
-    assert.equal(statSync(res.path).mode & 0o777, 0o600)
+    // Windows 的 chmod 只切只读位，表达不了 0600（mode 恒为 0o666）；这条只在 POSIX 上验。
+    if (process.platform !== 'win32') assert.equal(statSync(res.path).mode & 0o777, 0o600)
     assert.deepEqual(readFileSync(res.path), Buffer.from(bytes))
   } finally {
     await res.cleanup()
