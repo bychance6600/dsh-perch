@@ -284,6 +284,6 @@ if ($DryRun) {
   Say '    1) 重启 DSH（运行中的包文件不会热替换）' 'Gray'
   Say '    2) 设置 → 她 → 「渠道」页签，开 QQ 并填桥地址' 'Gray'
   Say "    3) 日志：$env:USERPROFILE\.dsh-perch\logs\dsh-perch.log" 'Gray'
-  Say '       看到「0.2.3 · 」就是挂上了；没有就是 bundles 没写进去。' 'Gray'
+  Say '       看到日志里以版本号开头的一行就是挂上了；没有就是 bundles 没写进去。' 'Gray'
 }
 Say $Separator 'DarkGray'
