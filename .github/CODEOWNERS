@@ -1,0 +1,11 @@
+# CODEOWNERS
+#
+# 规则：main 上的一切改动都要维护者批准（分支保护里开了「Require review from Code Owners」）。
+# 现在项目只有一个维护者，所以默认全部路径都归他；以后加第二位审阅人时，
+# 把具体路径写在他下面（最后匹配的那一行生效）。
+#
+# 核心路径（明确列出来，方便以后拆分权限）：
+#   /lib/derive.js  /lib/identity.js  /lib/persona.js  —— 她是谁的规则
+#   /AGENTS.md  /LICENSE  /CLA.md  /package.json  /.github/  —— 硬约束、法务、发版
+
+* @bychance6600
