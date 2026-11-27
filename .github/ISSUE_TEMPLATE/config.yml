@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 先读 README
+    url: https://github.com/bychance6600/dsh-perch#readme
+    about: 装法、当前版、常见问题都在这里
+  - name: 常见误读
+    url: https://github.com/bychance6600/dsh-perch/blob/main/docs/%E5%B8%B8%E8%A7%81%E8%AF%AF%E8%AF%BB.md
+    about: 「她是不是坏了」之前先看这一页

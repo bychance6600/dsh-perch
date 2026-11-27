@@ -1,0 +1,56 @@
+name: 功能建议
+description: 想加什么、想改哪里——先说说它要解决什么
+title: "[feat] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        这个项目对「加功能」很挑：它守的是「她只能长」和「人格不设配置菜单」。
+        但「哪里不好用」「她哪里说错话」值得说——先讲问题，再讲方案。
+  - type: textarea
+    id: problem
+    attributes:
+      label: 想解决什么
+      description: 现在是什么让你别扭
+    validations:
+      required: true
+  - type: textarea
+    id: workaround
+    attributes:
+      label: 现在怎么绕
+      description: 你现在的做法，或用别的工具补上
+    validations:
+      required: false
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 期望的样子
+      description: 你希望看到什么；具体到「她说什么 / 界面显示什么」最好
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 考虑过但没选的路
+      description: 想过哪些别的做法、为什么觉得不行
+    validations:
+      required: false
+  - type: dropdown
+    id: pr
+    attributes:
+      label: 是否愿意自己提 PR
+      options:
+        - 愿意，可以自己写
+        - 愿意，但需要人带一下
+        - 先提建议，写不了
+      default: 0
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我明白这个项目的边界（见 README「它不是什么」）
+          required: true
