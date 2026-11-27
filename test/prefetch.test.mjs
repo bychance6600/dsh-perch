@@ -51,6 +51,18 @@ test('prefetch：纸条有相关项就不翻账本', async () => {
   await fs.rm(root, { recursive: true, force: true })
 })
 
+test('prefetch：纸条只沾一个常见字眼不算相关，改查账本', async () => {
+  const root = await tmpRoot()
+  await seed(root, 'utterance', '11-23 那晚先拿草稿档跑一张炸蘑菇，不验画质，只看它能不能让我看懂那盘菜——所以得看了才算数。')
+  // 纸条只跟这句话共一个「说的」，不是纸上写着这件事（2026-11-27 真机回放）
+  await fs.writeFile(path.join(root, 'notes.json'), JSON.stringify({ notes: [{ id: 'n_w0', text: '他说过的规矩都记着', at: NOW }] }), 'utf8')
+  const hit = await prefetchFor(root, '我们说的那句「看了才算数」，你后来验了没', { now: NOW, names: [] })
+  assert.ok(hit, '要能查账本')
+  assert.equal(hit.source, 'ledger')
+  assert.match(hit.text, /看了才算数/)
+  await fs.rm(root, { recursive: true, force: true })
+})
+
 test('prefetch：账本最多 3 条、每条带 id、同 query 稳定，且不超字数和 token', async () => {
   const root = await tmpRoot()
   for (let i = 1; i <= 5; i += 1) await seed(root, 'utterance', `我上次在群里叫她姐姐，第 ${i} 次。`)
