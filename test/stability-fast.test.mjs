@@ -327,9 +327,9 @@ test('抽掉一条她看不见的判断：文本只差折叠行里那个数', ()
   const baseText = oldVariableSelfText(base, { shown })
   const kept = events.filter((e) => e.id !== target.id)
   const realText = oldVariableSelfText(deriveSelf(kept, OPTS), { shown })
-  const fold = (text) => text.replace(/（还有 \d+ 条更早的，你记不清原话了）/, '（还有 N 条更早的，你记不清原话了）')
+  const fold = (text) => text.replace(/（还有 \d+ 件更早的事）/, '（还有 N 件更早的事）')
   assert.equal(fold(realText), fold(baseText), '不可见判断被抽掉后，除折叠计数外不该有任何变化')
-  const countOf = (text) => Number((/（还有 (\d+) 条更早的/.exec(text) ?? [])[1])
+  const countOf = (text) => Number((/（还有 (\d+) 件更早的事/.exec(text) ?? [])[1])
   assert.equal(countOf(baseText) - countOf(realText), 1, '折叠计数正好少 1')
 
   // ② 快路径必须和这个真值逐字相同（verify 会逐条比对）。

@@ -16,9 +16,9 @@ import {
   RECENT_WINDOW_DAYS,
 } from '../lib/derive.js'
 import {
-  FORGET_LINE,
+  FOLD_NEUTRAL,
   FORGET_MATCH_MIN,
-  forgetLine,
+  foldedTopic,
   personaLine,
   recencyLine,
 } from '../lib/persona.js'
@@ -112,14 +112,14 @@ test('遗忘阈值：Dice 0.44 不命中，0.45 与 0.46 命中', () => {
       ev(T0 - DAY, { type: 'revise', text: '我后来换了说法', verdict: 'refuted', refs: [old.id] }),
       old,
     ], { now: T0 })
-    const got = forgetLine(model, topicB)
+    const got = foldedTopic(model, topicB)
     if (k === 44) assert.equal(got, '', '0.44 必须不命中')
-    else assert.equal(got, FORGET_LINE, String(k))
+    else assert.equal(got, topicA, String(k))
   }
   assert.equal(FORGET_MATCH_MIN, 0.45)
 })
 
-test('遗忘命中只回一句：不列条数、不列清单、不复读旧话', () => {
+test('折叠话题命中只回旧话本身：不再生成否认台词', () => {
   const [topicA, topicB] = longPair(46)
   const old = ev(T0 - 10 * DAY, { type: 'heard', origin: 'owner', text: topicA })
   const model = deriveSelf([
@@ -128,12 +128,15 @@ test('遗忘命中只回一句：不列条数、不列清单、不复读旧话',
     ev(T0 - DAY, { type: 'revise', text: '我后来换了说法', verdict: 'refuted', refs: [old.id] }),
     old,
   ], { now: T0 })
-  const line = forgetLine(model, topicB)
-  assert.equal(line, FORGET_LINE)
-  assert.equal(line.split('。').filter(Boolean).length, 1)
-  assert.equal(line.includes(topicA), false)
-  assert.equal(/[0-9０-９一二三四五六七八九十]+\s*条/.test(line), false)
-  assert.equal(line.includes('\n'), false)
+  const hit = foldedTopic(model, topicB)
+  assert.equal(hit, topicA, '命中时把旧话原文交回调用方')
+  const line = personaLine(model, { now: T0, message: topicB })
+  assert.equal(line.includes('记不清原话了'), false, '折起来不等于忘了')
+  assert.equal(line.includes(FOLD_NEUTRAL), false, '查不查得到由调用方决定，persona 不预置')
+  assert.equal(FOLD_NEUTRAL.split('。').filter(Boolean).length, 1)
+  for (const word of ['翻', '检索', '召回', '没找着那一条']) {
+    assert.equal(FOLD_NEUTRAL.includes(word), false, `中性事实不该含「${word}」`)
+  }
 })
 
 test('遗忘不命中返回空串', () => {
@@ -145,8 +148,8 @@ test('遗忘不命中返回空串', () => {
     ev(T0 - DAY, { type: 'revise', text: '我后来换了说法', verdict: 'refuted', refs: [old.id] }),
     old,
   ], { now: T0 })
-  assert.equal(forgetLine(model, '完全不相干的一句话'), '')
-  assert.equal(forgetLine(model, ''), '')
+  assert.equal(foldedTopic(model, '完全不相干的一句话'), '')
+  assert.equal(foldedTopic(model, ''), '')
 })
 
 test('遗忘的 refTexts 超过 200 字时被截断', () => {
@@ -176,8 +179,8 @@ test('遗忘纯函数：同样账本 + 同样的话，两次结果完全相同',
   ]
   const a = deriveSelf(events, { now: T0 })
   const b = deriveSelf(events, { now: T0 })
-  assert.equal(forgetLine(a, topicB), FORGET_LINE)
-  assert.equal(forgetLine(a, topicB), forgetLine(b, topicB))
+  assert.equal(foldedTopic(a, topicB), topicA)
+  assert.equal(foldedTopic(a, topicB), foldedTopic(b, topicB))
   assert.equal(personaLine(a, { now: T0, message: topicB }), personaLine(b, { now: T0, message: topicB }))
 })
 
