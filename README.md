@@ -1,7 +1,7 @@
 # dsh-perch
 
 ![license](https://img.shields.io/badge/license-MIT-blue)
-![version](https://img.shields.io/badge/version-0.4.0-green)
+![version](https://img.shields.io/badge/version-0.4.1-green)
 ![deps](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![node](https://img.shields.io/badge/node-%E2%89%A522-339933)
 ![dsh](https://img.shields.io/badge/DSH-plugin-6a5acd)
@@ -19,7 +19,7 @@
 - **她可以有一具可选的身体**：一只透明置顶的小窗，只显示状态与动作，不生成台词，也不替她开口。身体项目还在改、可能要重做，不装不影响任何功能。
 - **她没有「设置人格」的入口**：只有生长环境——几点醒、醒几次、刷不刷 B 站。判据只有一句：*这个配置能不能让她对同一个人说出不一样的话*。能，就是人格（禁）；只改在哪、何时、多频繁，是环境（可配）。
 
-> **0.4.0 是当前版（0.1.0 是重建版）。** 入口收窄成两处（DSH 会话与 QQ），材料改成「报纸 + 她自己搜」，B 站/抖音私信、出门、导入、通知与自更新都已删除。0.2.3 起把翻旧事写成三条路（字面 / 加权 / 顺着线索），可按人、按时间段翻；身份文档多一句最近七天的「近况」，撞上折起来的旧判断只回一句「这个话题我记得我记不清原话了」。
+> **0.4.1 是当前版（0.1.0 是重建版）。** 入口收窄成两处（DSH 会话与 QQ），材料改成「报纸 + 她自己搜」，B 站/抖音私信、出门、导入、通知与自更新都已删除。0.2.3 起把翻旧事写成三条路（字面 / 加权 / 顺着线索），可按人、按时间段翻；身份文档多一句最近七天的「近况」，撞上折起来的旧判断只回一句「这个话题我记得我记不清原话了」。
 >
 > 这一版为什么长成这样——前提、记忆的两层、成长与渠道的取舍、明确不做的东西——见 [`docs/从哪来.md`](docs/从哪来.md)。
 
@@ -146,7 +146,7 @@
 
 ## 五、装
 
-要求：**Node ≥ 22**，DSH `>=0.2.0-rc.1 <0.3.0-0`，零依赖。v0.4.0 已发布，release notes 在 [Releases](https://github.com/bychance6600/dsh-perch/releases/tag/v0.4.0)。
+要求：**Node ≥ 22**，DSH `>=0.2.0-rc.1 <0.3.0-0`，零依赖。v0.4.1 已发布，release notes 在 [Releases](https://github.com/bychance6600/dsh-perch/releases/tag/v0.4.1)。
 
 ### 手动装
 
