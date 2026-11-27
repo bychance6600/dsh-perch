@@ -18,7 +18,8 @@ import { appendEvent, readEvents } from '../lib/store.js'
 import { canReply, channelConfig } from '../lib/channels/gate.js'
 import { isOwnerMessage, ownerIdOf } from '../lib/channels/auth.js'
 import { isPureNarration } from '../lib/guard.js'
-import { getWakeSection } from '../lib/identity.js'
+import { getWakeSection, setWakeSection, clearWakeSection } from '../lib/identity.js'
+import { _resetExternalTurn, getExternalHeard, isExternalTurn } from '../lib/extturn.js'
 
 async function tmpRoot() {
   return fs.mkdtemp(path.join(os.tmpdir(), 'fish-chan-'))
@@ -973,33 +974,46 @@ test('出站：旁白和正常句混在一起时只去掉旁白那行', async ()
   await fs.rm(h.root, { recursive: true, force: true })
 })
 
-// ---- 2026-11-27 issue #20：唤醒预取相关旧事（0.5.0 M1） ----
+// ---- 2026-11-27 团队卡 #7：渠道层不再自己预取，预取搬到组装层 ----
 
-test('router：问到过去时 wake 段挂线索、轮末清空；没触发就不挂', async () => {
+test('router：渠道轮不再自己往 wake 段塞预取，但 assemble 期间能认出这是渠道轮', async () => {
+  _resetExternalTurn()
   const root = await tmpRoot()
   await appendEvent({ type: 'utterance', text: '我上次在群里叫过她姐姐。' }, { day: 1, stage: 1, source: 'tool' }, root)
   const seen = []
-  const h = await harness({ root, config: baseConfig, onPrompt: () => seen.push(getWakeSection()) })
+  const h = await harness({
+    root,
+    config: baseConfig,
+    onPrompt: () => seen.push({ wake: getWakeSection(), external: isExternalTurn(), heard: getExternalHeard() }),
+  })
   const r = await h.router.handle(groupMsg({ text: '你还记得上次在群里叫我姐姐吗' }))
   assert.equal(r.sent, true, String(r.why))
   assert.equal(seen.length, 1)
-  assert.match(seen[0], /可能相关的旧事/)
-  assert.match(seen[0], /线索已经在上面/)
-  assert.equal(getWakeSection(), '', '这一轮结束后线索段要清掉，不能漏到下一轮')
-  const h2 = await harness({ root, config: baseConfig, onPrompt: () => seen.push(getWakeSection()) })
-  const r2 = await h2.router.handle(groupMsg({ text: '今天天气不错' }))
-  assert.equal(r2.sent, true, String(r2.why))
-  assert.equal(seen[1], '', '没触发的一轮不挂预取段')
+  // 预取段由组装层（lib/identity.js 的 system-prompt/assemble）插，router 不再碰 wake 段
+  assert.equal(seen[0].wake, '', '渠道层不再往 perch:wake 里塞预取段')
+  // 组装层据此把日志的 source 写成 channel：渠道轮在 askHer 当下 isExternalTurn() 为真
+  assert.equal(seen[0].external, true, '渠道轮问她的时候 isExternalTurn() 必须为真')
+  // 原话旁路：组装层要拿这句原话去检索（buildPrompt 整段的前 80 字是群 header，会带偏关键词）
+  assert.equal(seen[0].heard, '你还记得上次在群里叫我姐姐吗', '渠道轮把来话原样递给了组装层')
+  assert.equal(getExternalHeard(), '', '出这一轮要把原话一起收走')
+  assert.equal(isExternalTurn(), false, '出这一轮要退场，不能把状态漏给下一轮')
   await fs.rm(root, { recursive: true, force: true })
 })
 
-test('router：预取段在 askHer 抛错时也清空', async () => {
+test('router：askHer 抛错时也不动调度唤醒留下的处境段', async () => {
+  _resetExternalTurn()
   const root = await tmpRoot()
-  await appendEvent({ type: 'utterance', text: '我上次在群里叫过她姐姐。' }, { day: 1, stage: 1, source: 'tool' }, root)
-  const h = await harness({ root, config: baseConfig, onPrompt: () => { throw new Error('boom') } })
-  const r = await h.router.handle(groupMsg({ text: '你还记得上次在群里叫我姐姐吗' }))
-  assert.equal(r.sent, false)
-  assert.equal(getWakeSection(), '')
-  await fs.rm(root, { recursive: true, force: true })
+  setWakeSection('调度：这一次是醒来看一眼')
+  try {
+    const h = await harness({ root, config: baseConfig, onPrompt: () => { throw new Error('boom') } })
+    const r = await h.router.handle(groupMsg({ text: '你还记得上次在群里叫我姐姐吗' }))
+    assert.equal(r.sent, false)
+    assert.equal(getWakeSection(), '调度：这一次是醒来看一眼', 'wake 段归 scheduler 管，渠道轮不许替它清')
+    assert.equal(isExternalTurn(), false)
+    assert.equal(getExternalHeard(), '', '抛错也要把原话旁路清掉')
+  } finally {
+    clearWakeSection()
+    await fs.rm(root, { recursive: true, force: true })
+  }
 })
 
