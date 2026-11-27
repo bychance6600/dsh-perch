@@ -18,6 +18,7 @@ import { appendEvent, readEvents } from '../lib/store.js'
 import { canReply, channelConfig } from '../lib/channels/gate.js'
 import { isOwnerMessage, ownerIdOf } from '../lib/channels/auth.js'
 import { isPureNarration } from '../lib/guard.js'
+import { getWakeSection } from '../lib/identity.js'
 
 async function tmpRoot() {
   return fs.mkdtemp(path.join(os.tmpdir(), 'fish-chan-'))
@@ -27,12 +28,14 @@ async function tmpRoot() {
  * 假宿主：`prompt()` 之后同一拍里回一条 assistant/message 和 turn/end。
  * 真机是分开到的（几秒），这里合成一拍是为了测，不是为了模仿延时。
  */
-function fakeHost(reply) {
+function fakeHost(reply, { onPrompt } = {}) {
   const handlers = []
   const calls = []
   const sc = {
     async prompt(req) {
       calls.push(req)
+      // 测 0.5.0 M1 的预取段：要在 askHer 当下抓 perch:wake，轮末就清空了。
+      onPrompt?.(req)
       // 按调用次序取话；给数组时第 N 次就用第 N 条（用完停在最后一条），
       // 这样「第一次只吐脚手架、第二次说人话」也能在这里演出来。
       const raw = Array.isArray(reply) ? reply[Math.min(calls.length - 1, reply.length - 1)] : reply
@@ -89,12 +92,12 @@ function fakeAdapter(statusOverride = {}) {
   }
 }
 
-async function harness({ reply = '嗯。', stage = 3, config = {}, root, ownerIds = {}, extraAdapters = [], status = {}, now = null } = {}) {
+async function harness({ reply = '嗯。', stage = 3, config = {}, root, ownerIds = {}, extraAdapters = [], status = {}, now = null, onPrompt } = {}) {
   const r = root ?? (await tmpRoot())
   const journal = createJournal(r)
   const people = createPeople(r)
   const adapter = fakeAdapter(status)
-  const { ctx, calls } = fakeHost(reply)
+  const { ctx, calls } = fakeHost(reply, { onPrompt })
   const router = createRouter({
     ctx,
     root: r,
@@ -936,3 +939,34 @@ test('出站：旁白和正常句混在一起时只去掉旁白那行', async ()
   assert.equal(h.adapter.sent[0].text, '好。')
   await fs.rm(h.root, { recursive: true, force: true })
 })
+
+// ---- 2026-11-27 issue #20：唤醒预取相关旧事（0.5.0 M1） ----
+
+test('router：问到过去时 wake 段挂线索、轮末清空；没触发就不挂', async () => {
+  const root = await tmpRoot()
+  await appendEvent({ type: 'utterance', text: '我上次在群里叫过她姐姐。' }, { day: 1, stage: 1, source: 'tool' }, root)
+  const seen = []
+  const h = await harness({ root, config: baseConfig, onPrompt: () => seen.push(getWakeSection()) })
+  const r = await h.router.handle(groupMsg({ text: '你还记得上次在群里叫我姐姐吗' }))
+  assert.equal(r.sent, true, String(r.why))
+  assert.equal(seen.length, 1)
+  assert.match(seen[0], /可能相关的旧事/)
+  assert.match(seen[0], /线索已经在上面/)
+  assert.equal(getWakeSection(), '', '这一轮结束后线索段要清掉，不能漏到下一轮')
+  const h2 = await harness({ root, config: baseConfig, onPrompt: () => seen.push(getWakeSection()) })
+  const r2 = await h2.router.handle(groupMsg({ text: '今天天气不错' }))
+  assert.equal(r2.sent, true, String(r2.why))
+  assert.equal(seen[1], '', '没触发的一轮不挂预取段')
+  await fs.rm(root, { recursive: true, force: true })
+})
+
+test('router：预取段在 askHer 抛错时也清空', async () => {
+  const root = await tmpRoot()
+  await appendEvent({ type: 'utterance', text: '我上次在群里叫过她姐姐。' }, { day: 1, stage: 1, source: 'tool' }, root)
+  const h = await harness({ root, config: baseConfig, onPrompt: () => { throw new Error('boom') } })
+  const r = await h.router.handle(groupMsg({ text: '你还记得上次在群里叫我姐姐吗' }))
+  assert.equal(r.sent, false)
+  assert.equal(getWakeSection(), '')
+  await fs.rm(root, { recursive: true, force: true })
+})
+
