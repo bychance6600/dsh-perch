@@ -89,7 +89,7 @@ test('「更早以前」是折叠不是删除：原文仍在，只截断显示',
   // 于是"折叠"折的是**最不显著**的那几条，不再是"最旧"的那几条。
   const line = foldOlderBeliefs(beliefs)
   assert.ok(line.includes('判断编号2') && line.includes('判断编号3'), '折叠行要带上靠后的那几条')
-  assert.match(line, /还有 7 条更早的/)
+  assert.match(line, /还有 7 件更早的事/)
   // 显示区只放最显著的 BELIEF_SHOWN 条（A19：默认 2 条）
   const text = personaLine(model({ beliefs }), { budget: 4000 })
   assert.ok(text.includes('- 判断编号0'), '最显著的必须在眼前')

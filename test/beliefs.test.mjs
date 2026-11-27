@@ -63,7 +63,7 @@ test('调成 1 条时只剩一条，其余折进「更早以前」', () => {
   assert.equal((seg.match(/^- 判断编号/gm) || []).length, 1)
   const old = text.slice(text.indexOf('## 更早以前'))
   assert.ok(old.includes('判断编号1'), '折行从第 2 条开始')
-  assert.ok(old.includes('记不清原话了'), `折叠行要交代还有多少条：${old.slice(0, 80)}`)
+  assert.ok(old.includes('还有 6 件更早的事'), `折叠行要交代还有多少件事：${old.slice(0, 80)}`)
 })
 
 test('折叠行不截断句子：放不下就少放一条（A12）', () => {
@@ -77,7 +77,7 @@ test('折叠行不截断句子：放不下就少放一条（A12）', () => {
   assert.ok(!line.includes('…'), '不许用省略号砍句子')
   assert.ok(line.includes('短判断一') && line.includes('短判断二'))
   assert.ok(!line.includes(long), '放不下的整条不塞，宁可少放一条')
-  assert.match(line, /还有 1 条更早的/)
+  assert.match(line, /还有 1 件更早的事/)
   // 第一条无论多长都要能出现在眼前（不为了字数把它砍掉）
   const one = foldOlderBeliefs([{ id: 'b0', text: long }], 0, 3)
   assert.equal(one, long)
@@ -110,8 +110,8 @@ test('A19：默认只摆 2 条，核心段确实变小；预算仍是 1800，句
 })
 
 test('配置项：默认 2，越界被夹回 1–8', () => {
-  assert.equal(DEFAULTS.memory.beliefsShown, 2)
-  assert.equal(normalizeConfig({}).memory.beliefsShown, 2)
+  assert.equal(DEFAULTS.memory.beliefsShown, 3)
+  assert.equal(normalizeConfig({}).memory.beliefsShown, 3)
   assert.equal(normalizeConfig({ memory: { beliefsShown: 0 } }).memory.beliefsShown, 1)
   assert.equal(normalizeConfig({ memory: { beliefsShown: 99 } }).memory.beliefsShown, 8)
   assert.equal(normalizeConfig({ memory: { beliefsShown: '5' } }).memory.beliefsShown, 5)

@@ -9,7 +9,7 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 
-import { prefetchFor, prefetchTriggers, estimateTokens, PREFETCH_MAX, PREFETCH_TOKENS, PREFETCH_CHARS } from '../lib/prefetch.js'
+import { prefetchFor, clueFor, prefetchTriggers, estimateTokens, PREFETCH_MAX, PREFETCH_TOKENS, PREFETCH_CHARS } from '../lib/prefetch.js'
 import { readEventsCached } from '../lib/recall.js'
 import { appendEvent } from '../lib/store.js'
 import {
@@ -481,4 +481,37 @@ test('组装层预取：不在渠道轮时，旁路里残留的原话不会被�
   }
   assert.deepEqual(calls.map((c) => c.heard), ['面板里说的这句'])
   assert.deepEqual(prefetchLogs(logs).map((l) => l.split(' ').at(-1)), ['source=dsh'])
+})
+
+test('clueFor：命中折叠话题后先查账本，把原话当线索递回来', async () => {
+  const root = await tmpRoot()
+  await seed(root, 'utterance', '以后你叫我阿岚。')
+  const clue = await clueFor(root, '以后你叫我什么来着', { now: NOW })
+  assert.match(clue, /有一句原话/)
+  assert.match(clue, /阿岚/)
+  for (const word of ['翻', '检索', '召回', '没找着那一条']) {
+    assert.equal(clue.includes(word), false, `线索不该含「${word}」`)
+  }
+  await fs.rm(root, { recursive: true, force: true })
+})
+
+test('clueFor：查不到就回空串（由调用方给中性事实）', async () => {
+  const root = await tmpRoot()
+  await seed(root, 'utterance', '今天风很大。')
+  assert.equal(await clueFor(root, '以后你叫我什么来着', { now: NOW }), '')
+  assert.equal(await clueFor(root, ''), '')
+  await fs.rm(root, { recursive: true, force: true })
+})
+
+test('clueFor：不把这一轮刚记进去的同一句话当线索', async () => {
+  const root = await tmpRoot()
+  await seed(root, 'utterance', '以后你叫我什么来着。')
+  assert.equal(await clueFor(root, '以后你叫我什么来着', { now: NOW }), '')
+  await fs.rm(root, { recursive: true, force: true })
+})
+
+test('clueFor：账本不在也不抛', async () => {
+  const root = await tmpRoot()
+  assert.equal(await clueFor(path.join(root, 'missing'), '在吗', { now: NOW }), '')
+  await fs.rm(root, { recursive: true, force: true })
 })

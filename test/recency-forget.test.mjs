@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import { deriveSelf, recentCountsOf, recencyOf } from '../lib/derive.js'
-import { personaLine, recencyLine, forgetLine, FORGET_LINE } from '../lib/persona.js'
+import { personaLine, recencyLine, foldedTopic, FOLD_NEUTRAL } from '../lib/persona.js'
 import { buildPrompt } from '../lib/channels/router.js'
 import { newId } from '../lib/schema.js'
 
@@ -95,8 +95,8 @@ test('折叠话题 Dice 恰在 0.44 不出现、0.46 出现', () => {
     old,
   ]
   const model = deriveSelf(events, { now: T0 })
-  assert.equal(forgetLine(model, topicB), '')
-  assert.equal(forgetLine(model, topicC), FORGET_LINE)
+  assert.equal(foldedTopic(model, topicB), '')
+  assert.equal(foldedTopic(model, topicC), topicA)
 })
 
 test('折叠话题不命中时那句不出现，belief.text 也能当话题', () => {
@@ -107,8 +107,8 @@ test('折叠话题不命中时那句不出现，belief.text 也能当话题', ()
     said(T0 - DAY, topicA),
   ]
   const model = deriveSelf(events, { now: T0 })
-  assert.equal(forgetLine(model, topicB), FORGET_LINE)
-  assert.equal(forgetLine(model, '完全不相干的一句话'), '')
+  assert.equal(foldedTopic(model, topicB), topicA)
+  assert.equal(foldedTopic(model, '完全不相干的一句话'), '')
 })
 
 test('纯函数：同样账本 + 同样的话，两次结果完全相同', () => {
@@ -121,15 +121,15 @@ test('纯函数：同样账本 + 同样的话，两次结果完全相同', () =>
   const a = deriveSelf(events, { now: T0 })
   const b = deriveSelf(events, { now: T0 })
   assert.deepEqual(personaLine(a, { now: T0, message: topicB }), personaLine(b, { now: T0, message: topicB }))
-  assert.equal(forgetLine(a, topicB), forgetLine(b, topicB))
+  assert.equal(foldedTopic(a, topicB), foldedTopic(b, topicB))
 })
 
 test('buildPrompt 只在带 forget 时多出那一句', () => {
   const msg = { channel: 'qq', kind: 'private', personName: '他', text: '在吗' }
   const without = buildPrompt(msg, [], { isOwner: true })
-  const withLine = buildPrompt(msg, [], { isOwner: true, forget: FORGET_LINE })
-  assert.equal(without.includes(FORGET_LINE), false)
-  assert.equal(withLine.includes(FORGET_LINE), true)
+  const withLine = buildPrompt(msg, [], { isOwner: true, forget: FOLD_NEUTRAL })
+  assert.equal(without.includes(FOLD_NEUTRAL), false)
+  assert.equal(withLine.includes(FOLD_NEUTRAL), true)
   // 落在最后一句正前方（在「回不回」之前），离她最近。
-  assert.equal(withLine.indexOf(FORGET_LINE) < withLine.indexOf('（回不回'), true)
+  assert.equal(withLine.indexOf(FOLD_NEUTRAL) < withLine.indexOf('（回不回'), true)
 })
