@@ -17,6 +17,7 @@ import { createPeople } from '../lib/people.js'
 import { appendEvent, readEvents } from '../lib/store.js'
 import { canReply, channelConfig } from '../lib/channels/gate.js'
 import { isOwnerMessage, ownerIdOf } from '../lib/channels/auth.js'
+import { isPureNarration } from '../lib/guard.js'
 
 async function tmpRoot() {
   return fs.mkdtemp(path.join(os.tmpdir(), 'fish-chan-'))
@@ -875,4 +876,63 @@ test('前面几句按各自的说话人标名字，不是全算到当前这个�
   assert.ok(prompt.includes('打狗头：哈基米哈基米'), prompt)
   assert.ok(!prompt.includes('果子：哈基米哈基米'), prompt)
   assert.ok(prompt.includes('你：我不接这个'), prompt)
+})
+
+// ---- 2026-11-27 issue #15：群聊三处口吻/点名问题 ----
+
+test('buildPrompt：群里叫了她、回她时，只把这两件事实放进开场那句（issue #15）', () => {
+  const mentioned = buildPrompt(groupMsg({ mentionedSelf: true, replyToSelf: false }), [], { isOwner: false })
+  const factLine = mentioned.split('\n').find((l) => l.includes('这条叫了你的名字'))
+  assert.ok(factLine, mentioned)
+  assert.match(factLine, /说话的是/, '事实要和开场那几句放在同一段')
+
+  const replied = buildPrompt(groupMsg({ mentionedSelf: false, replyToSelf: true }), [], { isOwner: false })
+  assert.match(replied, /这条是回你的/)
+  assert.doesNotMatch(replied, /这条叫了你的名字/)
+
+  const both = buildPrompt(groupMsg({ mentionedSelf: true, replyToSelf: true }), [], { isOwner: false })
+  assert.match(both, /这条叫了你的名字/)
+  assert.match(both, /这条是回你的/)
+
+  // 没点名、私聊：都不加
+  const plain = buildPrompt(groupMsg({ mentionedSelf: false, replyToSelf: false }), [], { isOwner: false })
+  assert.doesNotMatch(plain, /这条叫了你的名字|这条是回你的/)
+  const dm = buildPrompt({ ...groupMsg({ mentionedSelf: true }), kind: 'dm' }, [], { isOwner: false })
+  assert.doesNotMatch(dm, /这条叫了你的名字/)
+})
+
+test('buildPrompt：客厅只描述房间怎么找人，不再写「别的 AI」和主动限额（issue #15）', () => {
+  const withRoom = buildPrompt(groupMsg({ conversationId: '900' }), [], { isOwner: false, room: true })
+  assert.match(withRoom, /客厅/)
+  assert.match(withRoom, /@名字/, '投递提示要留着')
+  assert.match(withRoom, /不 @/, '投递提示要留着')
+  assert.doesNotMatch(withRoom, /别的 AI|一小时|主动找人|最多一次/)
+  const noRoom = buildPrompt(groupMsg(), [], { isOwner: false })
+  assert.doesNotMatch(noRoom, /客厅/)
+})
+
+test('isPureNarration：只认整条/整行括号自述，句子里带括号不算（issue #15）', () => {
+  assert.equal(isPureNarration('（这句不是叫我的，我不插话。）'), true)
+  assert.equal(isPureNarration('（旁白）'), true)
+  assert.equal(isPureNarration('（笑）这句是给你的。'), false)
+  assert.equal(isPureNarration('好。'), false)
+  assert.equal(isPureNarration(''), false)
+})
+
+test('出站：整条括号旁白拦下不发（夹具用真机那句）', async () => {
+  const h = await harness({ config: baseConfig, reply: '（这句不是叫我的，我不插话。）' })
+  const r = await h.router.handle(groupMsg({ mentionedSelf: true }))
+  assert.equal(r.sent, false)
+  assert.equal(r.why, 'narration')
+  assert.equal(h.adapter.sent.length, 0)
+  await fs.rm(h.root, { recursive: true, force: true })
+})
+
+test('出站：旁白和正常句混在一起时只去掉旁白那行', async () => {
+  const h = await harness({ config: baseConfig, reply: '（旁白：这句不是叫我的，我不插话。）\n好。' })
+  const r = await h.router.handle(groupMsg({ mentionedSelf: true }))
+  assert.equal(r.sent, true, String(r.why))
+  assert.equal(h.adapter.sent.length, 1)
+  assert.equal(h.adapter.sent[0].text, '好。')
+  await fs.rm(h.root, { recursive: true, force: true })
 })
