@@ -12,6 +12,20 @@ import path from 'node:path'
 import { prefetchFor, prefetchTriggers, estimateTokens, PREFETCH_MAX, PREFETCH_TOKENS, PREFETCH_CHARS } from '../lib/prefetch.js'
 import { readEventsCached } from '../lib/recall.js'
 import { appendEvent } from '../lib/store.js'
+import {
+  HOST_PERSONA_SECTION,
+  IDENTITY_ORDER,
+  IDENTITY_SECTION,
+  PREFETCH_ORDER,
+  PREFETCH_SECTION,
+  WAKE_ORDER,
+  WAKE_SECTION,
+  attachAssembleFix,
+  clearWakeSection,
+  setWakeSection,
+} from '../lib/identity.js'
+import { beginExternalTurn, endExternalTurn, _resetExternalTurn } from '../lib/extturn.js'
+import { PROACTIVE_TRIGGER } from '../lib/proactive.js'
 
 const NOW = Date.parse('2026-11-27T12:00:00+08:00')
 async function tmpRoot() {
@@ -135,4 +149,226 @@ test('prefetch：token 估算把中文与英文分开算', () => {
   assert.equal(estimateTokens('姐姐'), 2)
   assert.equal(estimateTokens('abcd'), 1)
   assert.equal(estimateTokens('姐姐abcd'), 3)
+})
+
+// ---- 团队卡 #7（issue #7）：预取从渠道层搬到组装层，一处注入、所有入口覆盖 ----
+//
+// 假宿主只做两件事：`ctx.on` 收钩子；按真机的顺序先 emit `agent/inbox/claimed`、
+// 再 `systemPrompt.assemble()`。这个顺序是从 asar 核实的（dsh-agent-loop 的 preStep）：
+// 本轮那条 user/message 要等 assemble 之后才 append 进 session。所以下面
+// 「session 里一条 user 都没有、但 claim 过一条」的夹具就是真机的形状。
+
+function fakeAgent({ session } = {}) {
+  const hooks = []
+  const agent = {
+    session: session ?? { id: 's1', snapshotEvents: () => [] },
+    ctx: {
+      on: (evt, fn, o) => {
+        const hook = { evt, fn, o }
+        hooks.push(hook)
+        return () => {
+          const i = hooks.indexOf(hook)
+          if (i >= 0) hooks.splice(i, 1)
+        }
+      },
+    },
+  }
+  return { agent, hooks }
+}
+
+const hookOf = (hooks, evt) => hooks.find((h) => h.evt === evt)
+
+/** 宿主先发 claim（在 assemble 之前）。 */
+function claimInto(hooks, agent, { text, id = 'm1', kind = 'user' } = {}) {
+  hookOf(hooks, 'agent/inbox/claimed').fn({
+    agent,
+    turn: 1,
+    message: { id, source: { kind }, content: [{ type: 'text', text }] },
+  })
+}
+
+/** 跑一次组装：宿主给的 sections 与真机同形（宿主人格段、身份段、wake 段）。 */
+async function assembleOnce(hooks, agent) {
+  const host = {
+    sections: [
+      { name: HOST_PERSONA_SECTION, order: 0, text: 'You are a coding agent' },
+      { name: IDENTITY_SECTION, order: IDENTITY_ORDER, text: '## 你是谁' },
+      { name: WAKE_SECTION, order: WAKE_ORDER, text: '' },
+    ],
+  }
+  return hookOf(hooks, 'system-prompt/assemble').fn({}, { agent }, async () => host)
+}
+
+/** 假预取：记下每次问到的「话」，按次序返回预先排好的结果（用完停在最后一条）。 */
+function spyPrefetch(...hits) {
+  const calls = []
+  const prefetch = async (root, heard) => {
+    calls.push({ root, heard })
+    const h = hits[Math.min(calls.length - 1, hits.length - 1)]
+    return h ?? null
+  }
+  return { prefetch, calls }
+}
+
+const HIT = { text: '## 可能相关的旧事（只是线索，不是结论）\n- 她上次在群里叫过他姐姐（e_1）', count: 1 }
+const sectionNames = (out) => out.sections.map((s) => s.name)
+const prefetchLogs = (logs) => logs.filter((l) => l.startsWith('prefetch '))
+
+test('组装层预取：用本轮 inbox 那句查（assemble 时 session 里还没有它），查到就插 perch:prefetch', async () => {
+  const { agent, hooks } = fakeAgent() // session 里一条事件都没有
+  const { prefetch, calls } = spyPrefetch(HIT)
+  const logs = []
+  const off = attachAssembleFix(agent, { root: '/root', prefetch, log: (m) => logs.push(m) })
+  claimInto(hooks, agent, { text: '你还记得上次在群里叫我姐姐吗' })
+  const out = await assembleOnce(hooks, agent)
+  assert.deepEqual(sectionNames(out), [IDENTITY_SECTION, PREFETCH_SECTION, WAKE_SECTION])
+  assert.equal(out.sections[1].order, PREFETCH_ORDER, '线索在身份之后、处境之前')
+  assert.equal(out.sections[1].text, HIT.text)
+  assert.deepEqual(calls.map((c) => c.heard), ['你还记得上次在群里叫我姐姐吗'])
+  assert.equal(calls[0].root, '/root')
+  // 每轮一条、格式固定：查过几次、多少字、这轮是谁在说。
+  assert.deepEqual(prefetchLogs(logs), [`prefetch n=1 chars=${HIT.text.length} source=dsh`])
+  off()
+  assert.equal(hooks.length, 0, '拆卸时两条钩子一起摘')
+})
+
+test('组装层预取：没线索就不插段（查过，但段不许空挂着）', async () => {
+  const { agent, hooks } = fakeAgent()
+  const { prefetch, calls } = spyPrefetch(null)
+  const logs = []
+  attachAssembleFix(agent, { root: '/root', prefetch, log: (m) => logs.push(m) })
+  claimInto(hooks, agent, { text: '今天天气不错' })
+  const out = await assembleOnce(hooks, agent)
+  assert.deepEqual(sectionNames(out), [IDENTITY_SECTION, WAKE_SECTION])
+  assert.equal(calls.length, 1)
+  assert.deepEqual(prefetchLogs(logs), ['prefetch n=0 chars=0 source=dsh'])
+})
+
+test('组装层预取：同一轮多次组装只检索一次，但每次组装都带着段', async () => {
+  const { agent, hooks } = fakeAgent()
+  const { prefetch, calls } = spyPrefetch(HIT)
+  attachAssembleFix(agent, { root: '/root', prefetch })
+  claimInto(hooks, agent, { text: '你还记得上次在群里叫我姐姐吗' })
+  for (let i = 0; i < 3; i += 1) {
+    const out = await assembleOnce(hooks, agent)
+    assert.ok(sectionNames(out).includes(PREFETCH_SECTION), `第 ${i + 1} 次组装也要有段`)
+  }
+  assert.equal(calls.length, 1, '工具循环里 assemble 会反复触发，但只许检索一次')
+})
+
+test('组装层预取：上一轮的临时段不漏到下一轮；下一轮换了句话就重新检索', async () => {
+  const { agent, hooks } = fakeAgent()
+  const { prefetch, calls } = spyPrefetch(HIT, null)
+  attachAssembleFix(agent, { root: '/root', prefetch })
+  claimInto(hooks, agent, { text: '你还记得上次在群里叫我姐姐吗', id: 'm1' })
+  const out1 = await assembleOnce(hooks, agent)
+  assert.ok(sectionNames(out1).includes(PREFETCH_SECTION))
+  claimInto(hooks, agent, { text: '今天天气不错', id: 'm2' })
+  const out2 = await assembleOnce(hooks, agent)
+  assert.deepEqual(sectionNames(out2), [IDENTITY_SECTION, WAKE_SECTION], '新的一轮不带着上一轮的线索')
+  assert.equal(calls.length, 2)
+  assert.equal(calls[1].heard, '今天天气不错')
+})
+
+test('组装层预取：调度唤醒轮（perch:wake 非空）不检索也不插段', async () => {
+  const { agent, hooks } = fakeAgent()
+  const { prefetch, calls } = spyPrefetch(HIT)
+  const logs = []
+  attachAssembleFix(agent, { root: '/root', prefetch, log: (m) => logs.push(m) })
+  setWakeSection('这一次的处境：醒来看一眼，推了一条视频')
+  try {
+    claimInto(hooks, agent, { text: '你还记得上次在群里叫我姐姐吗' })
+    const out = await assembleOnce(hooks, agent)
+    assert.deepEqual(sectionNames(out), [IDENTITY_SECTION, WAKE_SECTION])
+    assert.equal(calls.length, 0, '处境已经在 wake 段里，不再叠线索')
+    assert.equal(prefetchLogs(logs).length, 0)
+  } finally {
+    clearWakeSection()
+  }
+})
+
+test('组装层预取：渠道轮的日志写 source=channel（router 在 askHer 外侧包着 beginExternalTurn）', async () => {
+  _resetExternalTurn()
+  const { agent, hooks } = fakeAgent()
+  const { prefetch } = spyPrefetch(HIT)
+  const logs = []
+  attachAssembleFix(agent, { root: '/root', prefetch, log: (m) => logs.push(m) })
+  beginExternalTurn()
+  try {
+    claimInto(hooks, agent, { text: '你还记得上次在群里叫我姐姐吗' })
+    await assembleOnce(hooks, agent)
+  } finally {
+    endExternalTurn()
+    _resetExternalTurn()
+  }
+  assert.deepEqual(prefetchLogs(logs).map((l) => l.split(' ').at(-1)), ['source=channel'])
+})
+
+test('组装层预取：拿不到 inbox 事件时退回 session 里最后一条 user（跳过触发语）', async () => {
+  const session = {
+    id: 's2',
+    snapshotEvents: () => [
+      { type: 'user/message', seq: 5, data: { content: [{ type: 'text', text: '小满昨天说的那件事' }], source: { kind: 'user' } } },
+      { type: 'assistant/message', seq: 6, data: { message: { content: [{ type: 'text', text: '嗯。' }] } } },
+    ],
+  }
+  const { agent, hooks } = fakeAgent({ session })
+  const { prefetch, calls } = spyPrefetch(HIT)
+  attachAssembleFix(agent, { root: '/root', prefetch })
+  const out = await assembleOnce(hooks, agent) // 没有 claim：老宿主那条路
+  assert.deepEqual(calls.map((c) => c.heard), ['小满昨天说的那件事'])
+  assert.ok(sectionNames(out).includes(PREFETCH_SECTION))
+})
+
+test('组装层预取：inbox 里是「没有人跟你说话」或 retry 时不当成一句人话', async () => {
+  const session = {
+    id: 's3',
+    snapshotEvents: () => [
+      { type: 'user/message', seq: 1, data: { content: [{ type: 'text', text: PROACTIVE_TRIGGER }], source: { kind: 'user' } } },
+    ],
+  }
+  const { agent, hooks } = fakeAgent({ session })
+  const { prefetch, calls } = spyPrefetch(HIT)
+  attachAssembleFix(agent, { root: '/root', prefetch })
+  claimInto(hooks, agent, { text: PROACTIVE_TRIGGER, id: 'c1' })
+  claimInto(hooks, agent, { text: '（空回复）', id: 'c2', kind: 'retry' })
+  const out = await assembleOnce(hooks, agent)
+  assert.equal(calls.length, 0)
+  assert.deepEqual(sectionNames(out), [IDENTITY_SECTION, WAKE_SECTION])
+})
+
+test('组装层预取：上一轮的线索不会跟着一条没有正文的消息再摆一遍', async () => {
+  const { agent, hooks } = fakeAgent()
+  const { prefetch, calls } = spyPrefetch(HIT)
+  attachAssembleFix(agent, { root: '/root', prefetch })
+  claimInto(hooks, agent, { text: '小满昨天说的那件事', id: 'c1' })
+  const first = await assembleOnce(hooks, agent)
+  assert.deepEqual(calls.map((c) => c.heard), ['小满昨天说的那件事'])
+  assert.ok(sectionNames(first).includes(PREFETCH_SECTION))
+  // 第二次是 retry：这一轮没有新的正文，不能拿上一轮那句再查一次。
+  claimInto(hooks, agent, { text: '', id: 'c2', kind: 'retry' })
+  const second = await assembleOnce(hooks, agent)
+  assert.equal(calls.length, 1)
+  assert.deepEqual(sectionNames(second), [IDENTITY_SECTION, WAKE_SECTION])
+})
+
+test('组装层预取：预取自己炸了也不影响这一轮的提示词', async () => {
+  const { agent, hooks } = fakeAgent()
+  const prefetch = async () => {
+    throw new Error('boom')
+  }
+  attachAssembleFix(agent, { root: '/root', prefetch })
+  claimInto(hooks, agent, { text: '你还记得上次在群里叫我姐姐吗' })
+  const out = await assembleOnce(hooks, agent)
+  assert.deepEqual(sectionNames(out), [IDENTITY_SECTION, WAKE_SECTION])
+})
+
+test('组装层预取：老调用方不给 root 时只做整改、不预取，也不多挂事件', async () => {
+  const { agent, hooks } = fakeAgent()
+  const { prefetch, calls } = spyPrefetch(HIT)
+  attachAssembleFix(agent, { prefetch })
+  assert.equal(hookOf(hooks, 'agent/inbox/claimed'), undefined)
+  const out = await assembleOnce(hooks, agent)
+  assert.deepEqual(sectionNames(out), [IDENTITY_SECTION, WAKE_SECTION])
+  assert.equal(calls.length, 0)
 })

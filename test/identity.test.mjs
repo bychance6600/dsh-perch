@@ -298,9 +298,11 @@ test('attachIdentity 顺手挂上组装钩子，且拆卸时一起拆', () => {
   const r = attachIdentity(agent, root)
   assert.equal(r.ok, true)
   assert.equal(calls.length, 3, 'assemble 钩子不是 system prompt 的段，不许占段位')
-  assert.equal(hooks.length, 1)
+  // 团队卡 #7：组装钩子之外还要监听本轮 inbox 消息（预取要用本轮那句话），共两条。
+  assert.equal(hooks.length, 2)
   assert.equal(hooks[0].evt, 'system-prompt/assemble')
   assert.equal(hooks[0].o?.prepend, true)
+  assert.equal(hooks[1].evt, 'agent/inbox/claimed')
   // mountedCount 只数段与守卫；钩子单独记，但回家时必须一起拆
   assert.equal(mountedCount(agent), 3)
 })
