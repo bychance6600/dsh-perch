@@ -1,0 +1,86 @@
+name: Bug 报告
+description: 插件没按预期工作、报错、消息被吞——把现场留下来
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        谢谢你替她看这一眼。填得越具体，越不用来回问。
+        先确认：不是版本太旧（README 写着当前版）；不是已知环境问题（`docs/常见误读.md`）。
+  - type: input
+    id: dsh-version
+    attributes:
+      label: DSH 版本
+      description: DSH 的版本号或 commit（设置里能看到）
+      placeholder: 例如 0.4.1 / commit f0ff990
+    validations:
+      required: true
+  - type: input
+    id: plugin-version
+    attributes:
+      label: perch 版本与装法
+      description: 版本号；npm 装的还是 link 本地目录
+      placeholder: 例如 0.4.1 / npm；或 0.4.1 / link:D:/perch/dsh-perch
+    validations:
+      required: true
+  - type: input
+    id: os-node
+    attributes:
+      label: 操作系统与 Node 版本
+      placeholder: 例如 Windows 11 + Node 22.14
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 从哪一步开始出现；能放进来的话，贴最短的那条路径
+      placeholder: |
+        1. …
+        2. …
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+      description: 你以为会发生什么
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+      description: 她说了什么 / 没说什么；界面显示成什么样
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 相关日志行
+      description: 终端或日志里跟这次有关的那几行；不确定哪些有关，就贴末尾一段
+      render: shell
+    validations:
+      required: false
+  - type: dropdown
+    id: docker
+    attributes:
+      label: QQ 桥是怎么跑的
+      options:
+        - 没用 Docker（本机直接跑 NapCat / SnowLuma）
+        - Docker 里跑 NapCat / SnowLuma
+        - 不确定
+      default: 0
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已经看过 README 和 `docs/常见误读.md`
+          required: true
+        - label: 这不是旧版本已经修过的问题
+          required: true
