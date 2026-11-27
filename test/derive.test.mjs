@@ -7,6 +7,7 @@ import {
 // 2026-10-26：stability 从 derive.js 搬到 quality.js（它要用到 persona 的渲染，
 // 留在 derive 里会绕出 quality → persona → derive → quality 的环）。
 import { stability, stabilityBand, clearStabilityCache } from '../lib/quality.js'
+import { newId } from '../lib/schema.js'
 
 const T0 = Date.parse('2026-10-01T00:00:00Z')
 
@@ -545,6 +546,70 @@ test('语气词回话不成判断，也不靠累加固化（2026-11-25 真机）
   const m = deriveSelf(evs, { now: T0 + 25 * DAY_MS })
   assert.ok(m.beliefs.every((b) => b.text !== '嗯。'), '「嗯。」不该进判断')
   assert.equal(m.beliefs.filter((b) => b.solid).length, 0, '没有一条该被固化')
+})
+
+
+// 0.5.0 M5b（issue #8）：他当面说定、她也答应下来的话钉在最前。
+// 事件流没有轮次 id，用「他开口之后她的第一句话」近似同一轮；30 分钟沿用近况窗口。
+// 事件排序看 id 里的时间（idTime），短 id 会排乱；M5b 的同轮判定依赖真实顺序。
+const at = (ms, type, text, extra = {}) => ({
+  ...ev(newId(ms), type, 2, text, extra), ts: new Date(ms).toISOString(),
+})
+
+test('M5b：他当面说定、她答应的话 pin 在最前', () => {
+  const t = T0 + 2 * DAY_MS
+  const evs = [
+    ev('ev_seed', 'seed', 1, '种', { source: 'system' }),
+    at(t, 'heard', '主人：以后你叫我阿岚。', { origin: 'owner' }),
+    at(t + 60_000, 'utterance', '好，我以后叫你阿岚。'),
+    at(t + 2 * 60_000, 'utterance', '今天有点热。'),
+    at(t + 3 * 60_000, 'utterance', '我在看窗外。'),
+  ]
+  const m = deriveSelf(evs, { now: t + 5 * 60_000 })
+  assert.equal(m.beliefs[0].text, '好，我以后叫你阿岚。', '说定的事排最前')
+  assert.equal(m.beliefs[0].pinned, true)
+  assert.equal(m.beliefs.filter((b) => b.pinned).length, 1)
+})
+
+test('M5b：不是承诺、没有他在场、超时、同轮第二句，都不 pin', () => {
+  const t = T0 + 3 * DAY_MS
+  const evs = [
+    ev('ev_seed', 'seed', 1, '种', { source: 'system' }),
+    // 普通回话不是承诺
+    at(t, 'heard', '主人：今天热吗', { origin: 'owner' }),
+    at(t + 60_000, 'utterance', '有点热。'),
+    // 承诺，但上一轮已经说完了，这句没有新的他在场
+    at(t + 2 * 60_000, 'utterance', '我以后会早点回来。'),
+    // 没有 heard
+    at(t + 3 * 60_000, 'utterance', '我答应你，明天早点回来。'),
+    // 只有别人在场
+    at(t + 4 * 60_000, 'heard', '小周：你明天来吗', { origin: 'guest' }),
+    at(t + 5 * 60_000, 'utterance', '我答应你，明天来。'),
+    // 超过 30 分钟
+    at(t + 6 * 60_000, 'heard', '主人：周末去吗', { origin: 'owner' }),
+    at(t + 6 * 60_000 + 31 * 60_000, 'utterance', '我答应你，周末去。'),
+    // 偏好声明不是承诺
+    at(t + 100 * 60_000, 'heard', '主人：你喝什么咖啡', { origin: 'owner' }),
+    at(t + 101 * 60_000, 'utterance', '我以后只喝冰美式。'),
+  ]
+  const m = deriveSelf(evs, { now: t + 200 * 60_000 })
+  assert.equal(m.beliefs.filter((b) => b.pinned).length, 0)
+})
+
+test('M5b：承诺最多 pin 3 条，留最近的', () => {
+  const t = T0 + 4 * DAY_MS
+  const evs = [ev('ev_seed', 'seed', 1, '种', { source: 'system' })]
+  const promises = ['我以后会早点回来。', '我以后会好好吃饭。', '我以后会按时睡觉。', '我以后会照顾好自己。']
+  const ids = []
+  promises.forEach((text, i) => {
+    evs.push(at(t + i * 10 * 60_000, 'heard', '主人：说定了', { origin: 'owner' }))
+    const said = at(t + i * 10 * 60_000 + 60_000, 'utterance', text)
+    evs.push(said)
+    ids.push(said.id)
+  })
+  const m = deriveSelf(evs, { now: t + 60 * 60_000 })
+  const pinned = m.beliefs.filter((b) => b.pinned).map((b) => b.id).sort()
+  assert.deepEqual(pinned, ids.slice(1).sort(), '只留最近三条')
 })
 
 test('同一天同一句只算一次提及，口头禅刷不动 mentions', () => {

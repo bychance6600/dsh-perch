@@ -135,6 +135,21 @@ test('观测台与身份文档同源：/memory 用 shownCount 而不是写死的
   assert.ok(src.includes('Math.min(shownCap, model.beliefs.length)'))
 })
 
+
+test('M5b：pinned 不折进「更早以前」，窗口至少容纳全部 pinned', () => {
+  const pinned = [0, 1, 2].map((i) => ({ id: 'p' + i, text: '说好的事' + i, since: '2026-10-01', pinned: true }))
+  const plain = [0, 1, 2].map((i) => ({ id: 'n' + i, text: '判断编号' + i, since: '2026-10-01' }))
+  const list = [...pinned, ...plain]
+
+  const earlier = foldOlderBeliefs(list, 0, 3)
+  assert.equal(earlier.includes('说好的事'), false, 'pinned 不能被折成一行')
+
+  const text = buildSections(model({ beliefs: list }), { shown: 1 }).map((s) => s.text).join('\n')
+  const seg = beliefSection(text)
+  assert.equal((seg.match(/^- 说好的事/gm) || []).length, 3, '窗口再小也要把 3 条 pinned 逐条摆出来')
+  assert.ok(!seg.includes('判断编号0'), '普通判断仍按窗口走')
+})
+
 test('白名单里额外放行的工具要念给她听（0.6.1，用户 m01371）', () => {
   const base = renderSelfDoc(model(), { budget: 4000 })
   assert.ok(!base.includes('qq_send_message'), '没放行就不提')

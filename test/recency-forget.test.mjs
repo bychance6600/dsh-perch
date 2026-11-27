@@ -111,6 +111,20 @@ test('折叠话题不命中时那句不出现，belief.text 也能当话题', ()
   assert.equal(foldedTopic(model, '完全不相干的一句话'), '')
 })
 
+
+test('M5b：pinned 不会被当成折叠的旧话', () => {
+  const model = {
+    beliefs: [
+      { id: 'o0', text: '今天风很大' },
+      { id: 'o1', text: '楼下有只猫' },
+      { id: 'o2', text: '我后来换了说法' },
+      { id: 'p0', text: '说好的事', pinned: true },
+    ],
+  }
+  assert.equal(foldedTopic(model, '说好的事', { shown: 0 }), '', 'pinned 不在折叠窗口里')
+  assert.equal(foldedTopic(model, '楼下有只猫', { shown: 0 }), '楼下有只猫', '普通旧话仍然按窗口命中')
+})
+
 test('纯函数：同样账本 + 同样的话，两次结果完全相同', () => {
   const [topicA, topicB] = pair(23)
   const events = [
