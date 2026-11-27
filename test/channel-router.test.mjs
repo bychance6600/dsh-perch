@@ -566,6 +566,39 @@ test('router：回复她那一条也算被点名——不用再 @ 一次', async
   await fs.rm(h.root, { recursive: true, force: true })
 })
 
+test('router：别人被 @ 时，递到她眼前的是名字不是 QQ 号（issue #16）', async () => {
+  const h = await harness({ config: baseConfig, reply: '嗯。' })
+  // 她认识这个号：people 里记过名字（qq 适配器给的外号是 u_<QQ>）
+  await h.people.upsert('u_1234567890', { name: '云湄' })
+  const r = await h.router.handle(groupMsg({ text: '@1234567890 鱼欣好像不在了' }))
+  assert.equal(r.sent, true, JSON.stringify(r))
+  const prompt = h.calls[0].content[0].text
+  assert.match(prompt, /@云湄 鱼欣好像不在了/)
+  assert.doesNotMatch(prompt, /@1234567890/)
+  // 记下来的也是换了名字的那一句：以后翻旧事不该再冒出一串数字
+  const { events } = await readEvents(h.root)
+  const heard = events.filter((e) => e.type === 'heard')
+  assert.equal(heard.length, 1)
+  assert.match(heard[0].text, /@云湄 鱼欣好像不在了/)
+  await fs.rm(h.root, { recursive: true, force: true })
+})
+
+test('router：没记过名字的 @ 原样留着，宁可难看也不猜（issue #16）', async () => {
+  const h = await harness({ config: baseConfig, reply: '嗯。' })
+  const r = await h.router.handle(groupMsg({ text: '@9876543210 鱼欣好像不在了' }))
+  assert.equal(r.sent, true, JSON.stringify(r))
+  const prompt = h.calls[0].content[0].text
+  assert.match(prompt, /@9876543210 鱼欣好像不在了/)
+  // 不满 5 位的不当 QQ 号：房间号、短号、别的东西都不碰
+  const h2 = await harness({ config: baseConfig, reply: '嗯。' })
+  await h2.people.upsert('u_1234', { name: '不该换' })
+  await h2.router.handle(groupMsg({ text: '@1234 你也在吗' }))
+  const prompt2 = h2.calls[0].content[0].text
+  assert.match(prompt2, /@1234 你也在吗/)
+  await fs.rm(h.root, { recursive: true, force: true })
+  await fs.rm(h2.root, { recursive: true, force: true })
+})
+
 test('router：10 秒合批——同一个人连着说的合成一条，换人另起一段', async () => {
   const r = await tmpRoot()
   const { ctx } = fakeHost({ text: '嗯。' })
