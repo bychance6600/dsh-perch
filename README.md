@@ -5,7 +5,7 @@
 ![deps](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![node](https://img.shields.io/badge/node-%E2%89%A522-339933)
 ![dsh](https://img.shields.io/badge/DSH-plugin-6a5acd)
-![tests](https://img.shields.io/badge/tests-1613%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-1661%20passing-brightgreen)
 
 **她住的地方，不是一个助手。**
 
@@ -344,7 +344,7 @@ douyin-profile/       抖音浏览器的登录态（开抖音时才有）
 **已知口子（不是「已经干净」）**
 
 - 首轮第 1 个 step 还能看见宿主工具，兜底 `guard` 会挡。
-- 4 条环境红：坏 JSON、cover、`growth_commit 落库`、ULID；都是跨文件隔离或偶发，单跑会绿。
+- 已知环境红：坏 JSON、cover、`growth_commit 落库`、ULID、出站软链接（Windows 没有符号链接权限）、`withFileLock` 串行；都是跨文件隔离或偶发，单跑会绿。
 - 断线句里的秒数是墙钟时间，含桥自身的重连。
 
 ## 十四、开发与测试
@@ -355,7 +355,7 @@ node --test --test-isolation=none  # 沙箱 / 受限环境（跨文件会有假�
 node --test test/<file>.test.mjs   # 单文件
 ```
 
-当前基线（2026-11-17，macOS，Node 26）：正常环境 `node --test` **1588 条 / 1586 过 / 0 红 / 2 skip**；受限环境 `node --test --test-isolation=none` **1588 条 / 1582 过 / 4 红 / 2 skip**。4 条是已知环境项（跨文件隔离互相干扰；`withFileLock` 偶发），单跑对应文件会绿；2 skip 是路由缓存用例（要 `--experimental-test-module-mocks`，CI 单开 job）与身体解压用例（只在 Windows 跑）。**不许新增红。**
+当前基线（2026-11-27 实测，数字以计划库 `STATE.json` 为准）：正常环境 `node --test` **1661 条 / 1655 过 / 1 红 / 5 skip**；受限环境 `node --test --test-isolation=none` **1661 条 / 1654 过 / 6 红 / 1 skip**（Windows 本机实测正常环境 1661 / 1659 / 1 / 1，少数平台用例不 skip）。红都是已知环境项（坏 JSON、cover、`growth_commit 落库`、ULID、出站软链接——Windows 没有符号链接权限、`withFileLock` 串行；单跑对应文件会绿）。**不许新增红。**
 
 零依赖是铁律：`dependencies` / `peerDependencies` / `devDependencies` 三个永远 `{}`，测试只用 `node:test`。
 
