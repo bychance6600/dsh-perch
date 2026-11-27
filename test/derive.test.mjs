@@ -591,6 +591,9 @@ test('M5b：不是承诺、没有他在场、超时、同轮第二句，都不 p
     // 偏好声明不是承诺
     at(t + 100 * 60_000, 'heard', '主人：你喝什么咖啡', { origin: 'owner' }),
     at(t + 101 * 60_000, 'utterance', '我以后只喝冰美式。'),
+    // 跨渠道：他在 GUI 说，她在 QQ 回，不是同一轮
+    at(t + 150 * 60_000, 'heard', '主人：以后你叫我阿岚。', { origin: 'owner', channel: 'dsh', visibility: 'private' }),
+    at(t + 151 * 60_000, 'utterance', '好，我以后叫你阿岚。', { channel: 'qq', visibility: 'private' }),
   ]
   const m = deriveSelf(evs, { now: t + 200 * 60_000 })
   assert.equal(m.beliefs.filter((b) => b.pinned).length, 0)
