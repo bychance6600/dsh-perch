@@ -13,6 +13,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
+import { RETIRED_TOOLS, dropRetiredTools } from '../lib/index.js'
 import { HER_TOOLS, currentToolSurface, isHerAgent, knownToolNames, knownToolDescriptions, ownLayerNames, registerToolRestrict, rememberFromView, rememberKnownTools, readRestrictState, describeRestrict, toolSurfaceText, toolSurfaceFor, outsideSurfaceText, visibleToolsOf, withoutBrowseTools } from '../lib/restrict.js'
 
 /** 一个够用的假插件 ctx：能 on('agent/created')，也能被我们主动触发。 */
@@ -68,9 +69,11 @@ function fakeAgent(cwd, { withRestrict = true, withGuard = true } = {}) {
 test('清单里她该有的工具都在，且不含危险口子', () => {
   // 这些是她自己的，外加 read_image。
   // 定时工具默认不放（m04504），要放由用户自己加白名单——这里不许出现。
-  for (const name of ['growth_commit', 'write_diary', 'her_recall', 'her_diary', 'her_leave', 'her_note', 'pair_file', 'bili_look', 'douyin_look', 'bili_watch', 'ask_owner', 'openq_close', 'read_image']) {
+  for (const name of ['growth_commit', 'write_diary', 'her_recall', 'her_diary', 'her_leave', 'her_note', 'pair_file', 'bili_look', 'douyin_look', 'bili_watch', 'ask_owner', 'read_image']) {
     assert.ok(HER_TOOLS.includes(name), `清单里少了 ${name}`)
   }
+  // 0.5.0（团队 #9）：openq_close 已退役，她从工具面里看不见它。
+  assert.ok(!HER_TOOLS.includes('openq_close'), 'openq_close 已删除，不该还在清单里')
   // 这几个一旦放进去，收窄就白做了
   for (const name of ['pwsh', 'bash', 'write', 'edit', 'web_search', 'web_fetch', 'skill', 'subagent', 'workflow']) {
     assert.ok(!HER_TOOLS.includes(name), `清单里不该有 ${name}`)
@@ -121,6 +124,29 @@ test('额外放行会并进 allow，且去重', () => {
   assert.ok(allow.includes('web_search'), '用户填的额外放行要生效')
   assert.equal(allow.filter((x) => x === 'web_search').length, 1, '同一名字不许重复')
   assert.equal(allow.filter((x) => x === 'read_image').length, 1, '原本就在清单里的不该被重复追加')
+})
+
+test('老配置 allow 里的已退役名字不进 allow，收窄仍 applied（0.5.0 升级兜底）', () => {
+  // 用户的 config.tools.allow 里可能还写着 openq_close：宿主的工具表已经没有这个名字，
+  // 留着它会被当成「还没登记」，一直延后重试，那条会话的工具面就永远收不窄。
+  assert.ok(RETIRED_TOOLS.has('openq_close'))
+  assert.deepEqual(dropRetiredTools(['web_search', 'openq_close', ' openq_close ']), ['web_search'])
+
+  const ctx = fakeCtx()
+  const seen = []
+  registerToolRestrict(ctx, {
+    herDir: 'C:\\h',
+    extra: dropRetiredTools(['web_search', 'openq_close']),
+    onResult: (r) => seen.push(r),
+    log: () => {},
+  })
+  const hers = fakeAgent('C:\\h')
+  ctx.emit('agent/created', { agent: hers.agent })
+  assert.equal(hers.calls.length, 1, '仍要收窄')
+  const allow = hers.calls[0].allow
+  assert.ok(allow.includes('web_search'), '用户自己放行的名字照旧生效')
+  assert.ok(!allow.includes('openq_close'), '退役名不许进 allow')
+  assert.ok((seen[seen.length - 1]?.applied ?? 0) > 0, '不该因为残留退役名一直 deferred')
 })
 
 test('挂上了才算数：结论里 applied 必须 > 0', () => {
